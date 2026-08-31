@@ -16,9 +16,26 @@ jobs:
       - run: npm install -g @google/clasp
 
       - name: Restaurar credenciales de clasp
-        run: echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+        run: |
+          node --input-type=commonjs -e '
+            const fs = require("fs");
+            const raw = JSON.parse(process.env.CLASP_CREDENTIALS);
+            let output;
+            if (raw.tokens && raw.tokens.default) {
+              output = { token: raw.tokens.default };
+            } else if (raw.token) {
+              output = raw;
+            } else {
+              output = raw;
+            }
+            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output));
+            console.log("OK: credenciales restauradas (formato: " + (output.token ? "token" : "otro") + ")");
+          '
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+
+      - name: Verificar credenciales de clasp
+        run: node --input-type=commonjs -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync(process.env.HOME+"/.clasprc.json","utf8"));console.log("Token presente:",!!c.token);console.log("access_token:",!!c.token?.access_token);console.log("refresh_token:",!!c.token?.refresh_token)'
 
       - name: Generar appsscript.json
         run: |
