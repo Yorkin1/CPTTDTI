@@ -1,0 +1,3274 @@
+<script>
+  /* ============================================================
+     Lógica del cliente — Gestor de Clientes y Citas
+     Navegación, formularios, tablas, búsqueda y notificaciones.
+     Todo en español.
+     ============================================================ */
+
+  // Estado en memoria para evitar consultas repetidas.
+  var Estado = {
+    clientes: [],
+    clientesCargados: false,
+    citas: [],
+    citasCargados: false,
+    servicios: [],
+    serviciosCargados: false,
+    cacheHistorial: {},
+    usuariosLista: [],
+    usuariosCargados: false,
+    reservaUrl: '',
+    vistaActual: 'Clientes',
+    // Bienvenida: máxima de 5 veces por usuario y se oculta al cambiar de vista.
+    bienvenidaMostrada: false,
+    primeraVistaCargada: false,
+    // Configuración de la plantilla (personalización del negocio).
+    config: {
+      configurada: false,
+      nombreNegocio: 'Mi Negocio',
+      mensajeBienvenida: 'Bienvenido a nuestro sistema de gestión',
+      etiquetaCita: 'Cita',
+      colorPrimario: '#4285F4',
+      colorSecundario: '#16a34a',
+      tema: 'claro',
+      duracionCitaPredeterminada: '60',
+      habilitarReservas: false,
+      pasoReserva: 30,
+      horarioAtencion: _horarioAtencionDefault()
+    }
+  };
+
+  /* -------------------- Etiquetas dinámicas -------------------- */
+
+  // Devuelve el plural simple de una etiqueta en español.
+  function pluralizar(palabra) {
+    palabra = String(palabra || '');
+    if (!palabra) return palabra;
+    var ultima = palabra.charAt(palabra.length - 1).toLowerCase();
+    if (ultima === 's') return palabra;
+    if ('aeiou'.indexOf(ultima) !== -1) return palabra + 's';
+    return palabra + 'es';
+  }
+
+  // Accesos rápidos a las etiquetas configuradas.
+  function etCita()    { return Estado.config.etiquetaCita || 'Cita'; }
+  function etCitas()   { return pluralizar(etCita()); }
+
+  // Femenina si termina en "a", "ción", "sión", "dad", "tad" o "tud".
+  function etiquetaFemenina(etiqueta) {
+    var e = String(etiqueta || '').trim().toLowerCase();
+    if (!e) return true;
+    return /(a|ción|sión|dad|tad|tud)$/.test(e);
+  }
+
+  // Artículo indeterminado ("una"/"un") para la etiqueta de cita.
+  function articuloEtiqueta(etiqueta) {
+    return etiquetaFemenina(etiqueta) ? 'una' : 'un';
+  }
+
+  // Convierte la primera letra a minúscula (para usar dentro de frases).
+  function minuscInicial(t) {
+    t = String(t || '');
+    return t ? (t.charAt(0).toLowerCase() + t.slice(1)) : t;
+  }
+
+  /* -------------------- Utilidades -------------------- */
+
+  // Escapa texto para insertarlo de forma segura en HTML.
+  function esc(texto) {
+    if (texto === null || texto === undefined) return '';
+    return String(texto)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Muestra una notificación tipo toast.
+  function mostrarToast(mensaje, tipo) {
+    var toast = document.getElementById('toast');
+    toast.textContent = mensaje;
+    toast.className = 'toast visible ' + (tipo || '');
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(function() {
+      toast.className = 'toast';
+    }, 3500);
+  }
+
+  // Overlay de carga acotado a la tabla de una lista: se muestra mientras se
+  // escribe/borra/refresca, para que el usuario note el delay del servidor
+  // sin tapar toda la página. El objetivo es un wrapper NO scrolleable
+  // (.tabla-area) que envuelve al .tabla-contenedor, de modo que la capa
+  // blanca cubra toda el área de la tabla aunque se desplace horizontalmente.
+  function zonaDeCarga(tbodyId) {
+    var tbody = document.getElementById(tbodyId);
+    if (!tbody || !tbody.closest) return null;
+    var cont = tbody.closest('.tabla-contenedor');
+    if (!cont) return null;
+    // Si el contenedor scrolleable aún no está envuelto en el wrapper fijo,
+    // lo envolvemos dinámicamente (una sola vez).
+    var area = cont.parentNode;
+    if (!area || area.className.indexOf('tabla-area') === -1) {
+      var wrapper = document.createElement('div');
+      wrapper.className = 'tabla-area';
+      cont.parentNode.insertBefore(wrapper, cont);
+      wrapper.appendChild(cont);
+      area = wrapper;
+    }
+    return area;
+  }
+
+  function mostrarCargaZona(tbodyId, texto) {
+    var zona = zonaDeCarga(tbodyId);
+    if (!zona) return;
+    ocultarCargaZona(tbodyId);
+    var el = document.createElement('div');
+    el.className = 'carga-zona';
+    el.id = 'cargaZona-' + tbodyId;
+    el.innerHTML = '<div class="carga-zona-contenido"><div class="spinner-carga"></div><p>' +
+      esc(texto || 'Cargando…') + '</p></div>';
+    zona.appendChild(el);
+  }
+
+  function ocultarCargaZona(tbodyId) {
+    var el = document.getElementById('cargaZona-' + tbodyId);
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+
+  // Nombre completo de un cliente a partir de su ID.
+  function nombreCliente(idCliente) {
+    for (var i = 0; i < Estado.clientes.length; i++) {
+      if (String(Estado.clientes[i].ID_Cliente) === String(idCliente)) {
+        var c = Estado.clientes[i];
+        return (c.Nombre + ' ' + (c.Apellido || '')).trim();
+      }
+    }
+    return idCliente ? 'Cliente eliminado' : '—';
+  }
+
+  // Retrasa la ejecución de fn hasta que pasan "ms" sin que se vuelva a llamar.
+  // Evita re-renderizar la tabla en cada tecla al escribir en un buscador.
+  function debounce(fn, ms) {
+    var temporizador = null;
+    return function() {
+      var args = arguments;
+      var ctx = this;
+      clearTimeout(temporizador);
+      temporizador = setTimeout(function() {
+        fn.apply(ctx, args);
+      }, ms);
+    };
+  }
+
+  // Fuerza la recarga desde el servidor de la lista indicada y avisa al usuario.
+  // Muestra el overlay de carga sobre la tabla mientras la petición al
+  // servidor está en vuelo.
+  // Refresca TODAS las listas/tablas del sistema. Cualquier botón "↻ Refrescar"
+  // dispara esta función para mantener sincronizados clientes, citas, servicios,
+  // usuarios, historial y (si aplica) el monitor de actividad.
+  function refrescarTodasLasListas(terminar) {
+    var cargadores = [
+      function(cb) { cargarClientes(cb, true); },
+      function(cb) { cargarCitas(true, cb); },
+      function(cb) { cargarServicios(true, cb); },
+      function(cb) { cargarUsuarios(true, cb); },
+      function(cb) {
+        var sel = document.getElementById('sel_cliente_historial');
+        cargarHistorial(sel ? (sel.value || '') : '', true, cb);
+      }
+    ];
+    // El monitor solo existe/es visible para el dueño con el monitor habilitado.
+    if (esDuenoSesion() && Estado.config && Estado.config.habilitarMonitor === true) {
+      cargadores.push(function(cb) { cargarActividad(true, cb); });
+    }
+    var restantes = cargadores.length;
+    var completado = false;
+    var fin = function() {
+      if (completado) return;
+      restantes--;
+      if (restantes <= 0) { completado = true; if (typeof terminar === 'function') terminar(); }
+    };
+    // Seguridad: si alguna carga falla y no invoca su callback, no dejar el
+    // indicador de carga ni el aviso colgados.
+    setTimeout(function() {
+      if (!completado) { completado = true; if (typeof terminar === 'function') terminar(); }
+    }, 4000);
+    cargadores.forEach(function(loader) {
+      try { loader(fin); } catch (e) { fin(); }
+    });
+  }
+
+  function refrescarLista(tipo) {
+    var tbodyId = tipo === 'clientes' ? 'tablaClientes' :
+                  (tipo === 'citas' ? 'tablaCitas' :
+                  (tipo === 'historial' ? 'tablaHistorial' :
+                  (tipo === 'servicios' ? 'tablaServicios' :
+                  (tipo === 'monitor' ? 'tablaActividad' : 'tablaUsuarios'))));
+    var terminar = function() {
+      ocultarCargaZona(tbodyId);
+      mostrarToast('Listas actualizadas.', 'exito');
+    };
+    mostrarCargaZona(tbodyId, 'Refrescando datos…');
+    // Cualquier botón de refrescar actualiza TODAS las tablas del sistema.
+    refrescarTodasLasListas(terminar);
+  }
+/* -------------------- Validación de formato -------------------- */
+
+  // Valida el formato general de un correo electrónico.
+  function esEmailValido(email) {
+    email = String(email || '').trim();
+    if (!email) return true; // el correo es opcional
+    var patron = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    return patron.test(email);
+  }
+
+  // Códigos de área válidos para números dominicanos (fijos y móviles).
+  var CODIGOS_AREA_RD = ['809', '829', '849'];
+
+  // Valida el formato de un número de teléfono dominicano.
+  // Debe tener exactamente 10 dígitos e iniciar con un código de área
+  // válido (809, 829 u 849).
+  function esTelefonoValido(telefono) {
+    telefono = String(telefono || '').trim();
+    if (!telefono) return true; // el teléfono es opcional
+    var caracteresPermitidos = /^[0-9\s\-\(\)]+$/;
+    if (!caracteresPermitidos.test(telefono)) return false;
+
+    var digitos = telefono.replace(/\D/g, '');
+    if (digitos.length !== 10) return false;
+    return CODIGOS_AREA_RD.indexOf(digitos.slice(0, 3)) !== -1;
+  }
+
+  // Valida que un nombre/apellido contenga solo letras, espacios, apóstrofes y guiones
+  // (sin dígitos ni símbolos), permitiendo acentos y la letra "ñ".
+  function esNombreValido(texto) {
+    texto = String(texto || '').trim();
+    if (!texto) return true; // la obligatoriedad se valida aparte
+    var patron = /^[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+$/;
+    return patron.test(texto);
+  }
+
+  // Formatea un teléfono mientras se escribe: XXX-XXX-XXXX
+  function formatearTelefono(valor) {
+    valor = String(valor || '');
+    var digitos = valor.replace(/\D/g, '').slice(0, 10);
+    var resultado;
+    if (digitos.length > 6) {
+      resultado = digitos.slice(0, 3) + '-' + digitos.slice(3, 6) + '-' + digitos.slice(6, 10);
+    } else if (digitos.length > 3) {
+      resultado = digitos.slice(0, 3) + '-' + digitos.slice(3);
+    } else {
+      resultado = digitos;
+    }
+    return resultado;
+  }
+
+  // Marca visualmente un campo como inválido/válido.
+  function marcarCampo(idCampo, valido) {
+    var el = document.getElementById(idCampo);
+    if (!el) return;
+    el.style.borderColor = valido ? '' : 'var(--rojo)';
+    el.style.boxShadow = valido ? '' : '0 0 0 3px rgba(220, 38, 38, 0.12)';
+  }
+  
+  /* -------------------- Navegación -------------------- */
+
+  function irAVista(nombreVista) {
+    var vistaAnterior = Estado.vistaActual;
+    Estado.vistaActual = nombreVista;
+
+    // Ocultar el banner de bienvenida apenas el usuario cambia de vista por
+    // primera vez (no en la carga inicial ni al re-renderizar la misma vista).
+    if (!Estado.primeraVistaCargada && vistaAnterior !== nombreVista) {
+      Estado.primeraVistaCargada = true;
+      ocultarBienvenida();
+    }
+
+    // Detener el refresco automático de citas al cambiar de pantalla.
+    if (window._intervaloCitas) {
+      clearInterval(window._intervaloCitas);
+      window._intervaloCitas = null;
+    }
+
+    // Resaltar enlace activo.
+    var enlaces = document.querySelectorAll('.nav-enlace');
+    for (var i = 0; i < enlaces.length; i++) {
+      enlaces[i].classList.toggle('activo', enlaces[i].dataset.vista === nombreVista);
+    }
+
+    // Cerrar menú móvil.
+    document.getElementById('navEnlaces').classList.remove('abierto');
+
+    var contenido = document.getElementById('contenido');
+    contenido.innerHTML = '<div class="cargando">Cargando…</div>';
+
+    // Las vistas están precargadas como plantillas locales; se inyectan
+    // sin llamar al servidor, lo que hace la navegación casi instantánea.
+    setTimeout(function() {
+      var tpl = document.getElementById('tpl-' + nombreVista);
+      if (!tpl) {
+        contenido.innerHTML = '<div class="vacio">No se pudo cargar la vista.</div>';
+        return;
+      }
+      contenido.innerHTML = tpl.innerHTML;
+      aplicarEtiquetasVista(contenido);
+      inicializarVista(nombreVista);
+      // Forzar la sincronización con las hojas al entrar a Clientes/Citas:
+      // así una reserva hecha desde la página pública aparece nada más navegar
+      // a la vista, sin depender del polling ni de la visibilidad de la pestaña.
+      if (nombreVista === 'Clientes' || nombreVista === 'Citas') {
+        chequearCambios(true);
+      }
+    }, 60);
+  }
+
+  // Ejecuta la inicialización específica de cada vista.
+  function inicializarVista(nombreVista) {
+    if (nombreVista === 'Clientes')  return initClientes();
+    if (nombreVista === 'Servicios') return initServicios();
+    if (nombreVista === 'Citas')     return initCitas();
+    if (nombreVista === 'Historial') return initHistorial();
+    if (nombreVista === 'Configuracion') return initConfiguracion();
+    if (nombreVista === 'Usuarios') return initUsuarios();
+    if (nombreVista === 'Monitor') return initMonitor();
+  }
+
+  /* ==========================================================
+     VISTA: CLIENTES
+     ========================================================== */
+
+  function initClientes() {
+    var form = document.getElementById('formCliente');
+    form.addEventListener('submit', guardarCliente);
+    document.getElementById('btnCancelarCliente').addEventListener('click', cancelarEdicionCliente);
+    var campoTelefono = document.getElementById('cli_telefono');
+    if (campoTelefono) {
+      campoTelefono.addEventListener('input', function(e) {
+        var alFinal = e.target.selectionEnd === e.target.value.length;
+        e.target.value = formatearTelefono(e.target.value);
+        if (alFinal) {
+          e.target.selectionStart = e.target.selectionEnd = e.target.value.length;
+        }
+      });
+    }
+    document.getElementById('buscarCliente').addEventListener('input', debounce(function(e) {
+      renderTablaClientes(e.target.value);
+    }, 250));
+    var fotoArchivo = document.getElementById('cli_foto_archivo');
+    if (fotoArchivo) fotoArchivo.addEventListener('change', previsualizarFotoCliente);
+    var btnQuitar = document.getElementById('btnQuitarFoto');
+    if (btnQuitar) btnQuitar.addEventListener('click', limpiarFotoCliente);
+    cargarClientes();
+  }
+
+  // Reservas en línea: la gestión vive en la vista Servicios (visible para todos).
+  function iniciarGestionReservas() {
+    var chk = document.getElementById('cfg2_reservas_habilitar');
+    if (!chk) return; // La tarjeta no existe: no hacer nada.
+
+    // El editor NO puede cambiar el horario de reservas: solo ve los botones
+    // para compartir el enlace. Se oculta el bloque de configuración y el guardar.
+    if (!esAdminSesion()) {
+      var bloque = document.getElementById('bloqueConfigReservas');
+      if (bloque) bloque.style.display = 'none';
+      var btnGuardar = document.getElementById('btnGuardarReservas');
+      if (btnGuardar) btnGuardar.style.display = 'none';
+    }
+
+    var c = Estado.config;
+    chk.checked = !!c.habilitarReservas;
+    setVal('cfg2_reservas_paso', c.pasoReserva || 30);
+    rellenarHorarioAtencion(c.horarioAtencion || _horarioAtencionDefault());
+    iniciarDiasCerrados();
+
+    document.getElementById('btnGuardarReservas').addEventListener('click', guardarReservas);
+    document.getElementById('btnCopiarEnlaceReservas').addEventListener('click', copiarEnlaceReservas);
+
+    if (Estado.reservaUrl) {
+      aplicarEnlaceReservas(Estado.reservaUrl);
+    } else {
+      google.script.run
+        .withSuccessHandler(aplicarEnlaceReservas)
+        .withFailureHandler(function() {})
+        .obtenerUrlReservas();
+    }
+  }
+
+  function aplicarEnlaceReservas(url) {
+    if (!url) return;
+    Estado.reservaUrl = url;
+    var enl = document.getElementById('enlaceAbrirReservas');
+    if (enl) enl.href = url;
+    mostrarQrReservas(url);
+  }
+
+  function mostrarQrReservas(url) {
+    var img = document.getElementById('imgQrReservas');
+    var txt = document.getElementById('qrReservasUrl');
+    var desc = document.getElementById('enlaceDescargarQr');
+    if (!img || !url) return;
+    var src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+    img.onerror = function() {
+      img.style.display = 'none';
+      if (txt) txt.textContent = 'Enlace de reservas: ' + url;
+    };
+    img.src = src;
+    img.style.display = 'block';
+    if (txt) txt.textContent = url;
+    if (desc) { desc.href = src; desc.style.display = 'inline-block'; }
+  }
+
+  // Guarda los ajustes de reservas en línea desde la vista Clientes.
+  function guardarReservas() {
+    var datos = {
+      HABILITAR_RESERVAS: document.getElementById('cfg2_reservas_habilitar').checked ? 'SI' : 'NO',
+      PASO_RESERVA_MIN: document.getElementById('cfg2_reservas_paso').value || '30',
+      HORARIO_ATENCION: JSON.stringify(leerHorarioAtencionFormulario())
+    };
+
+    var btn = document.getElementById('btnGuardarReservas');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar ajustes de reservas';
+        if (sesionInvalida(resp)) return;
+        if (resp && resp.exito) {
+          mostrarToast(resp.mensaje, 'exito');
+          refrescarVistaActual();
+        } else {
+          mostrarToast((resp && resp.mensaje) || 'No se pudieron guardar los ajustes.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar ajustes de reservas';
+        mostrarToast('Error: ' + err.message, 'error');
+      })
+      .guardarConfiguracion(tokenSesion(), datos);
+  }
+
+  // Recarga suave: re-obtiene la configuración y re-renderiza la vista actual.
+  // No usa window.location.reload() porque en Apps Script deja la página en blanco.
+  function refrescarVistaActual() {
+    google.script.run
+      .withSuccessHandler(function(estado) {
+        Estado.config = estado || Estado.config;
+        aplicarConfiguracionGlobal();
+        irAVista(Estado.vistaActual);
+      })
+      .withFailureHandler(function(err) {
+        mostrarToast('No se pudo actualizar: ' + err.message, 'error');
+      })
+      .obtenerEstadoAplicacion();
+  }
+
+  // Detiene el chequeo de cambios (se usa al salir del panel / login).
+  function detenerChequeoCambios() {
+    if (window._intervaloFirma) {
+      clearInterval(window._intervaloFirma);
+      window._intervaloFirma = null;
+    }
+    window._firmaCambios = null;
+  }
+
+  // Detecta cambios externos comparando la firma de las hojas de datos.
+  // Con `forzar=true` refresca aunque la firma no haya cambiado (se usa al
+  // navegar a Clientes/Citas para garantizar datos frescos).
+  function chequearCambios(forzar) {
+    // Con la pestaña oculta no se consulta el servidor (ahorra cuota y carga).
+    if (document.hidden) return;
+    google.script.run
+      .withSuccessHandler(function(firma) {
+        if (sesionInvalida(firma)) return;
+        if (!firma || !firma.exito) return;
+        var clave = firma.clientes + '|' + firma.citas + '|' + firma.historial;
+        if (!forzar && window._firmaCambios !== null && window._firmaCambios === clave) return;
+        window._firmaCambios = clave;
+        // Refrescar SIEMPRE las cachés compartidas (clientes y citas), aunque la
+        // vista abierta sea otra: así un cliente o una cita creados externamente
+        // (p. ej. desde la página pública de reservas) aparecen al cambiar de
+        // vista, sin necesidad de recargar la página. Cada carga re-renderiza
+        // solo la vista que esté visible actualmente. El primer chequeo también
+        // sincroniza: la línea base que se captura pudo ya incluir cambios hechos
+        // entre la carga inicial del panel y este momento.
+        cargarClientes(null, true);
+        cargarCitas(true);
+        if (Estado.vistaActual === 'Historial') {
+          var sel = document.getElementById('sel_cliente_historial');
+          if (sel) cargarHistorial(sel.value || '', true);
+        }
+      })
+      .withFailureHandler(function() {})
+      .obtenerFirmaCambios(tokenSesion());
+  }
+
+  function previsualizarFotoCliente() {
+    var archivo = document.getElementById('cli_foto_archivo').files[0];
+    if (!archivo) return;
+    var lector = new FileReader();
+    lector.onload = function() {
+      var img = document.getElementById('cli_foto_preview');
+      img.src = lector.result;
+      img.style.display = 'block';
+      document.getElementById('btnQuitarFoto').style.display = 'inline-block';
+    };
+    lector.readAsDataURL(archivo);
+  }
+
+  function limpiarFotoCliente() {
+    document.getElementById('cli_foto_archivo').value = '';
+    document.getElementById('cli_foto_url').value = '';
+    var img = document.getElementById('cli_foto_preview');
+    img.src = '';
+    img.style.display = 'none';
+    document.getElementById('btnQuitarFoto').style.display = 'none';
+  }
+
+  function cargarClientes(callback, forzar) {
+    // Si ya se cargaron antes y no se pidió refresco, usar la copia local
+    // para que la navegación y los selectores sean instantáneos.
+    if (Estado.clientesCargados && !forzar) {
+      if (document.getElementById('tablaClientes')) {
+        renderTablaClientes(document.getElementById('buscarCliente').value);
+      }
+      if (typeof callback === 'function') callback();
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(clientes) {
+        if (sesionInvalida(clientes)) { if (typeof callback === 'function') callback(); return; }
+        Estado.clientes = clientes || [];
+        Estado.clientesCargados = true;
+        if (document.getElementById('tablaClientes')) {
+          renderTablaClientes(document.getElementById('buscarCliente').value);
+        }
+        // Si la vista activa es Citas, re-renderizar la tabla para que la
+        // columna "Cliente" muestre los nombres ya cargados (evita los "—").
+        if (Estado.vistaActual === 'Citas' && document.getElementById('tablaCitas')) {
+          aplicarFiltrosCitas();
+        }
+        if (typeof callback === 'function') callback();
+      })
+      .withFailureHandler(function(err) {
+        mostrarToast('Error al obtener clientes: ' + err.message, 'error');
+        if (typeof callback === 'function') callback();
+      })
+      .obtenerClientes(tokenSesion());
+  }
+
+  function renderTablaClientes(filtro) {
+    var tbody = document.getElementById('tablaClientes');
+    if (!tbody) return;
+    var esAdmin = esAdminSesion();
+    filtro = (filtro || '').toLowerCase();
+
+    var lista = Estado.clientes.filter(function(c) {
+      if (!filtro) return true;
+      var texto = (c.Nombre + ' ' + c.Apellido + ' ' + c.Telefono + ' ' + c.Email).toLowerCase();
+      return texto.indexOf(filtro) !== -1;
+    });
+
+    if (lista.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="vacio">No hay clientes registrados.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = lista.map(function(c) {
+      return '<tr>' +
+        '<td>' + (c.Foto ? '<img class="foto-mini" src="' + esc(c.Foto) + '" alt="Foto">' : '<span class="vacio-accion">&mdash;</span>') + '</td>' +
+        '<td>' + esc((c.Nombre + ' ' + (c.Apellido || '')).trim()) + '</td>' +
+        '<td>' + esc(c.Telefono) + '</td>' +
+        '<td>' + esc(c.Email) + '</td>' +
+        '<td class="col-wrap">' + esc(c.Direccion) + '</td>' +
+        '<td>' + esc(fechaDMY(c.Fecha_Registro)) + '</td>' +
+        '<td class="acciones-fila">' +
+          '<button class="btn btn-secundario btn-pequeno" onclick="editarCliente(\'' + esc(c.ID_Cliente) + '\')">Editar</button>' +
+          (esAdmin ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarCliente(\'' + esc(c.ID_Cliente) + '\')">Eliminar</button>' : '') +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function guardarCliente(e) {
+    e.preventDefault();
+    var id = document.getElementById('clienteId').value;
+    var datos = {
+      nombre: document.getElementById('cli_nombre').value.trim(),
+      apellido: document.getElementById('cli_apellido').value.trim(),
+      telefono: document.getElementById('cli_telefono').value.trim(),
+      email: document.getElementById('cli_email').value.trim(),
+      direccion: document.getElementById('cli_direccion').value.trim(),
+      notas: document.getElementById('cli_notas').value.trim(),
+      foto: document.getElementById('cli_foto_url').value.trim()
+    };
+
+    if (!datos.nombre) {
+      mostrarToast('El nombre es obligatorio.', 'error');
+      return;
+    }
+
+    var nombreValido = esNombreValido(datos.nombre);
+    var apellidoValido = esNombreValido(datos.apellido);
+    marcarCampo('cli_nombre', nombreValido);
+    marcarCampo('cli_apellido', apellidoValido);
+    if (!nombreValido || !apellidoValido) {
+      mostrarToast('El nombre y el apellido solo deben contener letras y espacios.', 'error');
+      return;
+    }
+
+    var telefonoValido = esTelefonoValido(datos.telefono);
+    marcarCampo('cli_telefono', telefonoValido);
+    if (!telefonoValido) {
+      mostrarToast('El formato del teléfono no es válido. Use un número dominicano (809/829/849) de 10 dígitos.', 'error');
+      return;
+    }
+
+    var emailValido = esEmailValido(datos.email);
+    marcarCampo('cli_email', emailValido);
+    if (!emailValido) {
+      mostrarToast('El formato del correo electrónico no es válido.', 'error');
+      return;
+    }
+
+    var btn = document.getElementById('btnGuardarCliente');
+    var manejador = function(respuesta) {
+      btn.disabled = false;
+      btn.textContent = id ? 'Actualizar cliente' : 'Guardar cliente';
+      ocultarCargaZona('tablaClientes');
+      if (sesionInvalida(respuesta)) return;
+      if (respuesta.exito) {
+        mostrarToast(respuesta.mensaje, 'exito');
+        document.getElementById('formCliente').reset();
+        var imgPrev = document.getElementById('cli_foto_preview');
+        if (imgPrev) { imgPrev.src = ''; imgPrev.style.display = 'none'; }
+        var btnQuitar = document.getElementById('btnQuitarFoto');
+        if (btnQuitar) btnQuitar.style.display = 'none';
+        cancelarEdicionCliente();
+        var fotoFinal = respuesta.foto || datos.foto || '';
+        if (id) {
+          actualizarClienteLocal(id, datos, fotoFinal);
+        } else if (respuesta.id) {
+          Estado.clientes.push({
+            ID_Cliente: respuesta.id,
+            Nombre: datos.nombre, Apellido: datos.apellido || '',
+            Telefono: datos.telefono || '', Email: datos.email || '',
+            Direccion: datos.direccion || '', Notas: datos.notas || '',
+            Foto: fotoFinal, Fecha_Registro: respuesta.fechaRegistro || ''
+          });
+        }
+        if (document.getElementById('tablaClientes')) {
+          renderTablaClientes(document.getElementById('buscarCliente').value);
+        }
+      } else {
+        mostrarToast(respuesta.mensaje, 'error');
+      }
+    };
+
+    var archivo = document.getElementById('cli_foto_archivo').files[0];
+    if (archivo) {
+      // Subir la imagen y guardar el cliente en UNA sola llamada al servidor.
+      btn.disabled = true;
+      btn.textContent = 'Guardando…';
+      var lector = new FileReader();
+      lector.onload = function() {
+        datos.fotoDataUrl = lector.result;
+        guardarClienteEnServidor(id, datos, btn, manejador);
+      };
+      lector.onerror = function() {
+        btn.disabled = false;
+        btn.textContent = 'Guardar cliente';
+        mostrarToast('No se pudo leer la imagen.', 'error');
+      };
+      lector.readAsDataURL(archivo);
+    } else {
+      guardarClienteEnServidor(id, datos, btn, manejador);
+    }
+  }
+
+  function guardarClienteEnServidor(id, datos, btn, manejador) {
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    mostrarCargaZona('tablaClientes', id ? 'Actualizando cliente…' : 'Guardando cliente…');
+    if (id) {
+      google.script.run.withSuccessHandler(manejador)
+        .withFailureHandler(function(err) { manejador({ exito: false, mensaje: err.message }); })
+        .actualizarCliente(tokenSesion(), id, datos);
+    } else {
+      google.script.run.withSuccessHandler(manejador)
+        .withFailureHandler(function(err) { manejador({ exito: false, mensaje: err.message }); })
+        .agregarCliente(tokenSesion(), datos);
+    }
+  }
+
+  // Refleja la edición en la caché local sin volver a consultar el servidor.
+  function actualizarClienteLocal(id, datos, foto) {
+    (Estado.clientes || []).forEach(function(c) {
+      if (String(c.ID_Cliente) === String(id)) {
+        c.Nombre = datos.nombre || '';
+        c.Apellido = datos.apellido || '';
+        c.Telefono = datos.telefono || '';
+        c.Email = datos.email || '';
+        c.Direccion = datos.direccion || '';
+        c.Notas = datos.notas || '';
+        c.Foto = foto;
+      }
+    });
+  }
+
+  function editarCliente(id) {
+    var c = Estado.clientes.filter(function(x) { return String(x.ID_Cliente) === String(id); })[0];
+    if (!c) return;
+    document.getElementById('clienteId').value = c.ID_Cliente;
+    document.getElementById('cli_nombre').value = c.Nombre || '';
+    document.getElementById('cli_apellido').value = c.Apellido || '';
+    document.getElementById('cli_telefono').value = c.Telefono || '';
+    document.getElementById('cli_email').value = c.Email || '';
+    document.getElementById('cli_direccion').value = c.Direccion || '';
+    document.getElementById('cli_notas').value = c.Notas || '';
+    document.getElementById('cli_foto_url').value = c.Foto || '';
+    document.getElementById('cli_foto_archivo').value = '';
+    var imgPrev = document.getElementById('cli_foto_preview');
+    if (imgPrev) {
+      imgPrev.src = c.Foto || '';
+      imgPrev.style.display = c.Foto ? 'block' : 'none';
+    }
+    var btnQuitar = document.getElementById('btnQuitarFoto');
+    if (btnQuitar) btnQuitar.style.display = c.Foto ? 'inline-block' : 'none';
+    document.getElementById('tituloFormCliente').textContent = 'Editar cliente';
+    document.getElementById('btnGuardarCliente').textContent = 'Actualizar cliente';
+    document.getElementById('btnCancelarCliente').style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelarEdicionCliente() {
+    document.getElementById('formCliente').reset();
+    document.getElementById('clienteId').value = '';
+    document.getElementById('tituloFormCliente').textContent = 'Nuevo cliente';
+    document.getElementById('btnGuardarCliente').textContent = 'Guardar cliente';
+    document.getElementById('btnCancelarCliente').style.display = 'none';
+  }
+
+  function confirmarEliminarCliente(id) {
+    if (!confirm('¿Está seguro de eliminar este cliente? Esta acción no se puede deshacer.')) return;
+    mostrarCargaZona('tablaClientes', 'Eliminando cliente…');
+    google.script.run
+      .withSuccessHandler(function(respuesta) {
+        ocultarCargaZona('tablaClientes');
+        if (sesionInvalida(respuesta)) return;
+        if (respuesta.exito) {
+          mostrarToast(respuesta.mensaje, 'exito');
+          Estado.clientes = (Estado.clientes || []).filter(function(c) {
+            return String(c.ID_Cliente) !== String(id);
+          });
+          if (document.getElementById('tablaClientes')) {
+            renderTablaClientes(document.getElementById('buscarCliente').value);
+          }
+        } else {
+          mostrarToast(respuesta.mensaje, 'error');
+        }
+      })
+      .withFailureHandler(function(err) { ocultarCargaZona('tablaClientes'); mostrarToast('Error: ' + err.message, 'error'); })
+      .eliminarCliente(tokenSesion(), id);
+  }
+
+  function llenarSelectClientes(idSelect) {
+    var sel = document.getElementById(idSelect);
+    if (!sel) return;
+    var opciones = '<option value="">— Todos los clientes —</option>';
+    Estado.clientes.forEach(function(c) {
+      opciones += '<option value="' + esc(c.ID_Cliente) + '">' +
+        esc((c.Nombre + ' ' + (c.Apellido || '')).trim()) + '</option>';
+    });
+    sel.innerHTML = opciones;
+  }
+
+  /* ==========================================================
+     VISTA: SERVICIOS (catálogo, solo admin edita)
+     ========================================================== */
+
+  function esAdminSesion() {
+    var s = obtenerSesion();
+    return !!s && s.rol === 'administrador';
+  }
+
+  function initServicios() {
+    var esAdmin = esAdminSesion();
+    var tarjetaForm = document.getElementById('tarjetaFormServicio');
+    if (tarjetaForm) tarjetaForm.style.display = esAdmin ? 'block' : 'none';
+    var thAcciones = document.getElementById('thAccionesServicio');
+    if (thAcciones) thAcciones.style.display = esAdmin ? '' : 'none';
+
+    if (esAdmin) {
+      document.getElementById('formServicio').addEventListener('submit', guardarServicio);
+      document.getElementById('btnCancelarServicio').addEventListener('click', cancelarEdicionServicio);
+    }
+
+    cargarServicios(true);
+    iniciarGestionReservas();
+  }
+
+  // Formatea un número como dinero ("$ 1,234.50").
+  function formatoMoneda(n) {
+    n = parseFloat(n) || 0;
+    return '$ ' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  function cargarServicios(forzar, callback) {
+    var tbody = document.getElementById('tablaServicios');
+    if (forzar) Estado.serviciosCargados = false;
+    if (Estado.serviciosCargados) {
+      if (tbody) renderTablaServicios();
+      if (typeof callback === 'function') callback();
+      return;
+    }
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="cargando">Cargando…</td></tr>';
+    google.script.run
+      .withSuccessHandler(function(servicios) {
+        if (sesionInvalida(servicios)) { if (typeof callback === 'function') callback(); return; }
+        if (servicios && servicios.exito === false) {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="vacio">' + esc(servicios.mensaje || 'No se pudieron cargar los servicios.') + '</td></tr>';
+          if (typeof callback === 'function') callback();
+          return;
+        }
+        Estado.servicios = servicios || [];
+        Estado.serviciosCargados = true;
+        if (tbody) renderTablaServicios();
+        if (typeof callback === 'function') callback();
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="vacio">Error al cargar servicios.</td></tr>';
+        mostrarToast(err.message, 'error');
+        if (typeof callback === 'function') callback();
+      })
+      .obtenerServicios(tokenSesion());
+  }
+
+  function renderTablaServicios() {
+    var tbody = document.getElementById('tablaServicios');
+    if (!tbody) return;
+    var esAdmin = esAdminSesion();
+    var lista = Estado.servicios || [];
+    if (lista.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="' + (esAdmin ? 6 : 5) + '" class="vacio">No hay servicios registrados.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(function(s) {
+      var estado = String(s.Activo || 'SI').toUpperCase() === 'NO' ? 'Inactivo' : 'Activo';
+      var claseEt = estado === 'Activo' ? 'etiqueta-programada' : 'etiqueta-expirada';
+      var acciones = esAdmin
+        ? '<button class="btn btn-secundario btn-pequeno" onclick="editarServicio(\'' + esc(s.ID_Servicio) + '\')">Editar</button>' +
+          '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarServicio(\'' + esc(s.ID_Servicio) + '\')">Eliminar</button>'
+        : '<span class="vacio-accion">—</span>';
+      return '<tr>' +
+        '<td>' + esc(s.Nombre) + '</td>' +
+        '<td>' + formatoMoneda(s.Precio) + '</td>' +
+        '<td>' + esc(s.Duracion_Mins) + ' min</td>' +
+        '<td class="col-wrap">' + esc(s.Descripcion) + '</td>' +
+        '<td><span class="etiqueta ' + claseEt + '">' + esc(estado) + '</span></td>' +
+        '<td class="acciones-fila">' + acciones + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function guardarServicio(e) {
+    e.preventDefault();
+    var id = document.getElementById('servicioId').value;
+    var datos = {
+      nombre: document.getElementById('ser_nombre').value.trim(),
+      precio: document.getElementById('ser_precio').value,
+      duracionMins: document.getElementById('ser_duracion').value,
+      descripcion: document.getElementById('ser_descripcion').value.trim(),
+      activo: document.getElementById('ser_activo').value
+    };
+    if (!datos.nombre) {
+      mostrarToast('El nombre del servicio es obligatorio.', 'error');
+      return;
+    }
+    var precio = parseFloat(datos.precio);
+    if (isNaN(precio) || precio < 0) {
+      mostrarToast('Ingrese un precio válido (mayor o igual a 0).', 'error');
+      return;
+    }
+
+    var btn = document.getElementById('btnGuardarServicio');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    mostrarCargaZona('tablaServicios', id ? 'Actualizando servicio…' : 'Guardando servicio…');
+
+    var manejador = function(respuesta) {
+      btn.disabled = false;
+      btn.textContent = id ? 'Actualizar servicio' : 'Guardar servicio';
+      ocultarCargaZona('tablaServicios');
+      if (sesionInvalida(respuesta)) return;
+      if (respuesta.exito) {
+        mostrarToast(respuesta.mensaje, 'exito');
+        cancelarEdicionServicio();
+        if (id) {
+          actualizarServicioLocal(id, datos);
+        } else if (respuesta.id) {
+          Estado.servicios.push({
+            ID_Servicio: respuesta.id,
+            Nombre: datos.nombre,
+            Precio: precio,
+            Duracion_Mins: parseInt(datos.duracionMins, 10) || 60,
+            Descripcion: datos.descripcion,
+            Activo: datos.activo
+          });
+        }
+        renderTablaServicios();
+      } else {
+        mostrarToast(respuesta.mensaje, 'error');
+      }
+    };
+
+    if (id) {
+      google.script.run.withSuccessHandler(manejador)
+        .withFailureHandler(function(err) { manejador({ exito: false, mensaje: err.message }); })
+        .actualizarServicio(tokenSesion(), id, datos);
+    } else {
+      google.script.run.withSuccessHandler(manejador)
+        .withFailureHandler(function(err) { manejador({ exito: false, mensaje: err.message }); })
+        .agregarServicio(tokenSesion(), datos);
+    }
+  }
+
+  function actualizarServicioLocal(id, datos) {
+    (Estado.servicios || []).forEach(function(s) {
+      if (String(s.ID_Servicio) === String(id)) {
+        s.Nombre = datos.nombre || '';
+        s.Precio = parseFloat(datos.precio) || 0;
+        s.Duracion_Mins = parseInt(datos.duracionMins, 10) || 60;
+        s.Descripcion = datos.descripcion || '';
+        s.Activo = datos.activo || 'SI';
+      }
+    });
+  }
+
+  function editarServicio(id) {
+    var s = null;
+    (Estado.servicios || []).some(function(item) {
+      if (String(item.ID_Servicio) === String(id)) { s = item; return true; }
+      return false;
+    });
+    if (!s) {
+      mostrarToast('No se encontró el servicio indicado.', 'error');
+      return;
+    }
+    document.getElementById('servicioId').value = s.ID_Servicio;
+    setVal('ser_nombre', s.Nombre || '');
+    setVal('ser_precio', s.Precio || '');
+    setVal('ser_duracion', s.Duracion_Mins || 60);
+    setVal('ser_descripcion', s.Descripcion || '');
+    setVal('ser_activo', String(s.Activo || 'SI').toUpperCase() === 'NO' ? 'NO' : 'SI');
+    document.getElementById('tituloFormServicio').textContent = 'Editar servicio';
+    document.getElementById('btnGuardarServicio').textContent = 'Actualizar servicio';
+    document.getElementById('btnCancelarServicio').style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelarEdicionServicio() {
+    var form = document.getElementById('formServicio');
+    if (form) form.reset();
+    var idField = document.getElementById('servicioId');
+    if (idField) idField.value = '';
+    setVal('ser_duracion', 60);
+    setVal('ser_activo', 'SI');
+    document.getElementById('tituloFormServicio').textContent = 'Nuevo servicio';
+    document.getElementById('btnGuardarServicio').textContent = 'Guardar servicio';
+    document.getElementById('btnCancelarServicio').style.display = 'none';
+  }
+
+  function confirmarEliminarServicio(id) {
+    if (!confirm('¿Está seguro de eliminar este servicio? Esta acción no se puede deshacer.')) return;
+    mostrarCargaZona('tablaServicios', 'Eliminando servicio…');
+    google.script.run
+      .withSuccessHandler(function(respuesta) {
+        ocultarCargaZona('tablaServicios');
+        if (sesionInvalida(respuesta)) return;
+        if (respuesta.exito) {
+          mostrarToast(respuesta.mensaje, 'exito');
+          Estado.servicios = (Estado.servicios || []).filter(function(s) {
+            return String(s.ID_Servicio) !== String(id);
+          });
+          renderTablaServicios();
+        } else {
+          mostrarToast(respuesta.mensaje, 'error');
+        }
+      })
+      .withFailureHandler(function(err) { ocultarCargaZona('tablaServicios'); mostrarToast('Error: ' + err.message, 'error'); })
+      .eliminarServicio(tokenSesion(), id);
+  }
+
+  /* ==========================================================
+     VISTA: CITAS
+     ========================================================== */
+
+  function initCitas() {
+    document.getElementById('formCita').addEventListener('submit', guardarCita);
+    document.getElementById('btnCancelarCita').addEventListener('click', cancelarEdicionCita);
+    var inputDur = document.getElementById('cita_duracion');
+    if (inputDur) inputDur.value = Estado.config.duracionCitaPredeterminada || 60;
+    document.getElementById('buscarCita').addEventListener('input', debounce(aplicarFiltrosCitas, 250));
+    document.getElementById('filtroEstadoCita').addEventListener('change', aplicarFiltrosCitas);
+    // Se cargan los clientes primero y, al terminar, se llenan el selector y se
+    // cargan las citas. Así la columna "Cliente" siempre tiene los nombres al
+    // dibujarse (evita mostrar "—" por cargar citas antes que clientes).
+    cargarClientes(function() {
+      llenarSelectClientes('cita_cliente');
+      cargarCitas();
+    });
+    // Cargar el catálogo de servicios para que el usuario elija al agendar.
+    cargarServicios(true, renderServiciosCita);
+
+    // Re-rendiza las citas de forma automática: así una cita que había estado
+    // "Programada" pasa a "Expirada" nada más cumplirse su hora de fin, sin
+    // tener que recargar o cambiar de pantalla.
+    if (window._intervaloCitas) clearInterval(window._intervaloCitas);
+    window._intervaloCitas = setInterval(function() {
+      if (document.hidden) return; // No re-renderizar con la pestaña oculta.
+      var firma = firmaCitasVigentes();
+      if (firma !== window._firmaCitas) aplicarFiltrosCitas();
+    }, 30000);
+  }
+
+  // Dibuja el selector de servicios en el formulario de citas. La duración se
+  // calcula a partir de los servicios marcados (no la elige el usuario).
+  function renderServiciosCita() {
+    var cont = document.getElementById('cita_servicios');
+    if (!cont) return;
+    var lista = Estado.servicios || [];
+    var activos = lista.filter(function(s) {
+      return String(s.Activo || 'SI').toUpperCase() !== 'NO';
+    });
+    if (activos.length === 0) {
+      cont.innerHTML = '<p class="vacio-accion">No hay servicios activos.</p>';
+      calcularDuracionCita();
+      return;
+    }
+    cont.innerHTML = activos.map(function(s) {
+      return '<div class="fila-servicio-cita">' +
+        '<label class="servicio-chk"><input type="checkbox" class="serv-cita" value="' + esc(s.ID_Servicio) +
+        '" data-dur="' + esc(s.Duracion_Mins) + '"> ' + esc(s.Nombre) + ' (' + formatoMoneda(s.Precio) +
+        ' · ' + esc(s.Duracion_Mins) + ' min)</label>' +
+        '<input type="number" class="serv-cant-cita" min="1" step="1" value="1" style="width:64px;">' +
+        '</div>';
+    }).join('');
+    var checks = cont.querySelectorAll('.serv-cita');
+    for (var i = 0; i < checks.length; i++) {
+      checks[i].addEventListener('change', calcularDuracionCita);
+    }
+    var cants = cont.querySelectorAll('.serv-cant-cita');
+    for (var j = 0; j < cants.length; j++) {
+      cants[j].addEventListener('input', calcularDuracionCita);
+    }
+    calcularDuracionCita();
+  }
+
+  // Suma las duraciones de los servicios marcados y actualiza el campo oculto
+  // de duración y el texto visible.
+  function calcularDuracionCita() {
+    var cont = document.getElementById('cita_servicios');
+    var dur = 0;
+    if (cont) {
+      var checks = cont.querySelectorAll('.serv-cita');
+      for (var i = 0; i < checks.length; i++) {
+        if (checks[i].checked) {
+          var mins = parseInt(checks[i].getAttribute('data-dur'), 10) || 0;
+          var cantInput = checks[i].parentNode.parentNode.querySelector('.serv-cant-cita');
+          var cant = parseInt(cantInput ? cantInput.value : '1', 10) || 1;
+          if (cant < 1) cant = 1;
+          dur += mins * cant;
+        }
+      }
+    }
+    var input = document.getElementById('cita_duracion');
+    var base = (Estado.config && Estado.config.duracionCitaPredeterminada) || 60;
+    if (input) input.value = dur > 0 ? dur : base;
+    var mostrar = document.getElementById('cita_duracion_mostrar');
+    if (mostrar) mostrar.textContent = 'Duración: ' + (input ? input.value : base) + ' min';
+  }
+
+  // Devuelve los servicios seleccionados como [{ id, cantidad }].
+  function obtenerServiciosCita() {
+    var cont = document.getElementById('cita_servicios');
+    var arr = [];
+    if (cont) {
+      var checks = cont.querySelectorAll('.serv-cita');
+      for (var i = 0; i < checks.length; i++) {
+        if (checks[i].checked) {
+          var cantInput = checks[i].parentNode.parentNode.querySelector('.serv-cant-cita');
+          var cant = parseInt(cantInput ? cantInput.value : '1', 10) || 1;
+          if (cant < 1) cant = 1;
+          arr.push({ id: checks[i].value, cantidad: cant });
+        }
+      }
+    }
+    return arr;
+  }
+
+  // Pre-marca los servicios al editar una cita existente (desde su JSON).
+  function marcarServiciosCita(jsonServicios) {
+    var cont = document.getElementById('cita_servicios');
+    if (!cont) return;
+    var sel = {};
+    try {
+      var arr = JSON.parse(jsonServicios || '[]');
+      arr.forEach(function(it) { sel[String(it.id)] = it.cantidad || 1; });
+    } catch (e) {}
+    var checks = cont.querySelectorAll('.serv-cita');
+    for (var i = 0; i < checks.length; i++) {
+      var id = checks[i].value;
+      if (sel[id]) {
+        checks[i].checked = true;
+        var cantInput = checks[i].parentNode.parentNode.querySelector('.serv-cant-cita');
+        if (cantInput) cantInput.value = sel[id];
+      } else {
+        checks[i].checked = false;
+      }
+    }
+    calcularDuracionCita();
+  }
+
+  // Aplica el buscador y el filtro por estado sobre las citas cargadas.
+  function aplicarFiltrosCitas() {
+    var tbody = document.getElementById('tablaCitas');
+    if (!tbody) return;
+    var term = (document.getElementById('buscarCita').value || '').toLowerCase();
+    var est = document.getElementById('filtroEstadoCita').value;
+    var lista = (Estado.citas || []).filter(function(c) {
+      if (est && estadoVigenteCita(c).estado !== est) return false;
+      if (term) {
+        var texto = (c.Titulo + ' ' + nombreCliente(c.ID_Cliente)).toLowerCase();
+        if (texto.indexOf(term) === -1) return false;
+      }
+      return true;
+    });
+    dibujarCitas(tbody, lista);
+  }
+
+  // Estado "vigente" de una cita: si está Programada y su hora de fin ya pasó,
+  // se muestra como Expirada (aún así se puede marcar como completada manualmente).
+  function estadoVigenteCita(c) {
+    var est = String(c.Estado || 'Programada');
+    if (est === 'Completada') {
+      return { estado: 'Completada', completada: true, expirada: false, bloqueada: false };
+    }
+    if (est === 'Expirada') {
+      return { estado: 'Expirada', completada: false, expirada: true, bloqueada: false };
+    }
+    var fin = finCitaDate(c.Fecha, c.Hora, c.Duracion_Mins);
+    var vencida = fin ? (fin.getTime() < Date.now()) : false;
+    if (vencida) {
+      return { estado: 'Expirada', completada: false, expirada: true, bloqueada: false };
+    }
+    return { estado: 'Programada', completada: false, expirada: false, bloqueada: false };
+  }
+
+  // Fecha (timestamp) en que termina la cita: fecha + hora + duración.
+  function finCitaDate(fecha, hora, durMin) {
+    var f = fechaLegible(fecha);
+    var h = horaLegible(hora);
+    if (!f || !h) return null;
+    var pf = f.split('-');
+    var ph = h.split(':');
+    if (pf.length !== 3 || ph.length !== 2) return null;
+    var d = new Date(
+      parseInt(pf[0], 10),
+      parseInt(pf[1], 10) - 1,
+      parseInt(pf[2], 10),
+      parseInt(ph[0], 10),
+      parseInt(ph[1], 10), 0);
+    var mins = parseInt(durMin, 10) || 0;
+    return new Date(d.getTime() + mins * 60000);
+  }
+
+  // Firma que cambia cuando cambia el estado vigente (p. ej. una cita expira).
+  function firmaCitasVigentes() {
+    return (Estado.citas || []).map(function(c) {
+      return c.ID_Cita + ':' + String(c.Estado) + ':' + estadoVigenteCita(c).estado;
+    }).join('|');
+  }
+
+  function cargarCitas(forzar, callback) {
+    var tbody = document.getElementById('tablaCitas');
+    if (forzar) Estado.citasCargados = false;
+    if (Estado.citasCargados) {
+      aplicarFiltrosCitas();
+      if (typeof callback === 'function') callback();
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(citas) {
+        if (sesionInvalida(citas)) { if (typeof callback === 'function') callback(); return; }
+        Estado.citas = citas || [];
+        Estado.citasCargados = true;
+        aplicarFiltrosCitas();
+        if (typeof callback === 'function') callback();
+      })
+      .withFailureHandler(function(err) {
+        tbody.innerHTML = '<tr><td colspan="11" class="vacio">Error al cargar citas.</td></tr>';
+        mostrarToast(err.message, 'error');
+        if (typeof callback === 'function') callback();
+      })
+      .obtenerCitas(tokenSesion());
+  }
+
+  // Devuelve solo la parte de fecha (quita " 00:00") de un valor leído.
+  function fechaLegible(f) {
+    f = String(f || '');
+    var m = f.match(/^(\d{4}-\d{2}-\d{2})(?: 00:00)?$/);
+    return m ? m[1] : f;
+  }
+
+  // Devuelve solo la hora (HH:mm) si un valor trae fecha base (1899-12-30).
+  function horaLegible(h) {
+    h = String(h || '');
+    var m = h.match(/\d{2}:\d{2}$/);
+    return m ? m[0] : h;
+  }
+
+  // Convierte "HH:mm" a minutos desde las 00:00 (0 si no es válido).
+  function horaAMin(h) {
+    var m = String(h || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return 0;
+    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  }
+
+  // Comprueba (solo en el cliente) si una cita [hora, hora+duración) de una
+  // fecha choca con otra ya registrada. "exceptoId" ignora la cita en edición.
+  function citaChocaLocal(fecha, hora, duracion, exceptoId) {
+    var inicio = horaAMin(hora);
+    var fin = inicio + (parseInt(duracion, 10) || 60);
+    var citas = Estado.citas || [];
+    for (var i = 0; i < citas.length; i++) {
+      var c = citas[i];
+      if (exceptoId && String(c.ID_Cita) === String(exceptoId)) continue;
+      var est = String(c.Estado || '');
+      if (est === 'Completada' || est === 'Cancelada') continue;
+      if (fechaLegible(c.Fecha) !== String(fecha)) continue;
+      var cIni = horaAMin(horaLegible(c.Hora));
+      var cFin = cIni + (parseInt(c.Duracion_Mins, 10) || 60);
+      if (inicio < cFin && fin > cIni) return true;
+    }
+    return false;
+  }
+
+  // Devuelve la hora en formato de 12 horas (h:mm AM/PM).
+  function hora12(h) {
+    h = horaLegible(h);
+    var m = h.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return h;
+    var hh = parseInt(m[1], 10);
+    var mm = m[2];
+    var suf = hh >= 12 ? 'PM' : 'AM';
+    var h12 = hh % 12;
+    if (h12 === 0) h12 = 12;
+    return h12 + ':' + mm + ' ' + suf;
+  }
+
+  // Convierte una fecha "yyyy-MM-dd" (con o sin hora al final) a "dd-MM-yyyy",
+// mostrando la parte de hora (si viene) en formato de 12 horas (h:mm AM/PM).
+  function fechaDMY(f) {
+    f = String(f || '');
+    var m = f.match(/^(\d{4})-(\d{2})-(\d{2})(.*)$/);
+    if (!m) return f;
+    var resto = m[4] || '';
+    var tm = resto.match(/(\d{1,2}):(\d{2})$/);
+    if (tm) {
+      resto = resto.replace(tm[0], hora12(tm[0]));
+    }
+    return m[3] + '-' + m[2] + '-' + m[1] + resto;
+  }
+
+  function dibujarCitas(tbody, citas) {
+    var esAdmin = esAdminSesion();
+    if (!citas || citas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="11" class="vacio">No hay ' +
+        minuscInicial(etCitas()) + ' registradas.</td></tr>';
+      return;
+    }
+    // Ordenar por fecha y hora.
+    citas.sort(function(a, b) {
+      return (fechaLegible(a.Fecha) + horaLegible(a.Hora)).localeCompare(
+        fechaLegible(b.Fecha) + horaLegible(b.Hora));
+    });
+    window._citasActuales = citas;
+    window._firmaCitas = firmaCitasVigentes();
+    tbody.innerHTML = citas.map(function(c) {
+      var info = estadoVigenteCita(c);
+      var estado = info.estado;
+      var claseEt = estado === 'Completada' ? 'etiqueta-completada' :
+                    (estado === 'Expirada' ? 'etiqueta-expirada' : 'etiqueta-programada');
+      var filaClase = estado === 'Completada' ? ' class="fila-completada"' :
+                      (estado === 'Expirada' ? ' class="fila-expirada"' : '');
+      var chk = '<input type="checkbox" class="check-completar" title="Marcar como completada" ' +
+        (info.completada ? 'checked ' : '') +
+        (info.completada || info.bloqueada ? 'disabled ' : '') +
+        'onchange="cambiarEstadoCita(\'' + esc(c.ID_Cita) + '\', this.checked ? \'Completada\' : \'Programada\')">';
+      return '<tr' + filaClase + '>' +
+        '<td class="col-check">' + chk + '</td>' +
+        '<td>' + esc(c.Titulo) + '</td>' +
+        (function() {
+          var nomCli = nombreCliente(c.ID_Cliente);
+          return '<td class="col-cliente" title="' + esc(nomCli) + '">' + esc(nomCli) + '</td>';
+        })() +
+        '<td>' + esc(c.Agendado_Por || (c.Descripcion && c.Descripcion.indexOf('Reservada') === 0 ? 'Cliente (en línea)' : '')) + '</td>' +
+        '<td>' + esc(fechaDMY(fechaLegible(c.Fecha))) + '</td>' +
+        '<td>' + esc(hora12(c.Hora)) + '</td>' +
+        '<td>' + esc(c.Duracion_Mins) + ' min</td>' +
+        '<td>' + (c.Total_Precio ? formatoMoneda(c.Total_Precio) : '<span class="vacio-accion">&mdash;</span>') + '</td>' +
+        (function() {
+          var srvTxt = '';
+          var srvTitle = '';
+          try {
+            var srv = JSON.parse(c.Servicios || '[]') || [];
+            if (srv.length) {
+              srvTxt = srv.map(function(s) {
+                return esc(s.nombre || 'Servicio') + (s.cantidad > 1 ? ' ×' + s.cantidad : '');
+              }).join(', ');
+              srvTitle = srv.map(function(s) {
+                return (s.nombre || 'Servicio') + (s.cantidad > 1 ? ' ×' + s.cantidad : '');
+              }).join(', ');
+            }
+          } catch (e) {}
+          if (!srvTxt) { srvTxt = '<span class="vacio-accion">&mdash;</span>'; srvTitle = 'Sin servicios'; }
+          return '<td class="col-servicios" title="' + esc(srvTitle) + '">' + srvTxt + '</td>';
+        })() +
+        '<td class="col-estado"><span class="etiqueta ' + claseEt + '">' + esc(estado) + '</span></td>' +
+        '<td class="acciones-fila">' +
+          '<button class="btn btn-secundario btn-pequeno" onclick="editarCita(\'' + esc(c.ID_Cita) + '\')">Editar</button>' +
+          (esAdmin ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarCita(\'' + esc(c.ID_Cita) + '\')">Eliminar</button>' : '') +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function guardarCita(e) {
+    e.preventDefault();
+    var id = document.getElementById('citaId').value;
+    var datos = {
+      idCliente: document.getElementById('cita_cliente').value,
+      titulo: document.getElementById('cita_titulo').value.trim(),
+      fecha: document.getElementById('cita_fecha').value,
+      hora: document.getElementById('cita_hora').value,
+      duracionMins: document.getElementById('cita_duracion').value,
+      descripcion: document.getElementById('cita_descripcion').value.trim(),
+      servicios: obtenerServiciosCita()
+    };
+    // Enviar correo/nombre del cliente para que el servidor no tenga que releer
+    // toda la hoja Clientes al enviar la confirmación (rendimiento).
+    for (var i = 0; i < Estado.clientes.length; i++) {
+      if (String(Estado.clientes[i].ID_Cliente) === String(datos.idCliente)) {
+        var c = Estado.clientes[i];
+        datos.emailCliente = c.Email || '';
+        datos.nombreCliente = (c.Nombre + ' ' + (c.Apellido || '')).trim();
+        break;
+      }
+    }
+    if (!datos.idCliente || !datos.titulo || !datos.fecha || !datos.hora) {
+      mostrarToast('Complete los campos obligatorios.', 'error');
+      return;
+    }
+
+    // Aviso rápido de superposición con otra cita del mismo día.
+    if (citaChocaLocal(datos.fecha, datos.hora, datos.duracionMins, id || '')) {
+      mostrarToast('Ya existe ' + articuloEtiqueta(etCita()) + ' ' + minuscInicial(etCita()) + ' en ese horario. Elija otra hora.', 'error');
+      return;
+    }
+
+    // Aviso no bloqueante: si el negocio ofrece servicios pero la cita no tiene ninguno.
+    if ((Estado.servicios || []).length > 0 && (obtenerServiciosCita() || []).length === 0) {
+      mostrarToast('Aviso: ' + articuloEtiqueta(etCita()) + ' ' + minuscInicial(etCita()) + ' no tiene servicios.', 'aviso');
+    }
+
+    var btn = document.getElementById('btnGuardarCita');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    mostrarCargaZona('tablaCitas', id ? 'Actualizando ' + minuscInicial(etCita()) + '…' : 'Agendando ' + minuscInicial(etCita()) + '…');
+
+    var manejador = function(respuesta) {
+      btn.disabled = false;
+      btn.textContent = id ? 'Actualizar cita' : 'Agendar cita';
+      ocultarCargaZona('tablaCitas');
+      if (sesionInvalida(respuesta)) return;
+      if (respuesta.exito) {
+        mostrarToast(respuesta.mensaje, 'exito');
+        cancelarEdicionCita();
+        if (id) {
+          actualizarCitaLocal(id, datos);
+        } else if (respuesta.id) {
+          var srvLocal = (datos.servicios || []).map(function(s) {
+            var def = (Estado.servicios || []).filter(function(x) {
+              return String(x.ID_Servicio) === String(s.id);
+            })[0];
+            var precio = def ? (parseFloat(def.Precio) || 0) : 0;
+            var cant = s.cantidad || 1;
+            return {
+              id: s.id, nombre: def ? def.Nombre : 'Servicio',
+              precio: precio, cantidad: cant, subtotal: precio * cant,
+              duracionMins: def ? def.Duracion_Mins : 0
+            };
+          });
+          var totalLocal = srvLocal.reduce(function(a, s) { return a + (s.subtotal || 0); }, 0);
+          Estado.citas.push({
+            ID_Cita: respuesta.id,
+            ID_Cliente: datos.idCliente || '',
+            Titulo: datos.titulo || '',
+            Fecha: String(datos.fecha || ''),
+            Hora: String(datos.hora || ''),
+            Duracion_Mins: parseInt(datos.duracionMins, 10) || 60,
+            Descripcion: datos.descripcion || '',
+            Estado: 'Programada',
+            Agendado_Por: (obtenerSesion() && obtenerSesion().nombre) || '',
+            Servicios: JSON.stringify(srvLocal),
+            Total_Precio: totalLocal
+          });
+        }
+        aplicarFiltrosCitas();
+      } else {
+        mostrarToast(respuesta.mensaje, 'error');
+      }
+    };
+
+    if (id) {
+      google.script.run.withSuccessHandler(manejador)
+        .withFailureHandler(function(err) { manejador({ exito: false, mensaje: err.message }); })
+        .actualizarCita(tokenSesion(), id, datos);
+    } else {
+      google.script.run.withSuccessHandler(manejador)
+        .withFailureHandler(function(err) { manejador({ exito: false, mensaje: err.message }); })
+        .agendarCita(tokenSesion(), datos);
+    }
+  }
+
+  // Refleja la edición de una cita en la caché local sin recargar del servidor.
+  function actualizarCitaLocal(id, datos) {
+    (Estado.citas || []).forEach(function(c) {
+      if (String(c.ID_Cita) === String(id)) {
+        c.ID_Cliente = datos.idCliente || '';
+        c.Titulo = datos.titulo || '';
+        c.Fecha = String(datos.fecha || '');
+        c.Hora = String(datos.hora || '');
+        c.Duracion_Mins = parseInt(datos.duracionMins, 10) || 60;
+        c.Descripcion = datos.descripcion || '';
+        var srvLocal = (datos.servicios || []).map(function(s) {
+          var def = (Estado.servicios || []).filter(function(x) {
+            return String(x.ID_Servicio) === String(s.id);
+          })[0];
+          var precio = def ? (parseFloat(def.Precio) || 0) : 0;
+          var cant = s.cantidad || 1;
+          return {
+            id: s.id, nombre: def ? def.Nombre : 'Servicio',
+            precio: precio, cantidad: cant, subtotal: precio * cant,
+            duracionMins: def ? def.Duracion_Mins : 0
+          };
+        });
+        c.Servicios = JSON.stringify(srvLocal);
+        c.Total_Precio = srvLocal.reduce(function(a, s) { return a + (s.subtotal || 0); }, 0);
+      }
+    });
+  }
+
+  function editarCita(id) {
+    var c = (window._citasActuales || []).filter(function(x) { return String(x.ID_Cita) === String(id); })[0];
+    if (!c) return;
+    document.getElementById('citaId').value = c.ID_Cita;
+    document.getElementById('cita_cliente').value = c.ID_Cliente || '';
+    document.getElementById('cita_titulo').value = c.Titulo || '';
+    document.getElementById('cita_fecha').value = fechaLegible(c.Fecha);
+    document.getElementById('cita_hora').value = horaLegible(c.Hora);
+    document.getElementById('cita_duracion').value = c.Duracion_Mins || 60;
+    document.getElementById('cita_descripcion').value = c.Descripcion || '';
+    marcarServiciosCita(c.Servicios);
+    document.getElementById('tituloFormCita').textContent = 'Editar ' + minuscInicial(etCita());
+    document.getElementById('btnGuardarCita').textContent = 'Actualizar cita';
+    document.getElementById('btnCancelarCita').style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelarEdicionCita() {
+    var form = document.getElementById('formCita');
+    if (form) form.reset();
+    var idField = document.getElementById('citaId');
+    if (idField) idField.value = '';
+    var dur = document.getElementById('cita_duracion');
+    if (dur) dur.value = Estado.config.duracionCitaPredeterminada || 60;
+    var contSer = document.getElementById('cita_servicios');
+    if (contSer) {
+      var chs = contSer.querySelectorAll('.serv-cita');
+      for (var k = 0; k < chs.length; k++) {
+        chs[k].checked = false;
+        var ci = chs[k].parentNode.parentNode.querySelector('.serv-cant-cita');
+        if (ci) ci.value = '1';
+      }
+    }
+    calcularDuracionCita();
+    var titulo = document.getElementById('tituloFormCita');
+    if (titulo) titulo.textContent = 'Agendar ' + (etiquetaFemenina(etCita()) ? 'nueva' : 'nuevo') + ' ' + minuscInicial(etCita());
+    var btn = document.getElementById('btnGuardarCita');
+    if (btn) btn.textContent = 'Agendar cita';
+    var btnCancelar = document.getElementById('btnCancelarCita');
+    if (btnCancelar) btnCancelar.style.display = 'none';
+  }
+
+  function cambiarEstadoCita(id, estado) {
+    mostrarCargaZona('tablaCitas', 'Actualizando estado ' + (etiquetaFemenina(etCita()) ? 'de la ' : 'del ') + minuscInicial(etCita()) + '…');
+    google.script.run
+      .withSuccessHandler(function(respuesta) {
+        ocultarCargaZona('tablaCitas');
+        if (sesionInvalida(respuesta)) return;
+        // Reflejar el cambio de inmediato en la caché local.
+        (Estado.citas || []).forEach(function(c) {
+          if (String(c.ID_Cita) === String(id)) c.Estado = estado;
+        });
+        if (respuesta && respuesta.exito) {
+          mostrarToast(respuesta.mensaje, 'exito');
+          aplicarFiltrosCitas();
+        } else {
+          mostrarToast((respuesta && respuesta.mensaje) || 'No se pudo cambiar el estado.', 'error');
+          cargarCitas(true);
+        }
+      })
+      .withFailureHandler(function(err) {
+        ocultarCargaZona('tablaCitas');
+        mostrarToast('Error: ' + err.message, 'error');
+        cargarCitas(true);
+      })
+      .cambiarEstadoCita(tokenSesion(), id, estado);
+  }
+
+  function confirmarEliminarCita(id) {
+    if (!confirm('¿Está seguro de eliminar esta cita? El evento de Google Calendar también se eliminará.')) return;
+    mostrarCargaZona('tablaCitas', 'Eliminando ' + minuscInicial(etCita()) + '…');
+    google.script.run
+      .withSuccessHandler(function(respuesta) {
+        ocultarCargaZona('tablaCitas');
+        if (sesionInvalida(respuesta)) return;
+        if (respuesta && respuesta.exito) {
+          mostrarToast(respuesta.mensaje, 'exito');
+          Estado.citas = (Estado.citas || []).filter(function(c) {
+            return String(c.ID_Cita) !== String(id);
+          });
+          aplicarFiltrosCitas();
+        } else {
+          mostrarToast((respuesta && respuesta.mensaje) || 'No se pudo eliminar la cita.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) { ocultarCargaZona('tablaCitas'); mostrarToast('Error: ' + err.message, 'error'); })
+      .eliminarCita(tokenSesion(), id);
+  }
+
+  /* ==========================================================
+     VISTA: HISTORIAL
+     ========================================================== */
+
+  function initHistorial() {
+    // Al entrar se descarta la caché para no mostrar historial viejo.
+    // Por defecto se muestra el historial de todos los clientes; el selector
+    // de cliente es un filtro opcional.
+    Estado.cacheHistorial = {};
+    var sel = document.getElementById('sel_cliente_historial');
+    sel.addEventListener('change', function() {
+      cargarHistorial(sel.value || '');
+      actualizarEtiquetaAlcanceExportar();
+    });
+    function _alCambiarFiltroHistorial() {
+      refrescarVistaHistorial();
+      actualizarEtiquetaAlcanceExportar();
+    }
+    document.getElementById('hist_fecha_desde').addEventListener('change', _alCambiarFiltroHistorial);
+    document.getElementById('hist_fecha_hasta').addEventListener('change', _alCambiarFiltroHistorial);
+    document.getElementById('hist_realizada_por').addEventListener('input', _alCambiarFiltroHistorial);
+    document.getElementById('btnExportarExcel').addEventListener('click', exportarExcel);
+    document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
+
+    var btnExp = document.getElementById('btnExportar');
+    var menuExp = document.getElementById('menuExportar');
+    if (btnExp && menuExp) {
+      btnExp.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var abierto = menuExp.style.display === 'block';
+        menuExp.style.display = abierto ? 'none' : 'block';
+        btnExp.setAttribute('aria-expanded', abierto ? 'false' : 'true');
+      });
+      if (!Estado._menuExportarGlobal) {
+        document.addEventListener('click', function(e) {
+          var m = document.getElementById('menuExportar');
+          var b = document.getElementById('btnExportar');
+          if (!m || m.style.display !== 'block') return;
+          if (!m.contains(e.target)) {
+            m.style.display = 'none';
+            if (b) b.setAttribute('aria-expanded', 'false');
+          }
+        });
+        Estado._menuExportarGlobal = true;
+      }
+    }
+    cargarClientes(function() {
+      llenarSelectClientes('sel_cliente_historial');
+      cargarHistorial('');
+      actualizarEtiquetaAlcanceExportar();
+    });
+  }
+
+  /* ==========================================================
+      VISTA: MONITOR DE ACTIVIDAD (exclusiva del dueño)
+      ========================================================== */
+
+  function initMonitor() {
+    // Poblar el filtro de usuarios desde el listado (el dueño es administrador).
+    var selU = document.getElementById('filtro_usuario_monitor');
+    if (selU && !selU.dataset.cargado) {
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          if (resp && resp.exito && resp.usuarios) {
+            resp.usuarios.forEach(function(u) {
+              var o = document.createElement('option');
+              o.value = u.usuario;
+              o.textContent = (u.nombre || u.usuario) + (u.principal ? ' (dueño)' : '');
+              selU.appendChild(o);
+            });
+          }
+          selU.dataset.cargado = '1';
+        })
+        .withFailureHandler(function() { selU.dataset.cargado = '1'; })
+        .listarUsuarios(tokenSesion());
+    }
+
+    function _alCambiarFiltroMonitor() { cargarActividad(true); }
+    document.getElementById('filtro_usuario_monitor').addEventListener('change', _alCambiarFiltroMonitor);
+    document.getElementById('filtro_modulo_monitor').addEventListener('change', _alCambiarFiltroMonitor);
+    document.getElementById('filtro_desde_monitor').addEventListener('change', _alCambiarFiltroMonitor);
+    document.getElementById('filtro_hasta_monitor').addEventListener('change', _alCambiarFiltroMonitor);
+
+    cargarActividad(false);
+  }
+
+  function cargarActividad(forzar, callback) {
+    var tbody = document.getElementById('tablaActividad');
+    if (!tbody) { if (typeof callback === 'function') callback(); return; }
+    tbody.innerHTML = '<tr><td colspan="6" class="cargando">Cargando…</td></tr>';
+
+    var filtros = {
+      usuario: (document.getElementById('filtro_usuario_monitor') || {}).value || '',
+      modulo: (document.getElementById('filtro_modulo_monitor') || {}).value || '',
+      desde: (document.getElementById('filtro_desde_monitor') || {}).value || '',
+      hasta: (document.getElementById('filtro_hasta_monitor') || {}).value || ''
+    };
+
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        if (sesionInvalida(resp)) { if (typeof callback === 'function') callback(); return; }
+        if (!resp || !resp.exito) {
+          tbody.innerHTML = '<tr><td colspan="6" class="vacio">' +
+            esc(resp && resp.mensaje ? resp.mensaje : 'No se pudo cargar la actividad.') + '</td></tr>';
+          if (typeof callback === 'function') callback();
+          return;
+        }
+        var act = resp.actividades || [];
+        if (act.length === 0) {
+          var msg = 'No hay actividad registrada.';
+          if (resp.total === 0) {
+            msg = 'Aún no hay actividades registradas. El monitor registra las acciones a partir de ahora: ' +
+                  'cree o edite un cliente, agende o cambie una cita, registre un usuario, etc., y aparecerán aquí.';
+          }
+          tbody.innerHTML = '<tr><td colspan="6" class="vacio">' + esc(msg) + '</td></tr>';
+          if (typeof callback === 'function') callback();
+          return;
+        }
+        function celda(v) { return v ? esc(String(v)) : '<span class="vacio-accion">&mdash;</span>'; }
+        tbody.innerHTML = act.map(function(a) {
+          return '<tr>' +
+            '<td>' + celda(a.Fecha) + '</td>' +
+            '<td>' + celda(a.Usuario) +
+              (a.Email && a.Email !== a.Usuario ? '<br><small>' + esc(a.Email) + '</small>' : '') + '</td>' +
+            '<td>' + celda(a.Rol) + '</td>' +
+            '<td>' + celda(a.Modulo) + '</td>' +
+            '<td>' + celda(a.Accion) + '</td>' +
+            '<td>' + celda(a.Detalle) + '</td>' +
+            '</tr>';
+        }).join('');
+        if (typeof callback === 'function') callback();
+      })
+      .withFailureHandler(function(err) {
+        tbody.innerHTML = '<tr><td colspan="6" class="vacio">Error al cargar la actividad.</td></tr>';
+        mostrarToast(err.message, 'error');
+        if (typeof callback === 'function') callback();
+      })
+      .obtenerActividad(tokenSesion(), filtros);
+  }
+
+  function cargarHistorial(idCliente, forzar, callback) {
+    var tbody = document.getElementById('tablaHistorial');
+    if (forzar) delete Estado.cacheHistorial[idCliente];
+    if (Object.prototype.hasOwnProperty.call(Estado.cacheHistorial, idCliente)) {
+      dibujarHistorial(tbody, Estado.cacheHistorial[idCliente]);
+      if (typeof callback === 'function') callback();
+      return;
+    }
+    tbody.innerHTML = '<tr><td colspan="8" class="cargando">Cargando…</td></tr>';
+    var continuar = function() {
+      google.script.run
+        .withSuccessHandler(function(registros) {
+          if (sesionInvalida(registros)) { if (typeof callback === 'function') callback(); return; }
+          Estado.cacheHistorial[idCliente] = registros || [];
+          mostrarHistorialFiltrado(tbody, registros || []);
+          if (typeof callback === 'function') callback();
+        })
+        .withFailureHandler(function(err) {
+          tbody.innerHTML = '<tr><td colspan="8" class="vacio">Error al cargar historial.</td></tr>';
+          mostrarToast(err.message, 'error');
+          if (typeof callback === 'function') callback();
+        })
+        .obtenerHistorial(tokenSesion(), idCliente);
+    };
+    if (Estado.citasCargados) continuar();
+    else cargarCitas(true, continuar);
+  }
+
+  function _datosFilaHistorial_(r, mapa) {
+    var cita = (r.ID_Cita && mapa) ? mapa[String(r.ID_Cita)] : null;
+    var cliente = nombreCliente(r.ID_Cliente);
+    var por = (cita && cita.Agendado_Por) ? String(cita.Agendado_Por) : '';
+    var fecha = fechaDMY(r.Fecha);
+    var descripcion = r.Descripcion || '';
+    var servicios = [];
+    if (cita && cita.Servicios) {
+      try {
+        var lista = JSON.parse(String(cita.Servicios || '[]'));
+        if (lista && lista.length) {
+          servicios = lista.map(function(it) {
+            return (it.cantidad || 1) + ' × ' + (it.nombre || 'Servicio');
+          });
+        }
+      } catch (eServ) {}
+    }
+    var total = (cita && cita.Total_Precio) ? formatoMoneda(cita.Total_Precio) : '';
+    var dur = (cita && cita.Duracion_Mins != null && cita.Duracion_Mins !== '') ? (cita.Duracion_Mins + ' min') : '';
+    var resultado = r.Resultado || '';
+    return {
+      cliente: cliente, por: por, fecha: fecha, descripcion: descripcion,
+      servicios: servicios, total: total, dur: dur, resultado: resultado
+    };
+  }
+
+  function _mapaCitas_() {
+    var mapa = {};
+    (Estado.citas || []).forEach(function(c) { if (c.ID_Cita) mapa[String(c.ID_Cita)] = c; });
+    return mapa;
+  }
+
+  function dibujarHistorial(tbody, registros) {
+    if (!registros || registros.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="vacio">No hay historial registrado.</td></tr>';
+      return;
+    }
+    var mapa = _mapaCitas_();
+    registros.sort(function(a, b) { return String(b.Fecha).localeCompare(String(a.Fecha)); });
+    tbody.innerHTML = registros.map(function(r) {
+      var d = _datosFilaHistorial_(r, mapa);
+      function celda(v) { return v ? esc(v) : '<span class="vacio-accion">&mdash;</span>'; }
+      var serviciosHtml = d.servicios.length
+        ? d.servicios.map(function(s) { return esc(s); }).join('<br>')
+        : '<span class="vacio-accion">&mdash;</span>';
+      return '<tr>' +
+        '<td>' + celda(d.cliente) + '</td>' +
+        '<td>' + celda(d.por) + '</td>' +
+        '<td>' + celda(d.fecha) + '</td>' +
+        '<td class="col-wrap">' + celda(d.descripcion) + '</td>' +
+        '<td>' + serviciosHtml + '</td>' +
+        '<td>' + celda(d.total) + '</td>' +
+        '<td>' + celda(d.dur) + '</td>' +
+        '<td>' + celda(d.resultado) + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function filtrarHistorial(registros) {
+    var desde = (document.getElementById('hist_fecha_desde').value || '').trim();
+    var hasta = (document.getElementById('hist_fecha_hasta').value || '').trim();
+    var rp = (document.getElementById('hist_realizada_por').value || '').trim().toLowerCase();
+    if (!registros) return [];
+    if (!desde && !hasta && !rp) return registros;
+    var mapa = _mapaCitas_();
+    return registros.filter(function(r) {
+      var f = String(r.Fecha || '').slice(0, 10);
+      if (desde && f < desde) return false;
+      if (hasta && f > hasta) return false;
+      if (rp) {
+        var cita = r.ID_Cita ? mapa[String(r.ID_Cita)] : null;
+        var por = (cita && cita.Agendado_Por) ? String(cita.Agendado_Por).toLowerCase() : '';
+        if (por.indexOf(rp) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function mostrarHistorialFiltrado(tbody, registros) {
+    dibujarHistorial(tbody, filtrarHistorial(registros));
+  }
+
+  function refrescarVistaHistorial() {
+    var id = document.getElementById('sel_cliente_historial').value || '';
+    var tbody = document.getElementById('tablaHistorial');
+    if (Object.prototype.hasOwnProperty.call(Estado.cacheHistorial, id)) {
+      mostrarHistorialFiltrado(tbody, Estado.cacheHistorial[id]);
+    } else {
+      cargarHistorial(id);
+    }
+  }
+
+  function _encabezadosHistorial_() {
+    return ['Cliente', 'Realizada por', 'Fecha', 'Descripción', 'Servicios', 'Total', 'Duración', 'Resultado'];
+  }
+
+  function _filaPlana_(r, mapa) {
+    var d = _datosFilaHistorial_(r, mapa || _mapaCitas_());
+    return [d.cliente, d.por, d.fecha, d.descripcion, d.servicios.join(' / '), d.total, d.dur, d.resultado];
+  }
+
+  function _celdaCSV_(v) {
+    v = (v == null) ? '' : String(v);
+    if (/[",\r\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+    return v;
+  }
+
+  function _descargarBlob_(blob, nombre) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
+  }
+
+  function cerrarMenuExportar() {
+    var m = document.getElementById('menuExportar');
+    var b = document.getElementById('btnExportar');
+    if (m) m.style.display = 'none';
+    if (b) b.setAttribute('aria-expanded', 'false');
+  }
+
+  function _describirAlcanceExportar_() {
+    var idCliente = (document.getElementById('sel_cliente_historial') || {}).value || '';
+    var partes = [];
+    partes.push(idCliente ? ('historial de «' + (nombreCliente(idCliente) || 'cliente seleccionado') + '»') : 'todo el historial');
+    var desde = (document.getElementById('hist_fecha_desde').value || '').trim();
+    var hasta = (document.getElementById('hist_fecha_hasta').value || '').trim();
+    if (desde || hasta) {
+      partes.push('desde ' + (desde || '…') + ' hasta ' + (hasta || '…'));
+    }
+    var rp = (document.getElementById('hist_realizada_por').value || '').trim();
+    if (rp) partes.push('realizada por: ' + rp);
+    return partes.join(' · ');
+  }
+
+  function _slugNombreCliente_(idCliente) {
+    var n = (nombreCliente(idCliente) || 'cliente').toLowerCase();
+    n = n.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return n || 'cliente';
+  }
+
+  function _nombreArchivoExportar_(ext) {
+    var idCliente = (document.getElementById('sel_cliente_historial') || {}).value || '';
+    var sufijo = idCliente ? ('cliente_' + _slugNombreCliente_(idCliente)) : 'todos';
+    return 'historial_' + sufijo + '.' + ext;
+  }
+
+  function actualizarEtiquetaAlcanceExportar() {
+    var el = document.getElementById('etiquetaAlcanceExportar');
+    if (el) el.textContent = 'Se exportará: ' + _describirAlcanceExportar_();
+  }
+
+  // Prepara la exportación: confirma el alcance, obtiene el historial filtrado
+  // por el cliente seleccionado y aplica los filtros de fecha/realizada-por.
+  // Al tener los datos listos invoca alListo(filas, restaurar).
+  function _prepararExportar_(boton, alListo) {
+    var texto = boton ? boton.textContent : '';
+    if (boton) { boton.disabled = true; boton.textContent = 'Exportando…'; }
+    var restaurar = function() {
+      if (boton) { boton.disabled = false; boton.textContent = texto; }
+      ocultarCargaZona('tablaHistorial');
+    };
+    var alcance = _describirAlcanceExportar_();
+    if (!window.confirm('Se exportará: ' + alcance + '.\n¿Desea continuar?')) {
+      restaurar();
+      return;
+    }
+    mostrarCargaZona('tablaHistorial', 'Generando archivo…');
+    var idCliente = (document.getElementById('sel_cliente_historial') || {}).value || '';
+    google.script.run
+      .withSuccessHandler(function(registros) {
+        if (sesionInvalida(registros)) { restaurar(); return; }
+        var mapa = _mapaCitas_();
+        var filas = filtrarHistorial(registros || []).map(function(r) { return _filaPlana_(r, mapa); });
+        if (!filas.length) { restaurar(); mostrarToast('No hay historial para exportar.', 'info'); return; }
+        alListo(filas, restaurar);
+      })
+      .withFailureHandler(function(err) {
+        restaurar();
+        mostrarToast('No se pudo exportar: ' + err.message, 'error');
+      })
+      .obtenerHistorial(tokenSesion(), idCliente);
+  }
+
+  function exportarExcel() {
+    cerrarMenuExportar();
+    var boton = document.getElementById('btnExportarExcel');
+    _prepararExportar_(boton, function(filas, restaurar) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          restaurar();
+          if (sesionInvalida(res)) return;
+          if (!res || !res.exito) { mostrarToast((res && res.mensaje) || 'No se pudo exportar el Excel.', 'error'); return; }
+          try {
+            var bin = atob(res.base64);
+            var bytes = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            _descargarBlob_(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), _nombreArchivoExportar_('xlsx'));
+          } catch (e) {
+            mostrarToast('Error al generar el Excel: ' + e.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) { restaurar(); mostrarToast('No se pudo exportar: ' + err.message, 'error'); })
+        .generarExcelHistorial(tokenSesion(), _encabezadosHistorial_(), filas);
+    });
+  }
+
+  function exportarPDF() {
+    cerrarMenuExportar();
+    var boton = document.getElementById('btnExportarPDF');
+    _prepararExportar_(boton, function(filas, restaurar) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          restaurar();
+          if (sesionInvalida(res)) return;
+          if (!res || !res.exito) { mostrarToast((res && res.mensaje) || 'No se pudo exportar el PDF.', 'error'); return; }
+          try {
+            var bin = atob(res.base64);
+            var bytes = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            _descargarBlob_(new Blob([bytes], { type: 'application/pdf' }), _nombreArchivoExportar_('pdf'));
+          } catch (e) {
+            mostrarToast('Error al generar el PDF: ' + e.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) { restaurar(); mostrarToast('No se pudo exportar: ' + err.message, 'error'); })
+        .generarPDFHistorial(tokenSesion(), _encabezadosHistorial_(), filas);
+    });
+  }
+
+  function cerrarMenuUsuario_() {
+    var lista = document.getElementById('menuUsuarioLista');
+    var boton = document.getElementById('btnMenuUsuario');
+    if (lista) lista.style.display = 'none';
+    if (boton) boton.setAttribute('aria-expanded', 'false');
+  }
+
+  /* ==========================================================
+     VISTA: CONFIGURACIÓN
+     ========================================================== */
+
+  function initConfiguracion() {
+    var c = Estado.config;
+    setVal('cfg2_nombre_negocio', c.nombreNegocio || '');
+    setVal('cfg2_mensaje_bienvenida', c.mensajeBienvenida || '');
+    setVal('cfg2_etiqueta_cita', c.etiquetaCita || '');
+    setVal('cfg2_duracion_cita_def', parseInt(c.duracionCitaPredeterminada, 10) || 60);
+    setVal('cfg2_color_primario', c.colorPrimario || '#4285F4');
+    setVal('cfg2_color_secundario', c.colorSecundario || '#16a34a');
+    setVal('cfg2_tema', c.tema || 'claro');
+    var chkMon = document.getElementById('cfg2_monitor_habilitar');
+    if (chkMon) chkMon.checked = !!c.habilitarMonitor;
+    Estado.logoEliminado = false;
+    actualizarVistaLogoConfiguracion(c.logoUrl || '');
+
+    document.getElementById('btnGuardarConfiguracionGeneral').addEventListener('click', guardarConfiguracionGeneral);
+    var archivoLogo = document.getElementById('cfg2_logo_archivo');
+    if (archivoLogo) archivoLogo.addEventListener('change', previsualizarLogoConfiguracion);
+    var btnQuitarLogo = document.getElementById('cfg2_logo_quitar');
+    if (btnQuitarLogo) btnQuitarLogo.addEventListener('click', quitarLogoConfiguracion);
+  }
+
+  // Muestra/oculta la vista previa del logo según la URL (o imagen recién cargada).
+  function actualizarVistaLogoConfiguracion(url) {
+    var img = document.getElementById('cfg2_logo_preview');
+    var btn = document.getElementById('cfg2_logo_quitar');
+    if (url) {
+      img.src = url;
+      img.style.display = 'block';
+      btn.style.display = 'inline-block';
+    } else {
+      img.src = '';
+      img.style.display = 'none';
+      btn.style.display = 'none';
+    }
+  }
+
+  function previsualizarLogoConfiguracion() {
+    var archivo = document.getElementById('cfg2_logo_archivo').files[0];
+    if (!archivo) return;
+    Estado.logoEliminado = false;
+    var lector = new FileReader();
+    lector.onload = function() {
+      var img = document.getElementById('cfg2_logo_preview');
+      img.src = lector.result;
+      img.style.display = 'block';
+      document.getElementById('cfg2_logo_quitar').style.display = 'inline-block';
+    };
+    lector.readAsDataURL(archivo);
+  }
+
+  function quitarLogoConfiguracion() {
+    document.getElementById('cfg2_logo_archivo').value = '';
+    Estado.logoEliminado = true;
+    actualizarVistaLogoConfiguracion('');
+  }
+
+  // Horario de atención predeterminado (getDay: 0=Domingo...6=Sábado).
+  function _horarioAtencionDefault() {
+    return {
+      0: { abre: '', cierra: '' },
+      1: { abre: '09:00', cierra: '17:00' },
+      2: { abre: '09:00', cierra: '17:00' },
+      3: { abre: '09:00', cierra: '17:00' },
+      4: { abre: '09:00', cierra: '17:00' },
+      5: { abre: '09:00', cierra: '17:00' },
+      6: { abre: '09:00', cierra: '13:00' }
+    };
+  }
+
+  // Rellena los campos de horario del formulario desde un objeto de configuración.
+  function rellenarHorarioAtencion(horario) {
+    for (var d = 0; d < 7; d++) {
+      var dia = horario[d] || {};
+      setVal('cfg2_res_d' + d + '_abre', dia.abre || '');
+      setVal('cfg2_res_d' + d + '_cierra', dia.cierra || '');
+      var chkCerrado = document.getElementById('cfg2_res_d' + d + '_cerrado');
+      if (chkCerrado) chkCerrado.checked = !(dia.abre && dia.cierra);
+    }
+  }
+
+  // Marcar "Cerrado" limpia el horario del día; desmarcar restaura el predeterminado.
+  function iniciarDiasCerrados() {
+    for (var d = 0; d < 7; d++) {
+      var chk = document.getElementById('cfg2_res_d' + d + '_cerrado');
+      if (!chk) continue;
+      chk.addEventListener('change', function() {
+        var idx = parseInt(this.id.replace(/[^0-9]/g, ''), 10);
+        if (this.checked) {
+          setVal('cfg2_res_d' + idx + '_abre', '');
+          setVal('cfg2_res_d' + idx + '_cierra', '');
+        } else {
+          // Al desmarcar "Cerrado", el día queda abierto con el horario por
+          // defecto real (nunca vacío, ni siquiera el domingo).
+          var def = _horarioAtencionDefault()[idx] || {};
+          var abre = def.abre || '09:00';
+          var cierra = def.cierra || (idx === 6 ? '13:00' : '17:00');
+          setVal('cfg2_res_d' + idx + '_abre', abre);
+          setVal('cfg2_res_d' + idx + '_cierra', cierra);
+        }
+      });
+    }
+  }
+
+  // Lee los campos de horario y devuelve el objeto para guardar en configuración.
+  function leerHorarioAtencionFormulario() {
+    var horario = {};
+    for (var d = 0; d < 7; d++) {
+      var chkCerrado = document.getElementById('cfg2_res_d' + d + '_cerrado');
+      var cerrado = chkCerrado ? chkCerrado.checked : false;
+      if (cerrado) {
+        horario[d] = { abre: '', cierra: '' };
+        continue;
+      }
+      var abre = document.getElementById('cfg2_res_d' + d + '_abre').value;
+      var cierra = document.getElementById('cfg2_res_d' + d + '_cierra').value;
+      horario[d] = { abre: abre || '', cierra: cierra || '' };
+    }
+    return horario;
+  }
+
+  // Copia el enlace público de reservas al portapapeles.
+  function copiarEnlaceReservas() {
+    if (Estado.reservaUrl) {
+      copiarTextoReservas(Estado.reservaUrl);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(url) {
+        if (url) Estado.reservaUrl = url;
+        copiarTextoReservas(url);
+      })
+      .withFailureHandler(function(err) {
+        mostrarToast('Error: ' + err.message, 'error');
+      })
+      .obtenerUrlReservas();
+  }
+
+  function copiarTextoReservas(url) {
+    if (!url) {
+      mostrarToast('Primero despliegue la aplicación web (Implementar → Aplicación web).', 'error');
+      return;
+    }
+    var aux = document.createElement('textarea');
+    aux.value = url;
+    aux.style.position = 'fixed';
+    aux.style.opacity = '0';
+    document.body.appendChild(aux);
+    aux.select();
+    try {
+      document.execCommand('copy');
+      mostrarToast('Enlace de reservas copiado.', 'exito');
+    } catch (e) {
+      mostrarToast(url, 'exito');
+    }
+    document.body.removeChild(aux);
+    var hint = document.getElementById('reservasEnlaceHint');
+    if (hint) hint.textContent = url;
+  }
+
+  function guardarConfiguracionGeneral() {
+    var nombreNegocio = document.getElementById('cfg2_nombre_negocio').value.trim();
+    if (!nombreNegocio) {
+      mostrarToast('El nombre del negocio es obligatorio.', 'error');
+      return;
+    }
+
+    var durDef = parseInt(document.getElementById('cfg2_duracion_cita_def').value, 10);
+    if (isNaN(durDef) || durDef < 1) {
+      mostrarToast('La duración predeterminada de cita debe ser un número mayor que 0.', 'error');
+      return;
+    }
+
+    var datos = {
+      NOMBRE_NEGOCIO: nombreNegocio,
+      MENSAJE_BIENVENIDA: document.getElementById('cfg2_mensaje_bienvenida').value.trim() || 'Bienvenido a nuestro sistema de gestión',
+      ETIQUETA_CITA: document.getElementById('cfg2_etiqueta_cita').value.trim() || 'Cita',
+      DURACION_CITA_PREDETERMINADA: String(durDef),
+      COLOR_PRIMARIO: document.getElementById('cfg2_color_primario').value || '#4285F4',
+      COLOR_SECUNDARIO: document.getElementById('cfg2_color_secundario').value || '#16a34a',
+      TEMA: document.getElementById('cfg2_tema').value || 'claro',
+      HABILITAR_MONITOR: document.getElementById('cfg2_monitor_habilitar').checked ? 'SI' : 'NO'
+    };
+
+    var btn = document.getElementById('btnGuardarConfiguracionGeneral');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    // Si se eligió un logo nuevo, se lee como data URL antes de enviar.
+    var archivoLogo = document.getElementById('cfg2_logo_archivo').files[0];
+    if (archivoLogo) {
+      var lector = new FileReader();
+      lector.onload = function() {
+        datos.logoDataUrl = lector.result;
+        enviarGuardarConfiguracionGeneral(datos, btn);
+      };
+      lector.onerror = function() {
+        btn.disabled = false;
+        btn.textContent = 'Guardar configuración';
+        mostrarToast('No se pudo leer la imagen del logo.', 'error');
+      };
+      lector.readAsDataURL(archivoLogo);
+    } else {
+      if (Estado.logoEliminado) datos.eliminarLogo = true;
+      enviarGuardarConfiguracionGeneral(datos, btn);
+    }
+  }
+
+  function enviarGuardarConfiguracionGeneral(datos, btn) {
+    google.script.run
+      .withSuccessHandler(function(respuesta) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar configuración';
+        if (sesionInvalida(respuesta)) return;
+        if (respuesta && respuesta.exito) {
+          mostrarToast('Configuración guardada.', 'exito');
+          google.script.run
+            .withSuccessHandler(function(estado) {
+              Estado.config = estado || Estado.config;
+              Estado.logoEliminado = false;
+              aplicarConfiguracionGlobal();
+              actualizarBarraSesion();
+              // Si se desactivó el monitor mientras se estaba viendo, salir de esa vista.
+              if (Estado.vistaActual === 'Monitor' &&
+                  !(esDuenoSesion() && Estado.config && Estado.config.habilitarMonitor === true)) {
+                irAVista('Clientes');
+              }
+              aplicarEtiquetasVista(document.getElementById('contenido'));
+            })
+            .withFailureHandler(function(err) { mostrarToast('Error al recargar configuración: ' + err.message, 'error'); })
+            .obtenerEstadoAplicacion();
+        } else {
+          mostrarToast((respuesta && respuesta.mensaje) || 'No se pudo guardar la configuración.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar configuración';
+        mostrarToast('Error al guardar: ' + err.message, 'error');
+      })
+      .guardarConfiguracion(tokenSesion(), datos);
+  }
+
+  /* ==========================================================
+     ARRANQUE
+     ========================================================== */
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Consultar el estado/configuración de la aplicación.
+    google.script.run
+      .withSuccessHandler(function(estado) {
+        Estado.config = estado || Estado.config;
+        // Aplicar colores y tema cuanto antes (también en el asistente/login).
+        aplicarColorPrimario(Estado.config.colorPrimario);
+        aplicarColorSecundario(Estado.config.colorSecundario);
+        aplicarTema(Estado.config.tema);
+        if (estado && estado.sinHoja) {
+          // Copia sin vincular: falta ejecutar "Client Manager → Iniciar configuración".
+          mostrarSinConfigurar();
+          return;
+        }
+        if (Estado.config.configurada) {
+          if (obtenerSesion()) {
+            iniciarDashboard();
+          } else {
+            mostrarLogin();
+          }
+        } else {
+          // Plantilla sin configurar: la configuración inicial ocurre DESPUÉS
+          // del registro del primer admin (no hay asistente pre-login).
+          var sesion = obtenerSesion();
+          if (sesion && sesion.token && sesion.rol === 'administrador') {
+            mostrarAsistenteInicial();
+          } else if (sesion && sesion.token) {
+            // Un editor no puede configurar el sistema.
+            ocultar('pantallaCarga');
+            mostrarLogin();
+            mostrarToast('El administrador debe completar la configuración inicial antes de comenzar.', 'exito');
+          } else {
+            mostrarLogin();
+          }
+        }
+      })
+      .withFailureHandler(function(err) {
+        // Si el error indica que no hay hoja vinculada, mostrar la pantalla
+        // de "falta configurar"; en otro caso, el login/registro.
+        ocultar('pantallaCarga');
+        if (err && /no hay hoja de c.lculo configurada|iniciar configuraci.n/i.test(err.message || '')) {
+          mostrarSinConfigurar();
+          return;
+        }
+        mostrarLogin();
+        mostrarToast('No se pudo cargar la configuración: ' + err.message, 'error');
+      })
+      .obtenerEstadoAplicacion();
+  });
+
+  // Pantalla "copia sin configurar": indica al usuario que debe ejecutar
+  // "Client Manager → Iniciar configuración" en su copia de la hoja.
+  function mostrarSinConfigurar() {
+    detenerChequeoCambios();
+    ocultar('pantallaCarga');
+    ocultar('asistenteInicial');
+    ocultar('pantallaLogin');
+    ocultar('appPrincipal');
+    mostrar('pantallaSinConfigurar');
+    var btn = document.getElementById('btnReintentarConfig');
+    if (btn && !btn.getAttribute('data-vinculado')) {
+      btn.setAttribute('data-vinculado', '1');
+      btn.addEventListener('click', function() {
+        window.location.reload();
+      });
+    }
+  }
+
+  /* -------------------- Sesión -------------------- */
+
+  function obtenerSesion() {
+    try {
+      var raw = sessionStorage.getItem('sistemaUsuario');
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function guardarSesion(usuario, nombre, rol, token, principal) {
+    sessionStorage.setItem('sistemaUsuario', JSON.stringify({
+      usuario: usuario, nombre: nombre, rol: rol, token: token || '',
+      principal: !!principal
+    }));
+  }
+
+  // Devuelve true si la sesión actual corresponde al dueño (primer administrador).
+  function esDuenoSesion() {
+    var s = obtenerSesion();
+    return !!s && s.rol === 'administrador' && s.principal === true;
+  }
+
+  // Token de sesión vigente (vacío si no hay sesión).
+  function tokenSesion() {
+    var s = obtenerSesion();
+    return (s && s.token) || '';
+  }
+
+  // Si la respuesta del servidor indica sesión expirada, cierra la sesión
+  // local, vuelve al login y devuelve true (el llamador debe detenerse).
+  function sesionInvalida(resp) {
+    if (resp && resp.sesionExpirada) {
+      sessionStorage.removeItem('sistemaUsuario');
+      ocultar('appPrincipal');
+      mostrarLogin();
+      mostrarToast('Su sesión expiró. Vuelva a iniciar sesión.', 'error');
+      return true;
+    }
+    return false;
+  }
+
+  function cerrarSesion() {
+    detenerChequeoCambios();
+    var sesion = obtenerSesion();
+    if (sesion && sesion.token) {
+      google.script.run.cerrarSesion(sesion.token);
+    }
+    sessionStorage.removeItem('sistemaUsuario');
+    ocultar('appPrincipal');
+    mostrarLogin();
+  }
+
+  // Avisa al administrador cuando se registra alguien nuevo (desde la última
+  // vez que se notificó). El control de "ya avisados" se guarda en el SERVIDOR
+  // (PropertiesService), por lo que el aviso ocurre UNA sola vez por usuario
+  // sin importar el navegador ni el dispositivo.
+  function avisarNuevosUsuarios() {
+    var sesion = obtenerSesion();
+    if (!sesion || sesion.rol !== 'administrador') return;
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        if (sesionInvalida(resp)) return;
+        if (!resp || !resp.exito || !resp.usuarios) return;
+        var nuevos = resp.usuarios || [];
+        if (nuevos.length === 0) return;
+        var ids = nuevos.map(function(u) { return String(u.usuario); });
+        var nombres = nuevos.map(function(u) { return (u.nombre || u.usuario); }).join(', ');
+        google.script.run
+          .withSuccessHandler(function() {})
+          .withFailureHandler(function() {})
+          .marcarUsuariosAvisados(tokenSesion(), ids);
+        mostrarToast('Nuevo usuario registrado: ' + nombres, 'exito');
+      })
+      .withFailureHandler(function() {})
+      .obtenerUsuariosNuevos(tokenSesion());
+  }
+
+  function mostrarLogin() {
+    detenerChequeoCambios();
+    ocultar('pantallaCarga');
+    ocultar('asistenteInicial');
+    ocultar('appPrincipal');
+    mostrar('pantallaLogin');
+    var form = document.getElementById('formLogin');
+    if (!form.getAttribute('data-vinculado')) {
+      form.setAttribute('data-vinculado', '1');
+      form.addEventListener('submit', iniciarSesion);
+      document.getElementById('formRegistro').addEventListener('submit', registrarCuenta);
+      document.getElementById('formRecuperar').addEventListener('submit', recuperarContrasenaCuenta);
+      document.getElementById('enlaceRegistro').addEventListener('click', function(e) {
+        e.preventDefault();
+        alternarFormAcceso(true);
+      });
+      document.getElementById('enlaceInicio').addEventListener('click', function(e) {
+        e.preventDefault();
+        alternarFormAcceso(false);
+      });
+      document.getElementById('enlaceRecuperar').addEventListener('click', function(e) {
+        e.preventDefault();
+        mostrarFormRecuperar(true);
+      });
+      document.getElementById('enlaceVolverLogin').addEventListener('click', function(e) {
+        e.preventDefault();
+        mostrarFormRecuperar(false);
+      });
+    }
+  }
+
+  // Muestra el formulario de recuperación (ocultando login/registro).
+  function mostrarFormRecuperar(ver) {
+    var fLogin = document.getElementById('formLogin');
+    var fRegistro = document.getElementById('formRegistro');
+    var fRecuperar = document.getElementById('formRecuperar');
+    fLogin.style.display = ver ? 'none' : '';
+    fRegistro.style.display = 'none';
+    fRecuperar.style.display = ver ? '' : 'none';
+    var titulo = document.getElementById('tituloLogin');
+    if (titulo) titulo.textContent = ver ? 'Recuperar contraseña' : 'Iniciar sesión';
+  }
+
+  // Alterna entre el formulario de inicio de sesión y el de registro.
+  function alternarFormAcceso(registro) {
+    var fLogin = document.getElementById('formLogin');
+    var fRegistro = document.getElementById('formRegistro');
+    var fRecuperar = document.getElementById('formRecuperar');
+    fLogin.style.display = registro ? 'none' : '';
+    fRegistro.style.display = registro ? '' : 'none';
+    fRecuperar.style.display = 'none';
+    var titulo = document.getElementById('tituloLogin');
+    if (titulo) titulo.textContent = registro ? 'Crear cuenta' : 'Iniciar sesión';
+  }
+
+  function recuperarContrasenaCuenta(e) {
+    e.preventDefault();
+    var btn = document.getElementById('btnRecuperar');
+    var correo = document.getElementById('rec_correo').value.trim();
+    if (!correo) {
+      mostrarToast('Ingrese su correo electrónico.', 'error');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        btn.disabled = false;
+        btn.textContent = 'Enviar contraseña temporal';
+        mostrarToast((resp && resp.mensaje) || 'Procesando…', resp && resp.exito ? 'exito' : 'error');
+        if (resp && resp.exito) {
+          document.getElementById('formRecuperar').reset();
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Enviar contraseña temporal';
+        mostrarToast('Error: ' + err.message, 'error');
+      })
+      .recuperarContrasena(correo);
+  }
+
+  function registrarCuenta(e) {
+    e.preventDefault();
+    var nombre = document.getElementById('reg_nombre').value.trim();
+    var correo = document.getElementById('reg_correo').value.trim();
+    var contrasena = document.getElementById('reg_contrasena').value;
+    var confirmarContrasena = document.getElementById('reg_contrasena_confirmar').value;
+    if (contrasena !== confirmarContrasena) {
+      mostrarToast('Las contraseñas no coinciden.', 'error');
+      return;
+    }
+    var btn = document.getElementById('btnRegistrar');
+    btn.disabled = true;
+    btn.textContent = 'Creando cuenta…';
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        btn.disabled = false;
+        btn.textContent = 'Crear cuenta';
+        if (resp && resp.exito) {
+          guardarSesion(resp.usuario, resp.nombre, resp.rol, resp.token, resp.principal);
+          document.getElementById('formRegistro').reset();
+          ocultar('pantallaLogin');
+          if (resp.primerAcceso && !Estado.config.configurada) {
+            // El primer admin registrado pasa al asistente de configuración inicial.
+            mostrarAsistenteInicial();
+          } else {
+            iniciarDashboard();
+          }
+          mostrarToast(resp.mensaje || 'Cuenta creada. Bienvenido.', 'exito');
+        } else {
+          mostrarToast((resp && resp.mensaje) || 'No se pudo crear la cuenta.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Crear cuenta';
+        mostrarToast('Error al crear la cuenta: ' + err.message, 'error');
+      })
+      .registrarUsuario(nombre, correo, contrasena);
+  }
+
+  function iniciarSesion(e) {
+    e.preventDefault();
+    var btn = document.getElementById('btnLogin');
+    btn.disabled = true;
+    btn.textContent = 'Ingresando…';
+    var usuario = document.getElementById('login_usuario').value.trim();
+    var contrasena = document.getElementById('login_contrasena').value;
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        btn.disabled = false;
+        btn.textContent = 'Ingresar';
+        if (resp && resp.exito) {
+          guardarSesion(resp.usuario, resp.nombre, resp.rol, resp.token, resp.principal);
+          document.getElementById('formLogin').reset();
+          ocultar('pantallaLogin');
+          iniciarDashboard();
+          if (resp.primerAcceso) {
+            mostrarToast(resp.mensaje, 'exito');
+          }
+        } else {
+          mostrarToast((resp && resp.mensaje) || 'No se pudo iniciar sesión.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Ingresar';
+        mostrarToast('Error al iniciar sesión: ' + err.message, 'error');
+      })
+      .verificarLogin(usuario, contrasena);
+  }
+
+  /* -------------------- Mostrar / ocultar -------------------- */
+
+  function mostrar(id)  { var e = document.getElementById(id); if (e) e.style.display = ''; }
+  function ocultar(id)  { var e = document.getElementById(id); if (e) e.style.display = 'none'; }
+
+  function aplicarColorPrimario(color) {
+    if (color) {
+      document.documentElement.style.setProperty('--color-primario', color);
+    }
+  }
+
+  function aplicarColorSecundario(color) {
+    if (color) {
+      document.documentElement.style.setProperty('--color-secundario', color);
+    }
+  }
+
+  function aplicarTema(tema) {
+    var cuerpo = document.body;
+    if (!cuerpo) return;
+    if (String(tema || 'claro').toLowerCase() === 'oscuro') {
+      cuerpo.classList.add('tema-oscuro');
+    } else {
+      cuerpo.classList.remove('tema-oscuro');
+    }
+  }
+
+  /* -------------------- Asistente de configuración inicial -------------------- */
+
+  // Plantillas de ejemplo: solo cambian etiquetas/textos de configuración,
+  // sin modificar el código genérico.
+  var PRESETS_CONFIG = {
+    gasolinera: {
+      NOMBRE_NEGOCIO: 'Estación de Combustible',
+      MENSAJE_BIENVENIDA: 'Bienvenido a Estación de Combustible',
+      ETIQUETA_CITA: 'Despacho',
+      COLOR_PRIMARIO: '#d97706',
+      COLOR_SECUNDARIO: '#92400e',
+      TEMA: 'claro',
+      DURACION_CITA_PREDETERMINADA: '15'
+    },
+    veterinaria: {
+      NOMBRE_NEGOCIO: 'Clínica Veterinaria',
+      MENSAJE_BIENVENIDA: 'Bienvenido a Cl��nica Veterinaria',
+      ETIQUETA_CITA: 'Consulta',
+      COLOR_PRIMARIO: '#0ea5e9',
+      COLOR_SECUNDARIO: '#16a34a',
+      TEMA: 'claro',
+      DURACION_CITA_PREDETERMINADA: '30'
+    },
+    barberia: {
+      NOMBRE_NEGOCIO: 'Barbería y Estética',
+      MENSAJE_BIENVENIDA: 'Bienvenido a Barbería y Estética',
+      ETIQUETA_CITA: 'Turno',
+      COLOR_PRIMARIO: '#334155',
+      COLOR_SECUNDARIO: '#eab308',
+      TEMA: 'claro',
+      DURACION_CITA_PREDETERMINADA: '30'
+    },
+    restaurante: {
+      NOMBRE_NEGOCIO: 'Restaurante',
+      MENSAJE_BIENVENIDA: 'Bienvenido a nuestro Restaurante',
+      ETIQUETA_CITA: 'Reserva',
+      COLOR_PRIMARIO: '#dc2626',
+      COLOR_SECUNDARIO: '#f59e0b',
+      TEMA: 'claro',
+      DURACION_CITA_PREDETERMINADA: '45'
+    },
+    clinica: {
+      NOMBRE_NEGOCIO: 'Clínica Médica',
+      MENSAJE_BIENVENIDA: 'Bienvenido a Clínica Médica',
+      ETIQUETA_CITA: 'Cita',
+      COLOR_PRIMARIO: '#2563eb',
+      COLOR_SECUNDARIO: '#0ea5e9',
+      TEMA: 'claro',
+      DURACION_CITA_PREDETERMINADA: '30'
+    },
+    taller: {
+      NOMBRE_NEGOCIO: 'Taller Mecánico',
+      MENSAJE_BIENVENIDA: 'Bienvenido a Taller Mecánico',
+      ETIQUETA_CITA: 'Servicio',
+      COLOR_PRIMARIO: '#475569',
+      COLOR_SECUNDARIO: '#eab308',
+      TEMA: 'claro',
+      DURACION_CITA_PREDETERMINADA: '60'
+    },
+    gimnasio: {
+      NOMBRE_NEGOCIO: 'Gimnasio',
+      MENSAJE_BIENVENIDA: 'Bienvenido a nuestro Gimnasio',
+      ETIQUETA_CITA: 'Clase',
+      COLOR_PRIMARIO: '#7c3aed',
+      COLOR_SECUNDARIO: '#ec4899',
+      TEMA: 'oscuro',
+      DURACION_CITA_PREDETERMINADA: '60'
+    },
+    estetica: {
+      NOMBRE_NEGOCIO: 'Centro de Estética',
+      MENSAJE_BIENVENIDA: 'Bienvenido a Centro de Estética',
+      ETIQUETA_CITA: 'Sesión',
+      COLOR_PRIMARIO: '#db2777',
+      COLOR_SECUNDARIO: '#a855f7',
+      TEMA: 'claro',
+      DURACION_CITA_PREDETERMINADA: '60'
+    }
+  };
+
+  function setVal(id, valor) {
+    var e = document.getElementById(id);
+    if (e) e.value = valor;
+  }
+
+  // Rellena el formulario del asistente con los valores de una plantilla.
+  function aplicarPlantillaEjemplo(clave) {
+    var p = PRESETS_CONFIG[clave];
+    if (!p) return;
+    setVal('cfg_nombre_negocio', p.NOMBRE_NEGOCIO || '');
+    setVal('cfg_mensaje_bienvenida', p.MENSAJE_BIENVENIDA || '');
+    setVal('cfg_etiqueta_cita', p.ETIQUETA_CITA || '');
+    setVal('cfg_duracion_cita_def', p.DURACION_CITA_PREDETERMINADA || '60');
+    setVal('cfg_color_primario', p.COLOR_PRIMARIO || '#4285F4');
+    setVal('cfg_color_secundario', p.COLOR_SECUNDARIO || '#16a34a');
+    setVal('cfg_tema', p.TEMA || 'claro');
+    mostrarToast('Plantilla aplicada. Revise los campos y guarde.', 'exito');
+  }
+
+  // Muestra el asistente de configuración inicial (tras el registro del admin).
+  function mostrarAsistenteInicial() {
+    ocultar('pantallaCarga');
+    ocultar('pantallaLogin');
+    ocultar('appPrincipal');
+    mostrar('asistenteInicial');
+
+    // Rellenar valores actuales como sugerencia.
+    var c = Estado.config;
+    setVal('cfg_nombre_negocio', c.nombreNegocio && c.nombreNegocio !== 'Mi Negocio' ? c.nombreNegocio : '');
+    setVal('cfg_mensaje_bienvenida', c.mensajeBienvenida || '');
+    setVal('cfg_etiqueta_cita', c.etiquetaCita || '');
+    setVal('cfg_duracion_cita_def', parseInt(c.duracionCitaPredeterminada, 10) || 60);
+    setVal('cfg_color_primario', c.colorPrimario || '#4285F4');
+    setVal('cfg_color_secundario', c.colorSecundario || '#16a34a');
+    setVal('cfg_tema', c.tema || 'claro');
+    Estado.logoEliminado = false;
+    actualizarVistaLogoAsistente(c.logoUrl || '');
+
+    var form = document.getElementById('formConfiguracionInicial');
+    if (!form.getAttribute('data-vinculado')) {
+      form.setAttribute('data-vinculado', '1');
+      form.addEventListener('submit', guardarAsistenteInicialConfiguracion);
+    }
+    var selPlantilla = document.getElementById('cfg_plantilla');
+    if (selPlantilla && !selPlantilla.getAttribute('data-vinculado')) {
+      selPlantilla.setAttribute('data-vinculado', '1');
+      selPlantilla.addEventListener('change', function() {
+        aplicarPlantillaEjemplo(this.value);
+      });
+    }
+    var archivoLogo = document.getElementById('cfg_logo_archivo');
+    if (archivoLogo && !archivoLogo.getAttribute('data-vinculado')) {
+      archivoLogo.setAttribute('data-vinculado', '1');
+      archivoLogo.addEventListener('change', previsualizarLogoAsistente);
+    }
+    var btnQuitarLogo = document.getElementById('cfg_logo_quitar');
+    if (btnQuitarLogo && !btnQuitarLogo.getAttribute('data-vinculado')) {
+      btnQuitarLogo.setAttribute('data-vinculado', '1');
+      btnQuitarLogo.addEventListener('click', quitarLogoAsistente);
+    }
+  }
+
+  // Vista previa / quitar logo dentro del asistente inicial.
+  function actualizarVistaLogoAsistente(url) {
+    var img = document.getElementById('cfg_logo_preview');
+    var btn = document.getElementById('cfg_logo_quitar');
+    if (url) {
+      img.src = url;
+      img.style.display = 'block';
+      if (btn) btn.style.display = 'inline-block';
+    } else {
+      img.src = '';
+      img.style.display = 'none';
+      if (btn) btn.style.display = 'none';
+    }
+  }
+
+  function previsualizarLogoAsistente() {
+    var archivo = document.getElementById('cfg_logo_archivo').files[0];
+    if (!archivo) return;
+    Estado.logoEliminado = false;
+    var lector = new FileReader();
+    lector.onload = function() {
+      var img = document.getElementById('cfg_logo_preview');
+      img.src = lector.result;
+      img.style.display = 'block';
+      document.getElementById('cfg_logo_quitar').style.display = 'inline-block';
+    };
+    lector.readAsDataURL(archivo);
+  }
+
+  function quitarLogoAsistente() {
+    document.getElementById('cfg_logo_archivo').value = '';
+    Estado.logoEliminado = true;
+    actualizarVistaLogoAsistente('');
+  }
+
+  // Guarda la configuración inicial (el sistema queda CONFIGURADA = SI).
+  function guardarAsistenteInicialConfiguracion(e) {
+    e.preventDefault();
+    var nombreNegocio = document.getElementById('cfg_nombre_negocio').value.trim();
+    if (!nombreNegocio) {
+      mostrarToast('El nombre del negocio es obligatorio.', 'error');
+      marcarCampo('cfg_nombre_negocio', false);
+      document.getElementById('cfg_nombre_negocio').focus();
+      return;
+    }
+
+    var durDef = parseInt(document.getElementById('cfg_duracion_cita_def').value, 10);
+    if (isNaN(durDef) || durDef < 1) {
+      mostrarToast('La duración predeterminada de cita debe ser un número mayor que 0.', 'error');
+      return;
+    }
+
+    var datos = {
+      NOMBRE_NEGOCIO: nombreNegocio,
+      MENSAJE_BIENVENIDA: document.getElementById('cfg_mensaje_bienvenida').value.trim() ||
+        'Bienvenido a nuestro sistema de gestión',
+      ETIQUETA_CITA: document.getElementById('cfg_etiqueta_cita').value.trim() || 'Cita',
+      DURACION_CITA_PREDETERMINADA: String(durDef),
+      COLOR_PRIMARIO: document.getElementById('cfg_color_primario').value || '#4285F4',
+      COLOR_SECUNDARIO: document.getElementById('cfg_color_secundario').value || '#16a34a',
+      TEMA: document.getElementById('cfg_tema').value || 'claro',
+      HABILITAR_MONITOR: document.getElementById('cfg_monitor_habilitar').checked ? 'SI' : 'NO'
+    };
+
+    var btn = document.getElementById('btnGuardarConfiguracionInicial');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    // Si se eligió un logo nuevo, se lee como data URL antes de enviar.
+    var archivoLogo = document.getElementById('cfg_logo_archivo').files[0];
+    if (archivoLogo) {
+      var lector = new FileReader();
+      lector.onload = function() {
+        datos.logoDataUrl = lector.result;
+        enviarGuardarAsistenteInicial(datos, btn);
+      };
+      lector.onerror = function() {
+        btn.disabled = false;
+        btn.textContent = 'Guardar y comenzar';
+        mostrarToast('No se pudo leer la imagen del logo.', 'error');
+      };
+      lector.readAsDataURL(archivoLogo);
+    } else {
+      if (Estado.logoEliminado) datos.eliminarLogo = true;
+      enviarGuardarAsistenteInicial(datos, btn);
+    }
+  }
+
+  function enviarGuardarAsistenteInicial(datos, btn) {
+    google.script.run
+      .withSuccessHandler(function(respuesta) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar y comenzar';
+        if (respuesta && respuesta.exito) {
+          // Recargar el estado y entrar al dashboard ya configurado.
+          google.script.run
+            .withSuccessHandler(function(estado) {
+              Estado.config = estado || Estado.config;
+              aplicarColorPrimario(Estado.config.colorPrimario);
+              aplicarColorSecundario(Estado.config.colorSecundario);
+              aplicarTema(Estado.config.tema);
+              ocultar('asistenteInicial');
+              iniciarDashboard();
+              mostrarToast('¡Configuración completada! Bienvenido a su sistema.', 'exito');
+            })
+            .withFailureHandler(function(err) {
+              mostrarToast('Error al recargar la configuración: ' + err.message, 'error');
+            })
+            .obtenerEstadoAplicacion();
+        } else {
+          mostrarToast((respuesta && respuesta.mensaje) || 'No se pudo guardar la configuración.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar y comenzar';
+        mostrarToast('Error al guardar: ' + err.message, 'error');
+      })
+      .guardarConfiguracion(tokenSesion(), datos);
+  }
+
+  /* -------------------- Dashboard -------------------- */
+
+  // Carga la configuración, los clientes y las citas en UNA sola llamada al
+  // servidor (menos invocaciones = arranque más rápido). Puebla el estado en
+  // memoria para que las vistas se dibujen al instante.
+  function cargarDatosIniciales(callback) {
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        if (sesionInvalida(resp)) { if (typeof callback === 'function') callback(false); return; }
+        if (!resp || !resp.exito) {
+          mostrarToast((resp && resp.mensaje) || 'No se pudieron cargar los datos.', 'error');
+          if (typeof callback === 'function') callback(false);
+          return;
+        }
+        Estado.config = resp.config || Estado.config;
+        Estado.clientes = resp.clientes || [];
+        Estado.clientesCargados = true;
+        Estado.citas = resp.citas || [];
+        Estado.citasCargados = true;
+        aplicarConfiguracionGlobal();
+        if (typeof callback === 'function') callback(true);
+      })
+      .withFailureHandler(function(err) {
+        mostrarToast('Error al cargar los datos: ' + err.message, 'error');
+        if (typeof callback === 'function') callback(false);
+      })
+      .obtenerDatosIniciales(tokenSesion());
+  }
+
+  // Repinta la barra superior con los datos de la sesión actual (nombre,
+  // avatar y visibilidad de las pestañas de administrador). Se usa al iniciar
+  // el dashboard y tras editar los datos del propio usuario.
+  function actualizarBarraSesion() {
+    var sesion = obtenerSesion();
+    if (!sesion) return;
+    var navSesion = document.getElementById('navSesion');
+    if (navSesion) navSesion.style.display = 'flex';
+    var nombreSesion = document.getElementById('nombreSesion');
+    if (nombreSesion) {
+      nombreSesion.textContent = sesion.nombre + (sesion.rol === 'administrador' ? ' · Admin' : '');
+    }
+    var avatar = document.getElementById('avatarUsuario');
+    if (avatar) avatar.textContent = (sesion.nombre || '?').trim().charAt(0);
+    var navUsuarios = document.getElementById('navUsuarios');
+    if (navUsuarios) navUsuarios.style.display = sesion.rol === 'administrador' ? 'inline-block' : 'none';
+    var navConfiguracion = document.getElementById('navConfiguracion');
+    if (navConfiguracion) navConfiguracion.style.display = sesion.rol === 'administrador' ? 'inline-block' : 'none';
+    var navMonitor = document.getElementById('navMonitor');
+    if (navMonitor) navMonitor.style.display =
+      (esDuenoSesion() && Estado.config && Estado.config.habilitarMonitor === true) ? 'inline-block' : 'none';
+  }
+
+  function iniciarDashboard() {
+    ocultar('pantallaCarga');
+    ocultar('asistenteInicial');
+    ocultar('pantallaLogin');
+    mostrar('appPrincipal');
+
+    aplicarConfiguracionGlobal();
+
+    // Chequeo silencioso de cambios externos (se agregó un cliente o se
+    // registró una cita, p. ej. desde la página pública de reservas).
+    // Solo refresca la vista abierta cuando la firma cambió de verdad.
+    if (window._intervaloFirma) clearInterval(window._intervaloFirma);
+    window._firmaCambios = null;
+    window._intervaloFirma = setInterval(chequearCambios, 30000);
+    // Al volver a la pestaña se comprueba de inmediato si hubo cambios (p. ej.
+    // una reserva hecha en otra pestaña/equipo), sin esperar al siguiente timer.
+    if (!window._vinculadoVisibilidad) {
+      window._vinculadoVisibilidad = true;
+      document.addEventListener('visibilitychange', function() {
+        if (document.hidden) return;
+        var s = obtenerSesion();
+        if (s && s.token) chequearCambios();
+      });
+    }
+
+    // Mostrar la sesión actual (usuario/rol) y el enlace Usuarios solo para admin.
+    actualizarBarraSesion();
+
+    // Vincular eventos una sola vez (evita duplicados tras salir/volver a entrar).
+    if (!document.body.getAttribute('data-vinculado')) {
+      document.body.setAttribute('data-vinculado', '1');
+
+      // Enlaces de navegación.
+      var enlaces = document.querySelectorAll('.nav-enlace');
+      for (var i = 0; i < enlaces.length; i++) {
+        enlaces[i].addEventListener('click', function(e) {
+          e.preventDefault();
+          irAVista(this.dataset.vista);
+        });
+      }
+
+      // Botón de menú móvil.
+      document.getElementById('menuToggle').addEventListener('click', function() {
+        document.getElementById('navEnlaces').classList.toggle('abierto');
+      });
+
+      // Cerrar sesión.
+      document.getElementById('btnSalir').addEventListener('click', cerrarSesion);
+
+      // Menú desplegable del usuario (cambiar contraseña / salir).
+      var btnMenuUsuario = document.getElementById('btnMenuUsuario');
+      var menuUsuarioLista = document.getElementById('menuUsuarioLista');
+      if (btnMenuUsuario && menuUsuarioLista) {
+        btnMenuUsuario.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var abierto = menuUsuarioLista.style.display === 'block';
+          menuUsuarioLista.style.display = abierto ? 'none' : 'block';
+          btnMenuUsuario.setAttribute('aria-expanded', abierto ? 'false' : 'true');
+        });
+        btnMenuUsuario.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+      }
+      document.addEventListener('click', function(e) {
+        var menuUsuario = document.getElementById('menuUsuario');
+        if (menuUsuario && !menuUsuario.contains(e.target)) {
+          var lista = document.getElementById('menuUsuarioLista');
+          var boton = document.getElementById('btnMenuUsuario');
+          if (lista) lista.style.display = 'none';
+          if (boton) boton.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Cambiar contraseña (disponible para todos los roles).
+      document.getElementById('btnCambiarContrasenaGlobal').addEventListener('click', function() {
+        cerrarMenuUsuario_();
+        abrirModalContrasena();
+      });
+      document.getElementById('btnCerrarModalContrasena').addEventListener('click', cerrarModalContrasena);
+      document.getElementById('formContrasenaGlobal').addEventListener('submit', cambiarMiContrasenaGlobal);
+      var fondoModal = document.getElementById('modalContrasena');
+      if (fondoModal) {
+        fondoModal.addEventListener('click', function(e) {
+          if (e.target === fondoModal) cerrarModalContrasena();
+        });
+      }
+
+    }
+
+    // Mostrar un estado de carga mientras llegan los datos en una sola llamada.
+    var contenidoIni = document.getElementById('contenido');
+    if (contenidoIni) contenidoIni.innerHTML = '<div class="cargando">Cargando…</div>';
+
+    // Cargar la vista inicial una vez que estén los datos en memoria.
+    cargarDatosIniciales(function() {
+      avisarNuevosUsuarios();
+      irAVista('Clientes');
+    });
+  }
+
+  // Aplica la configuración a los elementos globales (título, banner, nav).
+  function aplicarConfiguracionGlobal() {
+    var c = Estado.config;
+    aplicarColorPrimario(c.colorPrimario);
+    aplicarColorSecundario(c.colorSecundario);
+    aplicarTema(c.tema);
+
+    // Título del negocio en la barra y en el documento.
+    var titulo = document.getElementById('tituloNegocio');
+    if (titulo) titulo.textContent = c.nombreNegocio || 'Gestor de Clientes';
+    document.title = (c.nombreNegocio || 'Gestor de Clientes');
+
+    // Logo del negocio (arriba a la izquierda, antes del nombre).
+    var logo = document.getElementById('logoNegocio');
+    if (logo) {
+      if (c.logoUrl) {
+        logo.src = c.logoUrl;
+        logo.style.display = 'inline-block';
+      } else {
+        logo.removeAttribute('src');
+        logo.style.display = 'none';
+      }
+    }
+
+    // Mensaje de bienvenida (máximo 5 veces por usuario; se oculta al cambiar de vista).
+    var banner = document.getElementById('bannerBienvenida');
+    var msg = document.getElementById('mensajeBienvenida');
+    if (banner && msg && c.mensajeBienvenida && !Estado.bienvenidaMostrada) {
+      if (debeMostrarBienvenida()) {
+        msg.textContent = c.mensajeBienvenida;
+        banner.style.display = 'block';
+        Estado.bienvenidaMostrada = true;
+      }
+    }
+
+    // Pie de página.
+    var pie = document.getElementById('pieNegocio');
+    if (pie) pie.textContent = (c.nombreNegocio || 'Gestor de Clientes') + ' · © ' + new Date().getFullYear();
+
+    // Etiquetas de la barra de navegación.
+    var navCitas = document.getElementById('navCitas');
+    if (navCitas) navCitas.textContent = etCitas();
+  }
+
+  // Devuelve true si el banner de bienvenida debe mostrarse (máx. 5 veces
+  // por usuario). Al mostrarse, incrementa el contador en localStorage.
+  function debeMostrarBienvenida() {
+    var sesion = obtenerSesion();
+    if (!sesion || !sesion.usuario) return false;
+    var clave = 'vecesBienvenida_' + sesion.usuario;
+    var veces = parseInt(localStorage.getItem(clave), 10) || 0;
+    if (veces >= 5) return false;
+    localStorage.setItem(clave, String(veces + 1));
+    return true;
+  }
+
+  // Oculta el banner de bienvenida (p. ej. al cambiar de vista por primera vez).
+  function ocultarBienvenida() {
+    var banner = document.getElementById('bannerBienvenida');
+    if (banner) banner.style.display = 'none';
+  }
+
+  // Reemplaza el texto de los elementos marcados con data-et dentro de un contenedor.
+  function aplicarEtiquetasVista(contenedor) {
+    if (!contenedor) return;
+    var mapa = {
+      'cita':  etCita(),
+      'citas': etCitas(),
+      'cita_min':  minuscInicial(etCita()),
+      'citas_min': minuscInicial(etCitas()),
+      'cita_nueva': (etiquetaFemenina(etCita()) ? 'nueva' : 'nuevo') + ' ' + minuscInicial(etCita()),
+      'cita_una': articuloEtiqueta(etCita()) + ' ' + minuscInicial(etCita())
+    };
+    var nodos = contenedor.querySelectorAll('[data-et]');
+    for (var i = 0; i < nodos.length; i++) {
+      var clave = nodos[i].getAttribute('data-et');
+      if (mapa[clave] !== undefined) {
+        nodos[i].textContent = mapa[clave];
+      }
+    }
+  }
+
+  /* ==========================================================
+     VISTA: USUARIOS (solo administrador)
+     ========================================================== */
+
+  function initUsuarios() {
+    document.getElementById('formUsuario').addEventListener('submit', guardarUsuario);
+    document.getElementById('btnCancelarUsuario').addEventListener('click', cancelarEdicionUsuario);
+    cargarUsuarios();
+  }
+
+  function cargarUsuarios(forzar, callback) {
+    var tbody = document.getElementById('tablaUsuarios');
+    if (forzar) Estado.usuariosCargados = false;
+    if (Estado.usuariosCargados) {
+      dibujarUsuarios(tbody, Estado.usuariosLista || []);
+      if (typeof callback === 'function') callback();
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        if (sesionInvalida(resp)) { if (typeof callback === 'function') callback(); return; }
+        if (resp && resp.exito) {
+          Estado.usuariosLista = resp.usuarios || [];
+          Estado.usuariosCargados = true;
+          dibujarUsuarios(tbody, resp.usuarios || []);
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" class="vacio">' + esc((resp && resp.mensaje) || 'No se pudieron cargar los usuarios.') + '</td></tr>';
+        }
+        if (typeof callback === 'function') callback();
+      })
+      .withFailureHandler(function(err) {
+        tbody.innerHTML = '<tr><td colspan="5" class="vacio">Error al cargar usuarios.</td></tr>';
+        mostrarToast(err.message, 'error');
+        if (typeof callback === 'function') callback();
+      })
+      .listarUsuarios(tokenSesion());
+  }
+
+  function dibujarUsuarios(tbody, usuarios) {
+    if (!usuarios || usuarios.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="vacio">No hay usuarios registrados.</td></tr>';
+      return;
+    }
+    var sesion = obtenerSesion();
+    tbody.innerHTML = usuarios.map(function(u) {
+      var esYo = String(u.usuario).toLowerCase() === String(sesion.usuario).toLowerCase();
+      return '<tr>' +
+        '<td>' + esc(u.usuario) + (esYo ? ' <span class="etiqueta etiqueta-programada">usted</span>' : '') + (u.principal ? ' <span class="etiqueta etiqueta-programada">Propietario</span>' : '') + '</td>' +
+        '<td>' + esc(u.nombre) + '</td>' +
+        '<td>' + (u.rol === 'administrador' ? 'Administrador' : 'Editor') + '</td>' +
+        '<td>' + (u.activo ? 'Activo' : 'Inactivo') + '</td>' +
+        '<td class="acciones-fila">' +
+          (!u.principal && !esYo ? '<span class="vacio-accion">—</span>' : '') +
+          ((!u.principal || esYo) ? '<button class="btn btn-secundario btn-pequeno" onclick="editarUsuario(\'' + esc(u.usuario) + '\')">Editar</button>' : '') +
+          (!esYo && !u.principal ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarUsuario(\'' + esc(u.usuario) + '\')">Eliminar</button>' : '') +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function editarUsuario(usuario) {
+    var u = null;
+    (Estado.usuariosLista || []).some(function(item) {
+      if (String(item.usuario).toLowerCase() === String(usuario).toLowerCase()) {
+        u = item;
+        return true;
+      }
+      return false;
+    });
+    if (!u) {
+      mostrarToast('No se encontró el usuario indicado.', 'error');
+      return;
+    }
+    document.getElementById('usuarioIdOriginal').value = u.usuario;
+    document.getElementById('usu_usuario').value = u.usuario;
+    document.getElementById('usu_usuario').disabled = true;
+    document.getElementById('usu_nombre').value = u.nombre || '';
+    document.getElementById('usu_contrasena').value = '';
+    document.getElementById('usu_contrasena').placeholder = 'Dejar en blanco para no cambiarla';
+    document.getElementById('campoUsuarioContrasena').style.display = 'none';
+    document.getElementById('usu_contrasena_confirmar').value = '';
+    document.getElementById('campoUsuarioContrasenaConfirmar').style.display = 'none';
+    document.getElementById('usu_rol').value = u.rol === 'administrador' ? 'administrador' : 'editor';
+    document.getElementById('usu_activo').value = u.activo ? 'SI' : 'NO';
+    document.getElementById('tituloFormUsuario').textContent = 'Editar usuario';
+    document.getElementById('btnGuardarUsuario').textContent = 'Actualizar usuario';
+    document.getElementById('btnCancelarUsuario').style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelarEdicionUsuario() {
+    document.getElementById('formUsuario').reset();
+    document.getElementById('usuarioIdOriginal').value = '';
+    document.getElementById('usu_usuario').disabled = false;
+    document.getElementById('usu_contrasena').placeholder = 'Mínimo 8 caracteres';
+    document.getElementById('campoUsuarioContrasena').style.display = '';
+    document.getElementById('usu_contrasena_confirmar').placeholder = 'Repita la contraseña';
+    document.getElementById('campoUsuarioContrasenaConfirmar').style.display = '';
+    document.getElementById('usu_activo').value = 'SI';
+    document.getElementById('tituloFormUsuario').textContent = 'Nuevo usuario';
+    document.getElementById('btnGuardarUsuario').textContent = 'Crear usuario';
+    document.getElementById('btnCancelarUsuario').style.display = 'none';
+  }
+
+  function guardarUsuario(e) {
+    e.preventDefault();
+    var original = document.getElementById('usuarioIdOriginal').value;
+    var usuario = document.getElementById('usu_usuario').value.trim();
+    var datos = {
+      usuario: usuario,
+      nombre: document.getElementById('usu_nombre').value.trim(),
+      contrasena: original ? '' : document.getElementById('usu_contrasena').value,
+      rol: document.getElementById('usu_rol').value,
+      activo: document.getElementById('usu_activo').value
+    };
+    if (!usuario) {
+      mostrarToast('El usuario es obligatorio.', 'error');
+      return;
+    }
+    if (!original && !datos.contrasena) {
+      mostrarToast('La contraseña es obligatoria al crear un usuario.', 'error');
+      return;
+    }
+    if (!original) {
+      var confirmarContrasena = document.getElementById('usu_contrasena_confirmar').value;
+      if (datos.contrasena !== confirmarContrasena) {
+        mostrarToast('Las contraseñas no coinciden.', 'error');
+        return;
+      }
+    }
+
+    var btn = document.getElementById('btnGuardarUsuario');
+    var manejador = function(resp) {
+      btn.disabled = false;
+      btn.textContent = original ? 'Actualizar usuario' : 'Crear usuario';
+      ocultarCargaZona('tablaUsuarios');
+      if (sesionInvalida(resp)) return;
+      if (resp && resp.exito) {
+        mostrarToast(resp.mensaje, 'exito');
+        cancelarEdicionUsuario();
+        cargarUsuarios(true);
+        // Si el usuario editado es el de la sesión, refrescar nombre/avatar en la barra.
+        var s = obtenerSesion();
+        if (s && String(datos.usuario).toLowerCase() === String(s.usuario).toLowerCase()) {
+          guardarSesion(s.usuario, datos.nombre || s.nombre, s.rol, s.token, s.principal);
+          actualizarBarraSesion();
+        }
+      } else {
+        mostrarToast((resp && resp.mensaje) || 'No se pudo guardar el usuario.', 'error');
+      }
+    };
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    mostrarCargaZona('tablaUsuarios', original ? 'Actualizando usuario…' : 'Creando usuario…');
+    if (original) {
+      google.script.run.withSuccessHandler(manejador)
+        .withFailureHandler(function(err) { manejador({ exito: false, mensaje: err.message }); })
+        .actualizarUsuario(tokenSesion(), datos);
+    } else {
+      google.script.run.withSuccessHandler(manejador)
+        .withFailureHandler(function(err) { manejador({ exito: false, mensaje: err.message }); })
+        .crearUsuario(tokenSesion(), datos);
+    }
+  }
+
+  function confirmarEliminarUsuario(usuario) {
+    if (!confirm('¿Eliminar al usuario "' + usuario + '"? Esta acción no se puede deshacer.')) return;
+    mostrarCargaZona('tablaUsuarios', 'Eliminando usuario…');
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        ocultarCargaZona('tablaUsuarios');
+        if (sesionInvalida(resp)) return;
+        if (resp && resp.exito) {
+          mostrarToast(resp.mensaje, 'exito');
+          cargarUsuarios(true);
+        } else {
+          mostrarToast((resp && resp.mensaje) || 'No se pudo eliminar el usuario.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) { ocultarCargaZona('tablaUsuarios'); mostrarToast('Error: ' + err.message, 'error'); })
+      .eliminarUsuario(tokenSesion(), usuario);
+  }
+
+  /* ==========================================================
+     CAMBIAR MI CONTRASEÑA (modal global, todos los roles)
+     ========================================================== */
+
+  function abrirModalContrasena() {
+    var modal = document.getElementById('modalContrasena');
+    if (modal) modal.style.display = 'flex';
+    var f = document.getElementById('formContrasenaGlobal');
+    if (f) f.reset();
+    var actual = document.getElementById('g_contrasena_actual');
+    if (actual) actual.focus();
+  }
+
+  function cerrarModalContrasena() {
+    var modal = document.getElementById('modalContrasena');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function cambiarMiContrasenaGlobal(e) {
+    e.preventDefault();
+    var actual = document.getElementById('g_contrasena_actual').value;
+    var nueva = document.getElementById('g_contrasena_nueva').value;
+    var btn = document.getElementById('btnGuardarContrasenaGlobal');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        btn.disabled = false;
+        btn.textContent = 'Cambiar contraseña';
+        if (sesionInvalida(resp)) return;
+        if (resp && resp.exito) {
+          mostrarToast(resp.mensaje, 'exito');
+          document.getElementById('formContrasenaGlobal').reset();
+          cerrarModalContrasena();
+        } else {
+          mostrarToast((resp && resp.mensaje) || 'No se pudo cambiar la contraseña.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Cambiar contraseña';
+        mostrarToast('Error: ' + err.message, 'error');
+      })
+      .cambiarContrasena(tokenSesion(), actual, nueva);
+  }
+
+</script>

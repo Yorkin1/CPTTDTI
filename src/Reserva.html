@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reservar horario</title>
+    <?!= include('HojaEstilos') ?>
+    <style>
+      /* Ajustes específicos de la página pública de reservas. */
+      .paso-reserva { display: none; }
+      .paso-reserva.activo { display: block; }
+
+      .parrilla-horarios {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .slot-horario {
+        padding: 12px 8px;
+        border: 1px solid var(--gris-borde);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--texto);
+        cursor: pointer;
+        text-align: center;
+        font-family: inherit;
+        transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      }
+      .slot-horario:hover { border-color: var(--color-primario); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+      .slot-horario.seleccionado { background: var(--color-primario); border-color: var(--color-primario); color: #fff; }
+      .slot-horario.ocupado { opacity: .45; cursor: not-allowed; text-decoration: line-through; }
+      .slot-horario.ocupado:hover { border-color: var(--gris-borde); box-shadow: none; }
+
+      .resumen-reserva {
+        background: var(--azul-muy-claro);
+        border-left: 4px solid var(--color-primario);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 14px 0;
+        font-size: 14px;
+      }
+      .resumen-reserva strong { color: var(--color-primario); }
+
+      .aviso-publico {
+        max-width: 640px;
+        margin: 60px auto;
+        text-align: center;
+      }
+      .hora12 { font-variant-numeric: tabular-nums; }
+
+      /* Servicios de la reserva */
+      .fila-servicio {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 6px;
+        border-bottom: 1px solid var(--gris-borde);
+        flex-wrap: wrap;
+      }
+      .fila-servicio:last-of-type { border-bottom: none; }
+      .servicio-nombre { flex: 1; font-weight: 600; min-width: 140px; }
+      .servicio-control { display: flex; align-items: center; gap: 8px; }
+      .servicio-cant {
+        min-width: 28px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .servicio-subtotal { min-width: 90px; text-align: right; font-weight: 600; color: var(--azul-oscuro); }
+      .servicio-total {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 2px dashed var(--gris-borde);
+        text-align: right;
+        font-size: 17px;
+        color: var(--azul-oscuro);
+      }
+      .servicio-total strong { font-size: 20px; color: var(--color-primario); }
+    </style>
+  </head>
+  <body>
+    <!-- Barra con el nombre del negocio -->
+    <header class="navbar">
+      <div class="navbar-marca">
+        <span class="titulo-app" id="reservaNegocio">Reservar horario</span>
+      </div>
+    </header>
+
+    <main class="contenedor">
+
+      <!-- Aviso: sistema no configurado o reservas deshabilitadas -->
+      <div class="tarjeta aviso-publico" id="avisoPublico" style="display:none;">
+        <h2 id="avisoTitulo">Reservas cerradas</h2>
+        <p id="avisoTexto">En este momento no se puede reservar en línea. Inténtelo más tarde o contacte al negocio.</p>
+      </div>
+
+      <!-- Paso 1: elegir fecha y servicios -->
+      <section class="paso-reserva" id="pasoInicio">
+        <div class="cabecera-vista">
+          <h1 id="tituloReserva">Reservar mi horario</h1>
+          <p id="subtituloReserva">Elija el día para ver los horarios disponibles.</p>
+        </div>
+        <div class="tarjeta">
+          <div class="grid-form">
+            <div class="campo ancho-completo">
+              <label for="res_fecha">Fecha *</label>
+              <input type="date" id="res_fecha" required>
+            </div>
+          </div>
+          <div class="acciones-form">
+            <button type="button" class="btn btn-primario" id="btnVerHorarios">Ver horarios disponibles</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Paso 2: parrilla de horarios -->
+      <section class="paso-reserva" id="pasoHorarios">
+        <div class="cabecera-vista">
+          <h1>Horarios disponibles</h1>
+          <p id="resumenDia"></p>
+        </div>
+        <div class="tarjeta" id="tarjetaServicios">
+          <h2>Servicios</h2>
+          <p class="ayuda">Seleccione al menos un servicio para continuar. Puede agregar varios; la duración y el total se calculan automáticamente.</p>
+          <div class="grid-form">
+            <div class="campo">
+              <label for="res_servicio">Servicio *</label>
+              <select id="res_servicio">
+                <option value="">— Elija un servicio —</option>
+              </select>
+            </div>
+          </div>
+          <div id="resumenServicios" style="margin-top:14px;">
+            <p class="vacio">Aún no ha elegido servicios.</p>
+          </div>
+        </div>
+
+        <div class="tarjeta">
+          <button type="button" class="btn btn-secundario" id="btnElegirMejor">Elegir el mejor horario</button>
+          <div class="parrilla-horarios" id="parrillaHorarios"></div>
+          <p class="asistente-nota" id="notaHorarios"></p>
+          <div class="acciones-form">
+            <button type="button" class="btn btn-primario" id="btnContinuarHorario">Continuar con este horario</button>
+            <button type="button" class="btn btn-secundario" id="btnVolverInicio">Cambiar fecha</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Paso 3: datos del cliente -->
+      <section class="paso-reserva" id="pasoDatos">
+        <div class="cabecera-vista">
+          <h1>Tus datos</h1>
+          <p>Si ya eres cliente, tu reserva se vinculará a tu ficha automáticamente.</p>
+        </div>
+        <div class="tarjeta">
+          <div class="resumen-reserva" id="resumenHorarioElegido"></div>
+          <div class="grid-form">
+            <div class="campo ancho-completo">
+              <label for="cli_nombre">Nombre *</label>
+              <input type="text" id="cli_nombre" required placeholder="Ej. Juan Pérez">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="cli_email">Correo electrónico</label>
+              <input type="email" id="cli_email" placeholder="Ej. nombre@correo.com">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="cli_telefono">Teléfono</label>
+              <input type="tel" id="cli_telefono" placeholder="Ej. 809-555-1234" maxlength="12" pattern="[0-9 ()-]{7,12}" title="Formato de teléfono inválido (10 dígitos, use espacios o guiones).">
+            </div>
+            <p class="asistente-nota ancho-completo">Debe ingresar al menos su correo o su teléfono.</p>
+            <p class="asistente-nota ancho-completo" id="notaClienteExistente" style="display:none;"></p>
+          </div>
+          <div class="acciones-form">
+            <button type="button" class="btn btn-primario" id="btnConfirmarReserva">Confirmar reserva</button>
+            <button type="button" class="btn btn-secundario" id="btnVolverHorarios">Volver a los horarios</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Paso 4: confirmación (constancia) -->
+      <section class="paso-reserva" id="pasoConfirmacion">
+        <div class="cabecera-vista">
+          <h1>¡Reserva confirmada!</h1>
+          <p>Guarde esta constancia con los datos de su horario.</p>
+        </div>
+        <div class="tarjeta">
+          <div class="resumen-reserva" id="resumenConfirmacion"></div>
+          <p class="asistente-nota" id="notaConfirmacion"></p>
+          <div class="acciones-form">
+            <button type="button" class="btn btn-primario" id="btnOtraReserva">Reservar otro horario</button>
+            <button type="button" class="btn btn-secundario" id="btnEditarReserva">Editar / Modificar reserva</button>
+            <button type="button" class="btn btn-secundario" id="btnImprimirConstancia">Imprimir constancia</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="pie">
+      <span id="pieReserva"></span>
+    </footer>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Modal: confirmar la reserva antes de agendarla -->
+    <div class="modal-fondo" id="modalConfirmar" style="display:none;">
+      <div class="modal">
+        <div class="modal-cabecera">
+          <h2>Confirmar reserva</h2>
+          <button type="button" class="modal-cerrar" id="btnCerrarModalConfirmar" aria-label="Cerrar">&times;</button>
+        </div>
+        <div class="resumen-reserva" id="resumenConfirmarModal"></div>
+        <p class="asistente-nota">¿Confirmar estas citas? Si pulsa "No, editar", volverá a la pestaña anterior para modificar sus datos y servicios.</p>
+        <div class="acciones-form">
+          <button type="button" class="btn btn-primario" id="btnConfirmarSi">Sí, confirmar reserva</button>
+          <button type="button" class="btn btn-secundario" id="btnConfirmarNo">No, editar</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      /* ============================================================
+         Página pública de reservas — lógica
+         ============================================================ */
+
+      var Reserva = {
+        config: null,
+        servicios: [],
+        seleccion: { fecha: '', duracion: 60, hora: '', slots: [], servicios: {} },
+        paso: '',
+        _reserva: null,
+        _toastTimer: null
+      };
+
+      function mostrarToastReserva(mensaje, tipo) {
+        var toast = document.getElementById('toast');
+        toast.textContent = mensaje;
+        toast.className = 'toast visible ' + (tipo || '');
+        clearTimeout(Reserva._toastTimer);
+        Reserva._toastTimer = setTimeout(function() {
+          toast.className = 'toast';
+        }, 3500);
+      }
+
+      function escReserva(texto) {
+        if (texto === null || texto === undefined) return '';
+        return String(texto)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // Femenina si termina en "a", "ción", "sión", "dad", "tad" o "tud".
+      function femeninaReserva(etiqueta) {
+        var e = String(etiqueta || '').trim().toLowerCase();
+        if (!e) return true;
+        return /(a|ción|sión|dad|tad|tud)$/.test(e);
+      }
+
+      // Artículo indeterminado ("una"/"un") para la etiqueta de cita.
+      function articuloReserva(etiqueta) {
+        return femeninaReserva(etiqueta) ? 'una' : 'un';
+      }
+
+      function pasarAPaso(nombrePaso) {
+        var pasos = document.querySelectorAll('.paso-reserva');
+        for (var i = 0; i < pasos.length; i++) {
+          pasos[i].classList.remove('activo');
+        }
+        document.getElementById(nombrePaso).classList.add('activo');
+        Reserva.paso = nombrePaso;
+        // Mantener el refresco de disponibilidad activo mientras el usuario
+        // puede todavía elegir o cambiar el horario (pasos de horarios y datos),
+        // para invalidar el horario elegido si pasa la hora o es tomado por otro.
+        // Se detiene al volver al inicio o en la pantalla de éxito.
+        if (nombrePaso === 'pasoInicio' || nombrePaso === 'pasoConfirmacion') {
+          detenerActualizacionDisponibilidad();
+        } else {
+          iniciarActualizacionDisponibilidad();
+        }
+      }
+
+      // Disponibilidad en vivo: mientras el usuario puede elegir horario (pasos
+      // de horarios y datos) se re-consulta cada 15 s para reflejar horas
+      // tomadas por otros clientes o que ya pasaron.
+      function iniciarActualizacionDisponibilidad() {
+        detenerActualizacionDisponibilidad();
+        window._intervaloDisponibilidad = setInterval(actualizarDisponibilidad, 15000);
+      }
+
+      function detenerActualizacionDisponibilidad() {
+        if (window._intervaloDisponibilidad) {
+          clearInterval(window._intervaloDisponibilidad);
+          window._intervaloDisponibilidad = null;
+        }
+      }
+
+      function actualizarDisponibilidad() {
+        if (!Reserva.seleccion.fecha) return;
+        google.script.run
+          .withSuccessHandler(function(resp) {
+            if (!resp || !resp.exito) return;
+            var antes = (Reserva.seleccion.slots || []).join(',');
+            var despues = (resp.slots || []).join(',');
+            // Si la lista no cambió y la elección sigue válida, no hacer nada.
+            if (antes === despues &&
+                (!Reserva.seleccion.hora ||
+                 (resp.slots || []).indexOf(Reserva.seleccion.hora) !== -1)) {
+              return;
+            }
+            var elegida = Reserva.seleccion.hora;
+            Reserva.seleccion.slots = resp.slots || [];
+            if (elegida && (resp.slots || []).indexOf(elegida) === -1) {
+              // El horario elegido ya no está disponible: pasó de hora o fue
+              // tomado por otro. Se limpia la selección y se regresa a la
+              // parrilla (reconstruida sin el slot vencido) para que elija otro.
+              Reserva.seleccion.hora = '';
+              mostrarToastReserva('El horario elegido ya no está disponible (pasó la hora o fue tomado). Elija otro.', 'error');
+              renderParrilla();
+              pasarAPaso('pasoHorarios');
+              return;
+            }
+            // La elección sigue válida: refrescar la parrilla y el resaltado.
+            if (Reserva.paso === 'pasoHorarios') {
+              renderParrilla();
+              if (elegida && Reserva.seleccion.hora) {
+                var botones = document.querySelectorAll('#parrillaHorarios .slot-horario');
+                for (var i = 0; i < botones.length; i++) {
+                  botones[i].classList.toggle('seleccionado', botones[i].dataset.hora === elegida);
+                }
+              }
+            }
+          })
+          .withFailureHandler(function() {})
+          .obtenerHorariosDisponibilidad({ fecha: Reserva.seleccion.fecha, duracionMins: Reserva.seleccion.duracion });
+      }
+
+      // Valida el formato de un correo electrónico.
+      function esEmailValidoReserva(email) {
+        email = String(email || '').trim();
+        if (!email) return true; // el correo es opcional
+        var patron = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+        return patron.test(email);
+      }
+
+      // Códigos de área válidos para números dominicanos (fijos y m��viles).
+      var CODIGOS_AREA_RDRESERVA = ['809', '829', '849'];
+
+      // Valida el formato de un número de teléfono dominicano (10 dígitos
+      // iniciando con 809/829/849), igual que el formulario de clientes.
+      function esTelefonoValidoReserva(telefono) {
+        telefono = String(telefono || '').trim();
+        if (!telefono) return true; // el teléfono es opcional
+        var caracteresPermitidos = /^[0-9\s\-\(\)]+$/;
+        if (!caracteresPermitidos.test(telefono)) return false;
+        var digitos = telefono.replace(/\D/g, '');
+        if (digitos.length !== 10) return false;
+        return CODIGOS_AREA_RDRESERVA.indexOf(digitos.slice(0, 3)) !== -1;
+      }
+
+      // Valida que el nombre contenga solo letras, espacios, apóstrofes y
+      // guiones (sin dígitos ni símbolos), permitiendo acentos y "ñ".
+      function esNombreValidoReserva(texto) {
+        texto = String(texto || '').trim();
+        if (!texto) return true; // la obligatoriedad se valida aparte
+        var patron = /^[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+$/;
+        return patron.test(texto);
+      }
+
+      // Formatea un teléfono mientras se escribe: XXX-XXX-XXXX
+      function formatearTelefonoReserva(valor) {
+        valor = String(valor || '');
+        var digitos = valor.replace(/\D/g, '').slice(0, 10);
+        var resultado;
+        if (digitos.length > 6) {
+          resultado = digitos.slice(0, 3) + '-' + digitos.slice(3, 6) + '-' + digitos.slice(6, 10);
+        } else if (digitos.length > 3) {
+          resultado = digitos.slice(0, 3) + '-' + digitos.slice(3);
+        } else {
+          resultado = digitos;
+        }
+        return resultado;
+      }
+
+      // Marca visualmente un campo como inválido/válido.
+      function marcarCampoReserva(idCampo, valido) {
+        var el = document.getElementById(idCampo);
+        if (!el) return;
+        el.style.borderColor = valido ? '' : 'var(--rojo)';
+        el.style.boxShadow = valido ? '' : '0 0 0 3px rgba(220, 38, 38, 0.12)';
+      }
+
+      function hoyReserva() {
+        var d = new Date();
+        var y = d.getFullYear();
+        var m = ('0' + (d.getMonth() + 1)).slice(-2);
+        var dia = ('0' + d.getDate()).slice(-2);
+        return y + '-' + m + '-' + dia;
+      }
+
+      // Devuelve la hora en formato de 12 horas (h:mm AM/PM).
+      function hora12Reserva(h) {
+        h = String(h || '');
+        var m = h.match(/(\d{1,2}):(\d{2})$/);
+        if (!m) return h;
+        var hh = parseInt(m[1], 10);
+        var mm = m[2];
+        var suf = hh >= 12 ? 'PM' : 'AM';
+        var h12 = hh % 12;
+        if (h12 === 0) h12 = 12;
+        return h12 + ':' + mm + ' ' + suf;
+      }
+
+      // Convierte "yyyy-MM-dd" a "dd-MM-yyyy" para mostrarla al cliente.
+      function fechaDMYReserva(f) {
+        var m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return f;
+        return m[3] + '-' + m[2] + '-' + m[1];
+      }
+
+      function nombreDiaReserva(indice) {
+        var nombres = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        return nombres[indice] || '';
+      }
+
+      // Formatea un número como dinero ("$ 1,234.50").
+      function formatoMonedaReserva(n) {
+        n = parseFloat(n) || 0;
+        return '$ ' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      }
+
+      // Carga los servicios activos del negocio para el combobox.
+      function cargarServiciosPublicos() {
+        google.script.run
+          .withSuccessHandler(function(resp) {
+            if (!resp || !resp.exito) return;
+            Reserva.servicios = resp.servicios || [];
+            llenarListboxServicios();
+          })
+          .withFailureHandler(function() {})
+          .obtenerServiciosPublicos();
+      }
+
+      function llenarListboxServicios() {
+        var sel = document.getElementById('res_servicio');
+        if (!sel) return;
+        var opciones = '<option value="">— Elija un servicio —</option>';
+        (Reserva.servicios || []).forEach(function(s) {
+          opciones += '<option value="' + escReserva(s.id) + '">' +
+            escReserva(s.nombre) + ' — ' + formatoMonedaReserva(s.precio) +
+            ' (' + (s.duracionMins || 60) + ' min)</option>';
+        });
+        sel.innerHTML = opciones;
+      }
+
+      // Agrega (suma 1) el servicio elegido en el combobox a la selección.
+      function agregarServicioSeleccion() {
+        var sel = document.getElementById('res_servicio');
+        var id = sel.value;
+        if (!id) return;
+        var mapa = Reserva.seleccion.servicios || {};
+        mapa[String(id)] = (mapa[String(id)] || 0) + 1;
+        Reserva.seleccion.servicios = mapa;
+        sel.value = '';
+        renderResumenServicios();
+        recalcularDuracionYHorarios();
+      }
+
+      function cambiarCantidadServicio(id, delta) {
+        var mapa = Reserva.seleccion.servicios || {};
+        var cant = (mapa[String(id)] || 1) + delta;
+        if (cant <= 0) {
+          delete mapa[String(id)];
+        } else {
+          mapa[String(id)] = cant;
+        }
+        Reserva.seleccion.servicios = mapa;
+        renderResumenServicios();
+        limpiarHoraSiSinServicios();
+        recalcularDuracionYHorarios();
+      }
+
+      function quitarServicioSeleccion(id) {
+        delete Reserva.seleccion.servicios[String(id)];
+        renderResumenServicios();
+        limpiarHoraSiSinServicios();
+        recalcularDuracionYHorarios();
+      }
+
+      // Si no queda ningún servicio, se desmarca la hora elegida.
+      // Los servicios son opcionales: al quitarlos no se borra la hora
+      // elegida (la duración se recalcula con la predeterminada vía
+      // recalcularDuracionYHorarios). Se conserva por compatibilidad.
+      function limpiarHoraSiSinServicios() {}
+
+      // Dibuja la lista de servicios elegidos con cantidades y el total.
+      function renderResumenServicios() {
+        var cont = document.getElementById('resumenServicios');
+        if (!cont) return;
+        var mapa = Reserva.seleccion.servicios || {};
+        var ids = Object.keys(mapa);
+        if (ids.length === 0) {
+          cont.innerHTML = '<p class="vacio">Aún no ha elegido servicios.</p>';
+          return;
+        }
+        var filas = '';
+        var total = 0;
+        ids.forEach(function(id) {
+          var s = null;
+          (Reserva.servicios || []).some(function(x) {
+            if (String(x.id) === String(id)) { s = x; return true; }
+            return false;
+          });
+          if (!s) return;
+          var cant = mapa[id];
+          var sub = (s.precio || 0) * cant;
+          total += sub;
+          filas += '<div class="fila-servicio">' +
+            '<span class="servicio-nombre">' + escReserva(s.nombre) + '</span>' +
+            '<div class="servicio-control">' +
+              '<button type="button" class="btn btn-secundario btn-pequeno" onclick="cambiarCantidadServicio(\'' + escReserva(id) + '\', -1)">&minus;</button>' +
+              '<span class="servicio-cant">' + cant + '</span>' +
+              '<button type="button" class="btn btn-secundario btn-pequeno" onclick="cambiarCantidadServicio(\'' + escReserva(id) + '\', 1)">+</button>' +
+            '</div>' +
+            '<span class="servicio-subtotal">' + formatoMonedaReserva(sub) + '</span>' +
+            '<button type="button" class="btn btn-peligro btn-pequeno" title="Quitar" onclick="quitarServicioSeleccion(\'' + escReserva(id) + '\')">&times;</button>' +
+          '</div>';
+        });
+        cont.innerHTML = filas +
+          '<div class="servicio-total">Total: <strong>' + formatoMonedaReserva(total) + '</strong></div>';
+      }
+
+      // Duración = suma de duraciones × cantidad de los servicios elegidos.
+      // Si no hay servicios devuelve 0 (entonces se usa la predeterminada).
+      function duracionSegunServicios() {
+        var map = Reserva.seleccion.servicios || {};
+        var ids = Object.keys(map);
+        if (ids.length === 0) return 0;
+        var duracion = 0;
+        ids.forEach(function(id) {
+          (Reserva.servicios || []).forEach(function(s) {
+            if (String(s.id) === String(id)) {
+              duracion += (s.duracionMins || 60) * (map[id] || 1);
+            }
+          });
+        });
+        return duracion;
+      }
+
+      // Recalcula los horarios disponibles para la duración que resulta de
+      // los servicios elegidos y refresca la parrilla.
+      function recalcularDuracionYHorarios() {
+        if (!Reserva.seleccion.fecha) return;
+        var duracion = duracionSegunServicios();
+        if (duracion < 5) duracion = Reserva.seleccion.duracion || 60;
+        google.script.run
+          .withSuccessHandler(function(resp) {
+            if (!resp || !resp.exito) return;
+            var elegida = Reserva.seleccion.hora;
+            Reserva.seleccion.duracion = resp.duracion;
+            Reserva.seleccion.slots = resp.slots || [];
+            if (elegida && (resp.slots || []).indexOf(elegida) === -1) {
+              Reserva.seleccion.hora = '';
+              mostrarToastReserva('La duración cambió con los servicios y su horario ya no está disponible. Elija otro.', 'error');
+            }
+            renderParrilla();
+            if (elegida && Reserva.seleccion.hora) {
+              var botones = document.querySelectorAll('#parrillaHorarios .slot-horario');
+              for (var i = 0; i < botones.length; i++) {
+                botones[i].classList.toggle('seleccionado', botones[i].dataset.hora === elegida);
+              }
+            }
+          })
+          .withFailureHandler(function() {})
+          .obtenerHorariosDisponibles({ fecha: Reserva.seleccion.fecha, duracionMins: duracion });
+      }
+
+      // Resumen HTML de los servicios elegidos (para el paso de datos).
+      function resumenServiciosHTML() {
+        var map = Reserva.seleccion.servicios || {};
+        var ids = Object.keys(map);
+        if (ids.length === 0) return '';
+        var lineas = '';
+        var total = 0;
+        ids.forEach(function(id) {
+          (Reserva.servicios || []).forEach(function(s) {
+            if (String(s.id) === String(id)) {
+              var cant = map[id] || 1;
+              var sub = (s.precio || 0) * cant;
+              total += sub;
+              lineas += '&bull; ' + cant + ' × ' + escReserva(s.nombre) +
+                ' = <strong>' + formatoMonedaReserva(sub) + '</strong><br>';
+            }
+          });
+        });
+        return lineas + 'Total: <strong>' + formatoMonedaReserva(total) + '</strong>';
+      }
+
+      function iniciarReserva() {
+        document.getElementById('res_fecha').min = hoyReserva();
+        renderResumenServicios();
+        pasarAPaso('pasoInicio');
+
+        document.getElementById('btnVerHorarios').addEventListener('click', verHorariosDisponibles);
+        document.getElementById('btnElegirMejor').addEventListener('click', elegirMejorHorario);
+        document.getElementById('btnContinuarHorario').addEventListener('click', irADatos);
+        document.getElementById('btnVolverInicio').addEventListener('click', function() {
+          pasarAPaso('pasoInicio');
+        });
+        document.getElementById('btnVolverHorarios').addEventListener('click', function() {
+          pasarAPaso('pasoHorarios');
+        });
+        document.getElementById('btnConfirmarReserva').addEventListener('click', confirmarReserva);
+        var modalConfirmar = document.getElementById('modalConfirmar');
+        if (modalConfirmar && !modalConfirmar.getAttribute('data-vinculado')) {
+          modalConfirmar.setAttribute('data-vinculado', '1');
+          document.getElementById('btnConfirmarSi').addEventListener('click', procesarReserva);
+          document.getElementById('btnConfirmarNo').addEventListener('click', function() {
+            cerrarModalConfirmar();
+            pasarAPaso('pasoHorarios');
+          });
+          document.getElementById('btnCerrarModalConfirmar').addEventListener('click', function() {
+            cerrarModalConfirmar();
+            pasarAPaso('pasoHorarios');
+          });
+        }
+        document.getElementById('res_servicio').addEventListener('change', agregarServicioSeleccion);
+        document.getElementById('btnEditarReserva').addEventListener('click', function() {
+          pasarAPaso('pasoHorarios');
+        });
+        var campoTelefono = document.getElementById('cli_telefono');
+        if (campoTelefono) {
+          campoTelefono.addEventListener('input', function(e) {
+            var alFinal = e.target.selectionEnd === e.target.value.length;
+            e.target.value = formatearTelefonoReserva(e.target.value);
+            if (alFinal) {
+              e.target.selectionStart = e.target.selectionEnd = e.target.value.length;
+            }
+          });
+        }
+        document.getElementById('cli_email').addEventListener('blur', buscarSiYaSoyCliente);
+        document.getElementById('cli_telefono').addEventListener('blur', buscarSiYaSoyCliente);
+        document.getElementById('btnOtraReserva').addEventListener('click', function() {
+          Reserva.seleccion = { fecha: '', duracion: 60, hora: '', slots: [], servicios: {} };
+          Reserva._reserva = null;
+          document.getElementById('res_fecha').value = '';
+          iniciarReserva();
+        });
+        document.getElementById('btnImprimirConstancia').addEventListener('click', function() {
+          window.print();
+        });
+      }
+
+      function verHorariosDisponibles() {
+        var fecha = document.getElementById('res_fecha').value;
+        if (!fecha) {
+          mostrarToastReserva('Elija una fecha.', 'error');
+          return;
+        }
+        var duracion = duracionSegunServicios();
+        if (duracion < 5) {
+          duracion = parseInt((Reserva.config && Reserva.config.duracionCitaPredeterminada) || '60', 10) || 60;
+        }
+
+        var btn = document.getElementById('btnVerHorarios');
+        btn.disabled = true;
+        btn.textContent = 'Consultando…';
+
+        google.script.run
+          .withSuccessHandler(function(resp) {
+            btn.disabled = false;
+            btn.textContent = 'Ver horarios disponibles';
+            if (!resp || !resp.exito) {
+              mostrarToastReserva((resp && resp.mensaje) || 'No se pudieron obtener los horarios.', 'error');
+              return;
+            }
+            Reserva.seleccion.fecha = resp.fecha;
+            Reserva.seleccion.duracion = resp.duracion;
+            Reserva.seleccion.slots = resp.slots || [];
+            Reserva.seleccion.hora = '';
+            renderParrilla();
+            pasarAPaso('pasoHorarios');
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            btn.textContent = 'Ver horarios disponibles';
+            mostrarToastReserva('Error: ' + err.message, 'error');
+          })
+          .obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion });
+      }
+
+      function renderParrilla() {
+        var fecha = Reserva.seleccion.fecha;
+        var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
+        document.getElementById('resumenDia').textContent =
+          'Día ' + fechaDMYReserva(fecha) + ' (' + nombreDiaReserva(new Date(fecha + 'T00:00:00').getDay()) + ') · Duración: ' +
+          Reserva.seleccion.duracion + ' min';
+
+        var contenedor = document.getElementById('parrillaHorarios');
+        var slots = Reserva.seleccion.slots || [];
+        if (slots.length === 0) {
+          contenedor.innerHTML = '<p class="vacio">No hay horarios libres para este día. Elija otro día o contacte al negocio.</p>';
+          document.getElementById('notaHorarios').textContent = '';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < slots.length; i++) {
+          html += '<button type="button" class="slot-horario" data-hora="' + escReserva(slots[i]) +
+            '">' + hora12Reserva(slots[i]) + '</button>';
+        }
+        contenedor.innerHTML = html;
+        document.getElementById('notaHorarios').textContent =
+          'Seleccione un horario libre o pulse "Elegir el mejor horario".';
+
+        // Marcar los horarios libres como seleccionables y reaccionar al clic.
+        var botones = contenedor.querySelectorAll('.slot-horario');
+        for (var j = 0; j < botones.length; j++) {
+          botones[j].addEventListener('click', function() {
+            seleccionarHora(this.dataset.hora);
+          });
+        }
+      }
+
+      function seleccionarHora(hora) {
+        Reserva.seleccion.hora = hora;
+        var botones = document.querySelectorAll('#parrillaHorarios .slot-horario');
+        for (var i = 0; i < botones.length; i++) {
+          botones[i].classList.toggle('seleccionado', botones[i].dataset.hora === hora);
+        }
+        mostrarToastReserva('Horario elegido: ' + hora12Reserva(hora), 'exito');
+      }
+
+      function elegirMejorHorario() {
+        var slots = Reserva.seleccion.slots || [];
+        if (slots.length === 0) {
+          mostrarToastReserva('No hay horarios libres para este día.', 'error');
+          return;
+        }
+        // El primero de la lista es el más cercano disponible.
+        seleccionarHora(slots[0]);
+      }
+
+      function irADatos() {
+        if (!Reserva.seleccion.hora) {
+          mostrarToastReserva('Primero elija un horario libre.', 'error');
+          return;
+        }
+        // Servicio obligatorio solo si el negocio ofrece servicios.
+        if ((Reserva.servicios || []).length > 0 &&
+            Object.keys(Reserva.seleccion.servicios || {}).length === 0) {
+          mostrarToastReserva('Seleccione al menos un servicio para continuar.', 'error');
+          return;
+        }
+        var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
+        var html = 'Usted va a reservar ' + articuloReserva(etiqueta) + ' <strong>' + escReserva(etiqueta) + '</strong> el <strong>' +
+          escReserva(fechaDMYReserva(Reserva.seleccion.fecha)) + '</strong> a las <strong>' +
+          hora12Reserva(Reserva.seleccion.hora) + '</strong> (' + Reserva.seleccion.duracion + ' min).';
+        var servicios = resumenServiciosHTML();
+        if (servicios) {
+          html += '<br><br><strong>Servicios:</strong><br>' + servicios;
+        }
+        document.getElementById('resumenHorarioElegido').innerHTML = html;
+        var notaCliente = document.getElementById('notaClienteExistente');
+        if (notaCliente) { notaCliente.style.display = 'none'; notaCliente.textContent = ''; }
+        pasarAPaso('pasoDatos');
+      }
+
+      // Si ya está registrado/a, rellenar el nombre automáticamente y avisarle.
+      function buscarSiYaSoyCliente() {
+        var email = document.getElementById('cli_email').value.trim();
+        var telefono = document.getElementById('cli_telefono').value.trim();
+        if (!email && !telefono) return;
+        var nota = document.getElementById('notaClienteExistente');
+        if (nota) { nota.style.display = 'none'; nota.textContent = ''; }
+        google.script.run
+          .withSuccessHandler(function(resp) {
+            if (!resp || !resp.exito || !resp.encontrado) return;
+            var nombreCompleto = (resp.nombre || '') +
+              (resp.apellido ? ' ' + resp.apellido : '');
+            var campoNombre = document.getElementById('cli_nombre');
+            if (nombreCompleto && (!campoNombre.value || campoNombre.value.trim() === '')) {
+              campoNombre.value = nombreCompleto;
+            }
+            if (nota) {
+              nota.style.display = 'block';
+              nota.textContent = 'Ya está registrado/a como ' + nombreCompleto +
+                '. Su reserva se vinculará a su ficha automáticamente.';
+            }
+          })
+          .withFailureHandler(function() {})
+          .buscarClientePublico({ email: email, telefono: telefono });
+      }
+
+      function confirmarReserva() {
+        var nombre = document.getElementById('cli_nombre').value.trim();
+        var email = document.getElementById('cli_email').value.trim();
+        var telefono = document.getElementById('cli_telefono').value.trim();
+        if (!nombre) {
+          marcarCampoReserva('cli_nombre', false);
+          mostrarToastReserva('Ingrese su nombre.', 'error');
+          return;
+        }
+
+        var nombreValido = esNombreValidoReserva(nombre);
+        marcarCampoReserva('cli_nombre', nombreValido);
+        if (!nombreValido) {
+          mostrarToastReserva('El nombre solo debe contener letras y espacios.', 'error');
+          return;
+        }
+
+        var emailValido = esEmailValidoReserva(email);
+        marcarCampoReserva('cli_email', emailValido);
+        if (!emailValido) {
+          mostrarToastReserva('El formato del correo electrónico no es válido.', 'error');
+          return;
+        }
+
+        var telefonoValido = esTelefonoValidoReserva(telefono);
+        marcarCampoReserva('cli_telefono', telefonoValido);
+        if (!telefonoValido) {
+          mostrarToastReserva('El formato del teléfono no es válido. Use un número dominicano (809/829/849) de 10 dígitos.', 'error');
+          return;
+        }
+
+        if (!email && !telefono) {
+          mostrarToastReserva('Ingrese su correo o su teléfono.', 'error');
+          return;
+        }
+
+        // Servicio obligatorio solo si el negocio ofrece servicios.
+        if ((Reserva.servicios || []).length > 0 &&
+            Object.keys(Reserva.seleccion.servicios || {}).length === 0) {
+          mostrarToastReserva('Seleccione al menos un servicio para continuar.', 'error');
+          return;
+        }
+
+        // Servicios elegidos: se envían al servidor, que vuelve a calcular el
+        // total y la duración desde el catálogo (el cliente no puede alterarlos).
+        var serviciosEnviar = [];
+        var mapaServ = Reserva.seleccion.servicios || {};
+        Object.keys(mapaServ).forEach(function(id) {
+          serviciosEnviar.push({ id: id, cantidad: mapaServ[id] });
+        });
+        Reserva._reserva = {
+          fecha: Reserva.seleccion.fecha,
+          hora: Reserva.seleccion.hora,
+          duracionMins: Reserva.seleccion.duracion,
+          servicios: serviciosEnviar,
+          cliente: { nombre: nombre, email: email, telefono: telefono }
+        };
+        abrirModalConfirmar();
+      }
+
+      // Muestra el resumen y el total de la reserva en el modal de confirmación.
+      function abrirModalConfirmar() {
+        var modal = document.getElementById('modalConfirmar');
+        var cont = document.getElementById('resumenConfirmarModal');
+        var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
+        var html = '<strong>' + escReserva(etiqueta) + '</strong> el <strong>' +
+          escReserva(fechaDMYReserva(Reserva.seleccion.fecha)) + '</strong> a las <strong>' +
+          hora12Reserva(Reserva.seleccion.hora) + '</strong> (' + Reserva.seleccion.duracion + ' min).';
+        var servicios = resumenServiciosHTML();
+        if (servicios) {
+          html += '<br><br><strong>Servicios:</strong><br>' + servicios;
+        }
+        cont.innerHTML = html;
+        modal.style.display = 'flex';
+      }
+
+      function cerrarModalConfirmar() {
+        var modal = document.getElementById('modalConfirmar');
+        if (modal) modal.style.display = 'none';
+      }
+
+      // Ejecuta la reserva (llamada al servidor). Se invoca tras confirmar el
+      // modal; la lógica de reservarCitaPublica no cambia (precio y duración
+      // siempre se recalculan desde el catálogo en el servidor).
+      function procesarReserva() {
+        var datos = Reserva._reserva;
+        if (!datos) return;
+        var btn = document.getElementById('btnConfirmarSi');
+        btn.disabled = true;
+        btn.textContent = 'Reservando…';
+
+        google.script.run
+          .withSuccessHandler(function(resp) {
+            btn.disabled = false;
+            btn.textContent = 'Sí, confirmar reserva';
+            cerrarModalConfirmar();
+            if (!resp || !resp.exito) {
+              var mensaje = (resp && resp.mensaje) || 'No se pudo completar la reserva.';
+              mostrarToastReserva(mensaje, 'error');
+              // Si el horario ya no existe, refrescar los horarios vigentes.
+              if (resp && resp.sugerencias) {
+                Reserva.seleccion.slots = resp.sugerencias || [];
+                Reserva.seleccion.hora = '';
+                renderParrilla();
+                pasarAPaso('pasoHorarios');
+              }
+              return;
+            }
+            mostrarConfirmacion(resp);
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            btn.textContent = 'Sí, confirmar reserva';
+            cerrarModalConfirmar();
+            mostrarToastReserva('Error: ' + err.message, 'error');
+          })
+          .reservarCitaPublica(datos);
+      }
+
+      function mostrarConfirmacion(resp) {
+        var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
+        var html = '<strong>' + escReserva(etiqueta) + '</strong> ' +
+          (femeninaReserva(etiqueta) ? 'reservada' : 'reservado') + ' para el <strong>' +
+          escReserva(fechaDMYReserva(resp.fecha)) + '</strong> a las <strong>' + hora12Reserva(resp.hora) +
+          '</strong> (' + resp.duracion + ' min) en ' +
+          escReserva((Reserva.config && Reserva.config.nombreNegocio) || 'el negocio') + '.';
+        if (resp.servicios && resp.servicios.length > 0) {
+          html += '<br><br><strong>Servicios:</strong><br>' + resp.servicios.map(function(it) {
+            return '&bull; ' + it.cantidad + ' × ' + escReserva(it.nombre) +
+              ' = <strong>' + formatoMonedaReserva(it.subtotal) + '</strong>';
+          }).join('<br>') + '<br>Total a pagar: <strong>' + formatoMonedaReserva(resp.totalPrecio) + '</strong>';
+        }
+        document.getElementById('resumenConfirmacion').innerHTML = html;
+        document.getElementById('notaConfirmacion').textContent =
+          (resp.mensaje || '') + ' ¡Gracias por su reserva!';
+        pasarAPaso('pasoConfirmacion');
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        google.script.run
+          .withSuccessHandler(function(estado) {
+            Reserva.config = estado;
+            if (!estado || !estado.exito) {
+              mostrarAviso('Error', (estado && estado.mensaje) || 'No se pudo cargar la información.');
+              return;
+            }
+            if (!estado.configurada) {
+              mostrarAviso('Sistema sin configurar',
+                'El negocio aún no ha configurado su sistema de reservas.');
+              return;
+            }
+            if (!estado.habilitarReservas) {
+              mostrarAviso('Reservas cerradas',
+                'En este momento las reservas en línea están deshabilitadas. Inténtelo más tarde o contacte al negocio.');
+              return;
+            }
+            document.documentElement.style.setProperty('--color-primario', estado.colorPrimario);
+            document.getElementById('reservaNegocio').textContent =
+              estado.nombreNegocio || 'Reservar horario';
+            document.getElementById('pieReserva').textContent =
+              (estado.nombreNegocio || '') + ' · © ' + new Date().getFullYear();
+            cargarServiciosPublicos();
+            iniciarReserva();
+          })
+          .withFailureHandler(function(err) {
+            mostrarAviso('Error', 'No se pudo cargar la información: ' + err.message);
+          })
+          .obtenerEstadoPublico();
+      });
+
+      function mostrarAviso(titulo, texto) {
+        document.getElementById('avisoTitulo').textContent = titulo;
+        document.getElementById('avisoTexto').textContent = texto;
+        document.getElementById('avisoPublico').style.display = 'block';
+        var pasos = document.querySelectorAll('.paso-reserva');
+        for (var i = 0; i < pasos.length; i++) {
+          pasos[i].classList.remove('activo');
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,60 @@
+<div class="cabecera-vista">
+  <h1>Historial</h1>
+  <p>Consulte el historial de servicios, citas y atenciones de sus clientes.</p>
+</div>
+
+<div class="tarjeta">
+  <div class="cabecera-lista">
+    <h2>Registros</h2>
+    <div class="acciones-lista">
+      <span id="etiquetaAlcanceExportar" class="etiqueta-alcance"></span>
+      <div class="menu-exportar">
+        <button type="button" class="btn btn-secundario btn-pequeno" id="btnExportar" aria-haspopup="true" aria-expanded="false">
+          ⬇ Exportar <span class="flecha-exportar">▾</span>
+        </button>
+        <div class="menu-exportar-lista" id="menuExportar" style="display:none;">
+          <button type="button" class="menu-exportar-item" id="btnExportarExcel">Descargar Excel</button>
+          <button type="button" class="menu-exportar-item" id="btnExportarPDF">Descargar PDF</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secundario btn-pequeno btn-refrescar" title="Refrescar" onclick="refrescarLista('historial')">↻ Refrescar</button>
+    </div>
+  </div>
+
+  <div class="barra-busqueda">
+    <label>Cliente
+      <select id="sel_cliente_historial">
+        <option value="">— Todos los clientes —</option>
+      </select>
+    </label>
+    <label>Desde
+      <input type="date" id="hist_fecha_desde">
+    </label>
+    <label>Hasta
+      <input type="date" id="hist_fecha_hasta">
+    </label>
+    <label>Realizada por
+      <input type="text" id="hist_realizada_por" placeholder="nombre…">
+    </label>
+  </div>
+
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>Realizada por</th>
+          <th>Fecha</th>
+          <th class="col-wrap">Descripción</th>
+          <th>Servicios</th>
+          <th>Total</th>
+          <th>Duración</th>
+          <th>Resultado</th>
+        </tr>
+      </thead>
+      <tbody id="tablaHistorial">
+        <tr><td colspan="8" class="cargando">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

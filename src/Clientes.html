@@ -1,0 +1,81 @@
+<div class="cabecera-vista">
+  <h1>Clientes</h1>
+  <p>Registre y administre la información de sus clientes.</p>
+</div>
+
+<!-- Formulario de alta / edición de cliente -->
+<div class="tarjeta">
+  <h2 id="tituloFormCliente">Nuevo cliente</h2>
+  <form id="formCliente">
+    <input type="hidden" id="clienteId" value="">
+    <div class="grid-form">
+      <div class="campo">
+        <label for="cli_nombre">Nombre *</label>
+        <input type="text" id="cli_nombre" required>
+      </div>
+      <div class="campo">
+        <label for="cli_apellido">Apellido</label>
+        <input type="text" id="cli_apellido">
+      </div>
+      <div class="campo">
+        <label for="cli_telefono">Teléfono</label>
+        <input type="tel" id="cli_telefono" placeholder="Ej. 809-555-1234" maxlength="12" pattern="[0-9 ()-]{7,12}" title="Formato de teléfono inválido (10 dígitos, use espacios o guiones).">
+      </div>
+      <div class="campo">
+        <label for="cli_email">Correo electrónico</label>
+        <input type="email" id="cli_email" placeholder="Ej. nombre@correo.com">
+      </div>
+      <div class="campo ancho-completo">
+        <label for="cli_direccion">Dirección</label>
+        <input type="text" id="cli_direccion">
+      </div>
+      <div class="campo ancho-completo">
+        <label for="cli_notas">Notas</label>
+        <textarea id="cli_notas"></textarea>
+      </div>
+      <div class="campo ancho-completo">
+        <label for="cli_foto_url">Foto (URL)</label>
+        <input type="url" id="cli_foto_url" placeholder="pegue aquí un enlace de imagen (https://…)">
+      </div>
+      <div class="campo ancho-completo">
+        <label for="cli_foto_archivo">O subir imagen desde el equipo</label>
+        <input type="file" id="cli_foto_archivo" accept="image/png,image/jpeg,image/gif,image/webp">
+        <img id="cli_foto_preview" class="foto-preview" alt="Vista previa" style="display:none;">
+        <button type="button" class="btn btn-secundario btn-pequeno" id="btnQuitarFoto" style="display:none;">Quitar foto</button>
+      </div>
+    </div>
+    <div class="acciones-form">
+      <button type="submit" class="btn btn-primario" id="btnGuardarCliente">Guardar cliente</button>
+      <button type="button" class="btn btn-secundario" id="btnCancelarCliente" style="display:none;">Cancelar</button>
+    </div>
+  </form>
+</div>
+
+<!-- Listado de clientes -->
+<div class="tarjeta">
+  <div class="cabecera-lista">
+    <h2>Lista de clientes</h2>
+    <button type="button" class="btn btn-secundario btn-pequeno btn-refrescar" title="Refrescar lista" onclick="refrescarLista('clientes')">↻ Refrescar</button>
+  </div>
+  <div class="barra-busqueda">
+    <input type="text" id="buscarCliente" placeholder="Buscar por nombre, teléfono o correo…">
+  </div>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th>Foto</th>
+          <th>Nombre</th>
+          <th>Teléfono</th>
+          <th>Correo</th>
+          <th class="col-wrap">Dirección</th>
+          <th>Registro</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaClientes">
+        <tr><td colspan="7" class="cargando">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

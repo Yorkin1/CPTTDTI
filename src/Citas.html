@@ -1,0 +1,85 @@
+<div class="cabecera-vista">
+  <h1><span data-et="citas">Citas</span></h1>
+  <p>Agende <span data-et="citas_min">citas</span> y genere automáticamente un evento en Google Calendar.</p>
+</div>
+
+<!-- Formulario para agendar cita -->
+<div class="tarjeta">
+  <h2 id="tituloFormCita">Agendar <span data-et="cita_nueva">nueva cita</span></h2>
+  <form id="formCita">
+    <input type="hidden" id="citaId" value="">
+    <div class="grid-form">
+      <div class="campo">
+        <label for="cita_cliente">Cliente *</label>
+        <select id="cita_cliente" required>
+          <option value="">— Seleccione un cliente —</option>
+        </select>
+      </div>
+      <div class="campo ancho-completo">
+        <label for="cita_titulo">Título *</label>
+        <input type="text" id="cita_titulo" required placeholder="Ej. Reunión, revisión, consulta…">
+      </div>
+      <div class="campo">
+        <label for="cita_fecha">Fecha *</label>
+        <input type="date" id="cita_fecha" required>
+      </div>
+      <div class="campo">
+        <label for="cita_hora">Hora *</label>
+        <input type="time" id="cita_hora" required>
+      </div>
+      <div class="campo">
+        <label>Servicios <span class="ayuda">(la duración se calcula automáticamente)</span></label>
+        <div id="cita_servicios" class="servicios-cita"></div>
+        <input type="hidden" id="cita_duracion" value="60">
+        <p class="ayuda" id="cita_duracion_mostrar">Duración: 60 min</p>
+      </div>
+      <div class="campo ancho-completo">
+        <label for="cita_descripcion">Descripción</label>
+        <textarea id="cita_descripcion"></textarea>
+      </div>
+    </div>
+    <div class="acciones-form">
+      <button type="submit" class="btn btn-primario" id="btnGuardarCita">Agendar cita</button>
+      <button type="button" class="btn btn-secundario" id="btnCancelarCita" style="display:none;">Cancelar</button>
+    </div>
+  </form>
+</div>
+
+<!-- Listado de citas -->
+<div class="tarjeta">
+  <div class="cabecera-lista">
+    <h2><span data-et="citas">Citas</span> registradas</h2>
+    <button type="button" class="btn btn-secundario btn-pequeno btn-refrescar" title="Refrescar lista" onclick="refrescarLista('citas')">↻ Refrescar</button>
+  </div>
+  <div class="barra-busqueda">
+    <input type="text" id="buscarCita" placeholder="Buscar por título o cliente…">
+    <select id="filtroEstadoCita">
+      <option value="">Todos los estados</option>
+      <option value="Programada">Programada</option>
+      <option value="Completada">Completada</option>
+      <option value="Expirada">Expirada</option>
+    </select>
+  </div>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-check" title="Completada"></th>
+          <th>Título</th>
+          <th class="col-cliente">Cliente</th>
+          <th>Agendado por</th>
+          <th>Fecha</th>
+          <th>Hora</th>
+        <th>Duración</th>
+        <th>Total</th>
+          <th class="col-servicios">Servicios</th>
+        <th class="col-estado">Estado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaCitas">
+      <tr><td colspan="11" class="cargando">Cargando…</td></tr>
+    </tbody>
+    </table>
+  </div>
+</div>

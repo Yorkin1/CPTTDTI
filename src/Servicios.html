@@ -1,0 +1,152 @@
+<div class="cabecera-vista">
+  <h1>Servicios</h1>
+  <p>Administre el catálogo de servicios que sus clientes pueden elegir al reservar en línea.</p>
+</div>
+
+<!-- Formulario de alta / edición de servicio (solo administrador) -->
+<div class="tarjeta" id="tarjetaFormServicio" style="display:none;">
+  <h2 id="tituloFormServicio">Nuevo servicio</h2>
+  <form id="formServicio">
+    <input type="hidden" id="servicioId" value="">
+    <div class="grid-form">
+      <div class="campo ancho-completo">
+        <label for="ser_nombre">Nombre *</label>
+        <input type="text" id="ser_nombre" required placeholder="Ej. Cambio de aceite, Lavado completo…">
+      </div>
+      <div class="campo">
+        <label for="ser_precio">Precio *</label>
+        <input type="number" id="ser_precio" min="0" step="0.01" required placeholder="Ej. 1500.00">
+      </div>
+      <div class="campo">
+        <label for="ser_duracion">Duración (minutos)</label>
+        <input type="number" id="ser_duracion" min="5" step="5" value="60">
+      </div>
+      <div class="campo ancho-completo">
+        <label for="ser_descripcion">Descripción</label>
+        <textarea id="ser_descripcion"></textarea>
+      </div>
+      <div class="campo">
+        <label for="ser_activo">Estado</label>
+        <select id="ser_activo">
+          <option value="SI">Activo</option>
+          <option value="NO">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="acciones-form">
+      <button type="submit" class="btn btn-primario" id="btnGuardarServicio">Guardar servicio</button>
+      <button type="button" class="btn btn-secundario" id="btnCancelarServicio" style="display:none;">Cancelar</button>
+    </div>
+    <p class="asistente-nota">Los servicios <strong>activos</strong> aparecen en la página pública de reservas. Solo el administrador puede crearlos, editarlos o eliminarlos.</p>
+  </form>
+</div>
+
+<!-- Listado de servicios -->
+<div class="tarjeta">
+  <div class="cabecera-lista">
+    <h2>Lista de servicios</h2>
+    <button type="button" class="btn btn-secundario btn-pequeno btn-refrescar" title="Refrescar lista" onclick="refrescarLista('servicios')">↻ Refrescar</button>
+  </div>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Precio</th>
+          <th>Duración</th>
+          <th class="col-wrap">Descripción</th>
+          <th>Estado</th>
+          <th id="thAccionesServicio">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaServicios">
+        <tr><td colspan="6" class="cargando">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================
+     RESERVAS EN LÍNEA (configuración de la página pública)
+     ============================================================ -->
+<div class="tarjeta">
+  <h2>Reservas en línea</h2>
+  <p class="ayuda">Permita que sus clientes reserven su propio horario desde una página pública, sin iniciar sesión. Cada reserva se registra como <span data-et="cita_una">una cita</span> más.</p>
+  <div id="bloqueConfigReservas">
+  <div class="grid-form">
+    <div class="campo ancho-completo">
+      <label style="font-weight:600; cursor:pointer;">
+        <input type="checkbox" id="cfg2_reservas_habilitar" style="width:auto; margin-right:8px; accent-color:var(--color-primario);">
+        Habilitar reservas en línea para clientes
+      </label>
+    </div>
+    <div class="campo">
+      <label for="cfg2_reservas_paso">Paso entre horarios (minutos)</label>
+      <input type="number" id="cfg2_reservas_paso" min="5" step="5" placeholder="Ej. 30">
+    </div>
+  </div>
+
+  <h3 style="margin:18px 0 8px; font-size:15px; color:var(--color-primario);">Horario de atención</h3>
+  <p class="ayuda">Los días sin hora quedan cerrados. Ej. Lunes a Viernes 09:00–17:00.</p>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th>Día</th>
+          <th>Apertura</th>
+          <th>Cierre</th>
+          <th>Cerrado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Domingo</td>
+          <td><input type="time" id="cfg2_res_d0_abre" style="width:110px;"></td>
+          <td><input type="time" id="cfg2_res_d0_cierra" style="width:110px;"></td>
+          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d0_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
+        <tr><td>Lunes</td>
+          <td><input type="time" id="cfg2_res_d1_abre" style="width:110px;"></td>
+          <td><input type="time" id="cfg2_res_d1_cierra" style="width:110px;"></td>
+          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d1_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
+        <tr><td>Martes</td>
+          <td><input type="time" id="cfg2_res_d2_abre" style="width:110px;"></td>
+          <td><input type="time" id="cfg2_res_d2_cierra" style="width:110px;"></td>
+          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d2_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
+        <tr><td>Miércoles</td>
+          <td><input type="time" id="cfg2_res_d3_abre" style="width:110px;"></td>
+          <td><input type="time" id="cfg2_res_d3_cierra" style="width:110px;"></td>
+          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d3_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
+        <tr><td>Jueves</td>
+          <td><input type="time" id="cfg2_res_d4_abre" style="width:110px;"></td>
+          <td><input type="time" id="cfg2_res_d4_cierra" style="width:110px;"></td>
+          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d4_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
+        <tr><td>Viernes</td>
+          <td><input type="time" id="cfg2_res_d5_abre" style="width:110px;"></td>
+          <td><input type="time" id="cfg2_res_d5_cierra" style="width:110px;"></td>
+          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d5_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
+        <tr><td>Sábado</td>
+          <td><input type="time" id="cfg2_res_d6_abre" style="width:110px;"></td>
+          <td><input type="time" id="cfg2_res_d6_cierra" style="width:110px;"></td>
+          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d6_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
+      </tbody>
+    </table>
+  </div>
+  </div>
+
+  <div class="acciones-form" style="margin-top:16px;">
+    <button type="button" class="btn btn-primario" id="btnGuardarReservas">Guardar ajustes de reservas</button>
+    <button type="button" class="btn btn-secundario" id="btnCopiarEnlaceReservas">Copiar enlace de reservas</button>
+    <a href="#" id="enlaceAbrirReservas" class="btn btn-secundario" target="_blank">Abrir página de reservas</a>
+  </div>
+  <p class="asistente-nota" id="reservasEnlaceHint">Comparta el enlace con sus clientes para que reserven su horario.</p>
+  </div>
+
+  <div class="tarjeta" id="tarjetaQrReservas" style="text-align:center;">
+    <h2>Código QR para reservar</h2>
+    <p class="ayuda">Sus clientes pueden escanear este código con su teléfono para abrir directamente la página de reservas y elegir su horario.</p>
+    <img id="imgQrReservas" alt="Código QR de la página de reservas" style="width:200px;height:200px;margin:12px auto;display:none;border:1px solid var(--gris-borde);border-radius:10px;">
+    <p id="qrReservasUrl" class="asistente-nota" style="word-break:break-word;"></p>
+    <div class="acciones-form" style="justify-content:center;">
+      <a id="enlaceDescargarQr" class="btn btn-secundario" download="reservas-qr.png" style="display:none;">Descargar QR</a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestor de Clientes y Citas</title>
+    <?!= include('HojaEstilos') ?>
+  </head>
+  <body>
+    <!-- Pantalla de carga inicial -->
+    <div id="pantallaCarga" class="pantalla-carga">
+      <div class="cargando">Cargando…</div>
+    </div>
+
+    <!-- ============================================================
+         ASISTENTE DE CONFIGURACIÓN INICIAL (POST-REGISTRO ADMIN)
+         Pantalla completa que se muestra al primer administrador tras
+         registrarse, hasta que CONFIGURADA = "SI". Se configura DESPUÉS
+         de crear la cuenta (ya no hay asistente pre-login).
+         ============================================================ -->
+    <div id="asistenteInicial" class="asistente" style="display:none;">
+      <div class="asistente-tarjeta asistente-inicial">
+        <div class="asistente-cabecera">
+          <h1>Configuración inicial</h1>
+          <p>Complete los datos de su negocio para comenzar. Podrá cambiarlos más adelante desde la pestaña Configuración.</p>
+        </div>
+
+        <form id="formConfiguracionInicial" novalidate>
+          <div class="grid-form">
+            <div class="campo ancho-completo">
+              <label for="cfg_plantilla">Plantilla de ejemplo (opcional)</label>
+              <select id="cfg_plantilla">
+                <option value="">— Personalizar desde cero —</option>
+                <option value="gasolinera">Estación de Combustible</option>
+                <option value="veterinaria">Clínica Veterinaria</option>
+                <option value="barberia">Barbería y Estética</option>
+                <option value="restaurante">Restaurante</option>
+                <option value="clinica">Clínica Médica</option>
+                <option value="taller">Taller Mecánico</option>
+                <option value="gimnasio">Gimnasio</option>
+                <option value="estetica">Centro de Estética</option>
+              </select>
+              <p class="asistente-nota">Al elegir una plantilla se rellenan los campos de abajo; puede ajustarlos antes de guardar.</p>
+            </div>
+            <div class="campo ancho-completo">
+              <label for="cfg_nombre_negocio">Nombre del negocio *</label>
+              <input type="text" id="cfg_nombre_negocio" required placeholder="Ej. Estación de Combustible">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="cfg_mensaje_bienvenida">Mensaje de bienvenida</label>
+              <input type="text" id="cfg_mensaje_bienvenida" placeholder="Bienvenido a nuestro sistema de gestión">
+            </div>
+            <div class="campo">
+              <label for="cfg_etiqueta_cita">Etiqueta de cita</label>
+              <input type="text" id="cfg_etiqueta_cita" placeholder="Ej. Cita, Turno, Consulta, Despacho">
+            </div>
+            <div class="campo">
+              <label for="cfg_duracion_cita_def">Duración predeterminada de cita (minutos)</label>
+              <input type="number" id="cfg_duracion_cita_def" min="5" step="5" placeholder="Ej. 60">
+            </div>
+            <div class="campo">
+              <label for="cfg_color_primario">Color primario</label>
+              <input type="color" id="cfg_color_primario" value="#4285F4">
+            </div>
+            <div class="campo">
+              <label for="cfg_color_secundario">Color secundario</label>
+              <input type="color" id="cfg_color_secundario" value="#16a34a">
+            </div>
+            <div class="campo">
+              <label for="cfg_tema">Tema</label>
+              <select id="cfg_tema">
+                <option value="claro">Claro</option>
+                <option value="oscuro">Oscuro</option>
+              </select>
+            </div>
+            <div class="campo ancho-completo">
+              <label for="cfg_logo_archivo">Logo del negocio (opcional)</label>
+              <input type="file" id="cfg_logo_archivo" accept="image/png,image/jpeg,image/gif,image/webp">
+              <img id="cfg_logo_preview" class="foto-preview logo-preview" alt="Vista previa del logo" style="display:none;">
+              <button type="button" class="btn btn-secundario btn-pequeno" id="cfg_logo_quitar" style="display:none;">Quitar logo</button>
+              <p class="asistente-nota">Se muestra arriba a la izquierda, antes del nombre del negocio.</p>
+            </div>
+            <div class="campo ancho-completo">
+              <label style="font-weight:600; cursor:pointer;">
+                <input type="checkbox" id="cfg_monitor_habilitar" checked style="width:auto; margin-right:8px; accent-color:var(--color-primario);">
+                Habilitar monitor de actividad del dueño
+              </label>
+              <p class="asistente-nota">Registra todas las acciones de los usuarios en una vista exclusiva para usted.</p>
+            </div>
+          </div>
+          <div class="acciones-form">
+            <button type="submit" class="btn btn-primario" id="btnGuardarConfiguracionInicial">Guardar y comenzar</button>
+          </div>
+          <p class="asistente-nota">Los campos marcados con * son obligatorios.</p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         PLANTILLA SIN CONFIGURAR
+         Se muestra cuando la copia aún no se vinculó a su base de datos:
+         falta ejecutar "Client Manager → Iniciar configuración".
+         ============================================================ -->
+    <div id="pantallaSinConfigurar" class="asistente" style="display:none;">
+      <div class="asistente-tarjeta">
+        <div class="asistente-cabecera">
+          <h1>Falta configurar esta copia</h1>
+          <p>Esta copia de la plantilla aún no está vinculada a su base de datos.</p>
+        </div>
+        <ol class="asistente-nota lista-pasos">
+          <li>Abra su copia de la hoja de cálculo de Google.</li>
+          <li>En el menú superior haga clic en <strong>Client Manager</strong>.</li>
+          <li>Elija <strong>Iniciar configuración</strong> y acepte los permisos solicitados.</li>
+          <li>Vuelva a esta página (o pulse el botón de abajo).</li>
+        </ol>
+        <div class="acciones-form">
+          <button type="button" class="btn btn-primario" id="btnReintentarConfig">Reintentar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         INICIO DE SESIÓN
+         Se muestra cuando la app está configurada pero no hay sesión.
+         ============================================================ -->
+    <div id="pantallaLogin" class="asistente" style="display:none;">
+      <div class="asistente-tarjeta">
+        <div class="asistente-cabecera">
+          <h1 id="tituloLogin">Iniciar sesión</h1>
+          <p>Entre con su correo y contraseña, o registrese para acceder.</p>
+        </div>
+
+        <form id="formLogin">
+          <div class="grid-form">
+            <div class="campo ancho-completo">
+              <label for="login_usuario">Correo electrónico *</label>
+              <input type="email" id="login_usuario" required placeholder="Ej. nombre@correo.com" autocomplete="email">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="login_contrasena">Contraseña *</label>
+              <input type="password" id="login_contrasena" required placeholder="••••••••" autocomplete="current-password">
+            </div>
+          </div>
+          <div class="acciones-form">
+            <button type="submit" class="btn btn-primario" id="btnLogin">Ingresar</button>
+          </div>
+          <p class="asistente-nota">¿No tiene cuenta? <a href="#" id="enlaceRegistro">Registrarse</a> · ¿Olvidó su contraseña? <a href="#" id="enlaceRecuperar">Recuperar</a></p>
+        </form>
+
+        <form id="formRecuperar" style="display:none;">
+          <div class="grid-form">
+            <div class="campo ancho-completo">
+              <label for="rec_correo">Correo electrónico *</label>
+              <input type="email" id="rec_correo" required placeholder="tu@correo.com" autocomplete="email">
+            </div>
+          </div>
+          <div class="acciones-form">
+            <button type="submit" class="btn btn-primario" id="btnRecuperar">Enviar contraseña temporal</button>
+          </div>
+          <p class="asistente-nota"><a href="#" id="enlaceVolverLogin">Volver a iniciar sesión</a></p>
+        </form>
+
+        <form id="formRegistro" style="display:none;">
+          <div class="grid-form">
+            <div class="campo ancho-completo">
+              <label for="reg_nombre">Nombre *</label>
+              <input type="text" id="reg_nombre" required placeholder="Ej. Juan Pérez" autocomplete="name">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="reg_correo">Correo electrónico *</label>
+              <input type="email" id="reg_correo" required placeholder="Ej. nombre@correo.com" autocomplete="email">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="reg_contrasena">Contraseña *</label>
+              <input type="password" id="reg_contrasena" required minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="reg_contrasena_confirmar">Confirmar contraseña *</label>
+              <input type="password" id="reg_contrasena_confirmar" required minlength="8" placeholder="Repita la contraseña" autocomplete="new-password">
+            </div>
+          </div>
+          <div class="acciones-form">
+            <button type="submit" class="btn btn-primario" id="btnRegistrar">Crear cuenta</button>
+          </div>
+          <p class="asistente-nota">¿Ya tiene cuenta? <a href="#" id="enlaceInicio">Iniciar sesión</a></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         APLICACIÓN PRINCIPAL (dashboard)
+         ============================================================ -->
+    <div id="appPrincipal" style="display:none;">
+      <!-- Barra de navegación -->
+      <header class="navbar">
+        <div class="navbar-marca" style="cursor:pointer;" onclick="irAVista('Clientes')" title="Ir a Clientes">
+          <img id="logoNegocio" class="logo-negocio" alt="Logo del negocio" style="display:none;">
+          <span class="titulo-app" id="tituloNegocio">Gestor de Clientes</span>
+        </div>
+        <nav class="navbar-enlaces" id="navEnlaces">
+          <a href="#" class="nav-enlace activo" data-vista="Clientes">Clientes</a>
+          <a href="#" class="nav-enlace" data-vista="Servicios">Servicios</a>
+          <a href="#" class="nav-enlace" data-vista="Citas" id="navCitas">Citas</a>
+          <a href="#" class="nav-enlace" data-vista="Historial">Historial</a>
+          <a href="#" class="nav-enlace" data-vista="Configuracion" id="navConfiguracion" style="display:none;">Configuración</a>
+          <a href="#" class="nav-enlace" data-vista="Usuarios" id="navUsuarios" style="display:none;">Usuarios</a>
+          <a href="#" class="nav-enlace" data-vista="Monitor" id="navMonitor" style="display:none;">Monitor</a>
+        </nav>
+        <div class="nav-sesion" id="navSesion" style="display:none;">
+          <div class="menu-usuario" id="menuUsuario">
+            <button type="button" class="menu-usuario-boton" id="btnMenuUsuario" aria-haspopup="true" aria-expanded="false">
+              <span class="avatar-usuario" id="avatarUsuario"></span>
+              <span class="nombre-sesion" id="nombreSesion"></span>
+              <span class="flecha-usuario">&#9662;</span>
+            </button>
+            <div class="menu-usuario-lista" id="menuUsuarioLista" style="display:none;">
+              <button type="button" class="menu-usuario-item" id="btnCambiarContrasenaGlobal">Cambiar contraseña</button>
+              <div class="menu-usuario-separador"></div>
+              <button type="button" class="menu-usuario-item menu-usuario-item-peligro" id="btnSalir">Salir</button>
+            </div>
+          </div>
+        </div>
+        <button class="menu-toggle" id="menuToggle" aria-label="Menú">☰</button>
+      </header>
+
+      <!-- Mensaje de bienvenida (máximo 5 veces por usuario) -->
+      <div class="banner-bienvenida" id="bannerBienvenida" style="display:none;">
+        <span id="mensajeBienvenida"></span>
+      </div>
+
+      <!-- Contenedor principal donde se cargan las vistas -->
+      <main class="contenedor">
+        <div id="contenido">
+          <div class="cargando">Cargando…</div>
+        </div>
+      </main>
+
+      <footer class="pie">
+        <span id="pieNegocio"></span>
+      </footer>
+    </div>
+
+    <!-- Notificaciones tipo toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ============================================================
+         MODAL: CAMBIAR MI CONTRASEÑA
+         Disponible para todos los roles desde la barra superior.
+         ============================================================ -->
+    <div id="modalContrasena" class="modal-fondo" style="display:none;">
+      <div class="modal">
+        <div class="modal-cabecera">
+          <h2>Cambiar mi contraseña</h2>
+          <button type="button" class="modal-cerrar" id="btnCerrarModalContrasena" aria-label="Cerrar">&times;</button>
+        </div>
+        <form id="formContrasenaGlobal">
+          <div class="grid-form">
+            <div class="campo ancho-completo">
+              <label for="g_contrasena_actual">Contraseña actual *</label>
+              <input type="password" id="g_contrasena_actual" required autocomplete="current-password">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="g_contrasena_nueva">Nueva contraseña *</label>
+              <input type="password" id="g_contrasena_nueva" required minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+            </div>
+          </div>
+          <div class="acciones-form">
+            <button type="submit" class="btn btn-primario" id="btnGuardarContrasenaGlobal">Cambiar contraseña</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         PLANTILLAS DE VISTAS PRECARGADAS
+         Los fragmentos se incrustan al cargar la página y se inyectan
+         localmente en #contenido al navegar (sin llamadas al servidor).
+         ============================================================ -->
+    <script type="text/plain" id="tpl-Clientes"><?!= include('Clientes') ?></script>
+    <script type="text/plain" id="tpl-Servicios"><?!= include('Servicios') ?></script>
+    <script type="text/plain" id="tpl-Citas"><?!= include('Citas') ?></script>
+    <script type="text/plain" id="tpl-Historial"><?!= include('Historial') ?></script>
+    <script type="text/plain" id="tpl-Configuracion"><?!= include('Configuracion') ?></script>
+    <script type="text/plain" id="tpl-Usuarios"><?!= include('Usuarios') ?></script>
+    <script type="text/plain" id="tpl-Monitor"><?!= include('Monitor') ?></script>
+
+    <?!= include('JavaScript') ?>
+  </body>
+</html>
