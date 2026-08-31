@@ -46,17 +46,27 @@ jobs:
               const spreadsheetId = match[1];
               console.log("Spreadsheet ID: " + spreadsheetId);
 
-              const clasprc = JSON.parse(fs.readFileSync(process.env.HOME + "/.clasprc.json", "utf8"));
-              const token = clasprc.token;
+              const clasprcPath = process.env.HOME + "/.clasprc.json";
+              console.log("Leyendo credenciales de: " + clasprcPath);
+              const clasprc = JSON.parse(fs.readFileSync(clasprcPath, "utf8"));
+              console.log("Estructura clasprc:", JSON.stringify(Object.keys(clasprc)));
 
-              const oauth2 = new google.auth.OAuth2(
-                token.client_id,
-                token.client_secret,
-                "https://developers.google.com/oauthplayground"
-              );
+              // Buscar token en diferentes estructuras posibles
+              const token = clasprc.token || clasprc;
+              const clientId = token.client_id || clasprc.client_id;
+              const clientSecret = token.client_secret || clasprc.client_secret;
+              const accessToken = token.access_token;
+              const refreshToken = token.refresh_token;
+
+              if (!accessToken || !refreshToken || !clientId || !clientSecret) {
+                console.error("Faltan campos en las credenciales. Estructura encontrada:", JSON.stringify(clasprc, null, 2));
+                process.exit(1);
+              }
+
+              const oauth2 = new google.auth.OAuth2(clientId, clientSecret, "https://developers.google.com/oauthplayground");
               oauth2.setCredentials({
-                access_token: token.access_token,
-                refresh_token: token.refresh_token
+                access_token: accessToken,
+                refresh_token: refreshToken
               });
 
               const script = google.script({ version: "v1", auth: oauth2 });
