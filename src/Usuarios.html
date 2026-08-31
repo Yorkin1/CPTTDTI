@@ -1,0 +1,108 @@
+<div class="cabecera-vista">
+  <h1>Usuarios</h1>
+  <p>
+    Administre las cuentas de acceso al sistema. Solo el administrador puede
+    crear, editar o eliminar usuarios.
+  </p>
+</div>
+
+<!-- Formulario de alta / edición de usuario -->
+<div class="tarjeta">
+  <h2 id="tituloFormUsuario">Nuevo usuario</h2>
+  <form id="formUsuario">
+    <input type="hidden" id="usuarioIdOriginal" value="" />
+    <div class="grid-form">
+      <div class="campo">
+        <label for="usu_usuario">Correo electrónico *</label>
+        <input
+          type="email"
+          id="usu_usuario"
+          required
+          placeholder="Ej. nombre@correo.com"
+        />
+      </div>
+      <div class="campo">
+        <label for="usu_nombre">Nombre</label>
+        <input type="text" id="usu_nombre" placeholder="Ej. Juan Pérez" />
+      </div>
+      <div class="campo" id="campoUsuarioContrasena">
+        <label for="usu_contrasena">Contraseña</label>
+        <input
+          type="password"
+          id="usu_contrasena"
+          minlength="8"
+          placeholder="Mínimo 8 caracteres"
+        />
+      </div>
+      <div class="campo" id="campoUsuarioContrasenaConfirmar">
+        <label for="usu_contrasena_confirmar">Confirmar contraseña</label>
+        <input
+          type="password"
+          id="usu_contrasena_confirmar"
+          minlength="8"
+          placeholder="Repita la contraseña"
+        />
+      </div>
+      <div class="campo">
+        <label for="usu_rol">Permiso</label>
+        <select id="usu_rol">
+          <option value="editor">Editor</option>
+          <option value="administrador">Administrador</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="usu_activo">Estado</label>
+        <select id="usu_activo">
+          <option value="SI">Activo</option>
+          <option value="NO">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="acciones-form">
+      <button type="submit" class="btn btn-primario" id="btnGuardarUsuario">
+        Crear usuario
+      </button>
+      <button
+        type="button"
+        class="btn btn-secundario"
+        id="btnCancelarUsuario"
+        style="display: none"
+      >
+        Cancelar
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Listado de usuarios -->
+<div class="tarjeta">
+  <div class="cabecera-lista">
+    <h2>Lista de usuarios</h2>
+    <button
+      type="button"
+      class="btn btn-secundario btn-pequeno btn-refrescar"
+      title="Refrescar lista"
+      onclick="refrescarLista('usuarios')"
+    >
+      ↻ Refrescar
+    </button>
+  </div>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th>Correo electrónico</th>
+          <th>Nombre</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaUsuarios">
+        <tr>
+          <td colspan="5" class="cargando">Cargando…</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

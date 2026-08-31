@@ -1,0 +1,52 @@
+<div class="cabecera-vista">
+  <h1>Monitor de Actividades</h1>
+  <p>Registro de todas las acciones que realizan los usuarios en el sistema. Vista exclusiva del dueño.</p>
+</div>
+
+<div class="tarjeta">
+  <div class="cabecera-lista">
+    <h2>Actividades</h2>
+    <button type="button" class="btn btn-secundario btn-pequeno btn-refrescar" title="Refrescar" onclick="refrescarLista('monitor')">↻ Refrescar</button>
+  </div>
+  <div class="barra-busqueda">
+    <label>Usuario
+      <select id="filtro_usuario_monitor">
+        <option value="">Todos</option>
+      </select>
+    </label>
+    <label>Módulo
+      <select id="filtro_modulo_monitor">
+        <option value="">Todos</option>
+        <option value="Clientes">Clientes</option>
+        <option value="Citas">Citas</option>
+        <option value="Servicios">Servicios</option>
+        <option value="Usuarios">Usuarios</option>
+        <option value="Configuración">Configuración</option>
+      </select>
+    </label>
+    <label>Desde
+      <input type="date" id="filtro_desde_monitor">
+    </label>
+    <label>Hasta
+      <input type="date" id="filtro_hasta_monitor">
+    </label>
+  </div>
+
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Usuario</th>
+          <th>Rol</th>
+          <th>Módulo</th>
+          <th>Acción</th>
+          <th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody id="tablaActividad">
+        <tr><td colspan="6" class="cargando">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,60 @@
+name: Actualizar copias de clientes
+
+on:
+  workflow_dispatch:
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install -g @google/clasp
+
+      - name: Restaurar credenciales de clasp
+        run: echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+
+      - name: Empujar a cada cliente activo
+        run: |
+          node -e '
+            const clientes = require("./deploy/clientes.json");
+            const { execSync } = require("child_process");
+            const fs = require("fs");
+            let fallos = [];
+            let exitosos = [];
+            for (const c of clientes) {
+              if (!c.activo) {
+                console.log("⊘ " + c.slug + " (inactivo, saltando)");
+                continue;
+              }
+              console.log("→ " + c.slug);
+              fs.writeFileSync(".clasp.json", JSON.stringify({
+                scriptId: c.scriptId,
+                rootDir: "./src",
+                scriptExtensions: [".js", ".gs"],
+                htmlExtensions: [".html"],
+                jsonExtensions: [".json"],
+                filePushOrder: [],
+                skipSubdirectories: false
+              }, null, 2));
+              try {
+                execSync("clasp push -f", { stdio: "inherit" });
+                execSync("clasp deploy -i " + c.deploymentId + " -d \"auto: " + (process.env.GITHUB_SHA || "").slice(0,7) + "\"", { stdio: "inherit" });
+                console.log("✓ " + c.slug + " actualizado");
+                exitosos.push(c.slug);
+              } catch (e) {
+                console.error("✗ Falló " + c.slug);
+                fallos.push(c.slug);
+              }
+            }
+            console.log("");
+            console.log("Resumen: " + exitosos.length + " exitosos, " + fallos.length + " fallidos");
+            if (fallos.length) {
+              console.error("Fallaron: " + fallos.join(", "));
+              process.exit(1);
+            }
+          '
