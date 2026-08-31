@@ -22,7 +22,7 @@ jobs:
 
       - name: Generar appsscript.json
         run: |
-          node -e '
+          node --input-type=commonjs -e '
             const fs = require("fs");
             const manifest = {
               timeZone: "America/Santo_Domingo",
@@ -51,7 +51,7 @@ jobs:
 
       - name: Empujar a cada cliente activo
         run: |
-          node -e '
+          node --input-type=commonjs -e '
             const clientes = require("./deploy/clientes.json");
             const { execSync } = require("child_process");
             const fs = require("fs");
