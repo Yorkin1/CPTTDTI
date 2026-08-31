@@ -4,6 +4,7 @@ node_modules/
 # clasp credentials (NUNCA subir)
 ~/.clasprc.json
 .clasprc.json
+.clasp.json
 
 # OS files
 Thumbs.db
