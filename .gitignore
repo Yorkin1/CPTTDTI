@@ -6,6 +6,9 @@ node_modules/
 .clasprc.json
 .clasp.json
 
+# Apps Script manifest (sensible)
+src/appsscript.json
+
 # OS files
 Thumbs.db
 Desktop.ini

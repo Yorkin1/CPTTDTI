@@ -20,6 +20,35 @@ jobs:
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
+      - name: Generar appsscript.json
+        run: |
+          node -e '
+            const fs = require("fs");
+            const manifest = {
+              timeZone: "America/Santo_Domingo",
+              dependencies: {},
+              exceptionLogging: "STACKDRIVER",
+              runtimeVersion: "V8",
+              oauthScopes: [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/calendar",
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/documents",
+                "https://www.googleapis.com/auth/script.send_mail",
+                "https://www.googleapis.com/auth/script.container.ui",
+                "https://www.googleapis.com/auth/userinfo.email"
+              ],
+              webapp: {
+                executeAs: "USER_DEPLOYING",
+                access: "ANYONE"
+              },
+              executionApi: {
+                access: "MYSELF"
+              }
+            };
+            fs.writeFileSync("./src/appsscript.json", JSON.stringify(manifest, null, 2));
+          '
+
       - name: Empujar a cada cliente activo
         run: |
           node -e '
