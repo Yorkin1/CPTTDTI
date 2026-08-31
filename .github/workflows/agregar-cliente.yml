@@ -25,7 +25,7 @@ jobs:
       - name: Restaurar credenciales de clasp
         run: |
           echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
-          node --input-type=commonjs -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync(process.env.HOME+"/.clasprc.json","utf8"));console.log("Clasprc keys:",JSON.stringify(Object.keys(c)));if(c.token){console.log("Token keys:",JSON.stringify(Object.keys(c.token)))}else{console.log("No token field")}'
+          node --input-type=commonjs -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync(process.env.HOME+"/.clasprc.json","utf8"));console.log("Clasprc keys:",JSON.stringify(Object.keys(c)));if(c.tokens){console.log("Tokens keys:",JSON.stringify(Object.keys(c.tokens)));console.log("Tokens type:",typeof c.tokens);if(typeof c.tokens==="object"&&!Array.isArray(c.tokens)){console.log("Tokens object keys:",JSON.stringify(Object.keys(c.tokens)))}else if(Array.isArray(c.tokens)){console.log("Tokens is array, first item keys:",c.tokens.length>0?JSON.stringify(Object.keys(c.tokens[0])):"empty")}}else if(c.token){console.log("Token keys:",JSON.stringify(Object.keys(c.token)))}else{console.log("No token/tokens field")}'
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
@@ -54,11 +54,11 @@ jobs:
               console.log("Estructura clasprc:", JSON.stringify(Object.keys(clasprc)));
 
               // Buscar token en diferentes estructuras posibles
-              const token = clasprc.token || clasprc;
-              const clientId = token.client_id || clasprc.client_id;
-              const clientSecret = token.client_secret || clasprc.client_secret;
-              const accessToken = token.access_token;
-              const refreshToken = token.refresh_token;
+              const tokenObj = clasprc.token || clasprc.tokens || clasprc;
+              const clientId = tokenObj.client_id || clasprc.client_id || "";
+              const clientSecret = tokenObj.client_secret || clasprc.client_secret || "";
+              const accessToken = tokenObj.access_token;
+              const refreshToken = tokenObj.refresh_token;
 
               if (!accessToken || !refreshToken || !clientId || !clientSecret) {
                 console.error("Faltan campos en las credenciales. Estructura encontrada:", JSON.stringify(clasprc, null, 2));
