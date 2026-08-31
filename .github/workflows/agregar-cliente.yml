@@ -1,0 +1,146 @@
+name: Agregar cliente
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Nombre corto del cliente (ej: barberia)"
+        required: true
+      spreadsheet_url:
+        description: "URL completa de la hoja de cálculo compartida"
+        required: true
+
+jobs:
+  agregar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install googleapis
+
+      - name: Restaurar credenciales de clasp
+        run: echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+
+      - name: Detectar scriptId y deploymentId
+        id: detectar
+        run: |
+          node -e '
+            const fs = require("fs");
+            const { google } = require("googleapis");
+
+            const slug = "${{ github.event.inputs.slug }}";
+            const url = "${{ github.event.inputs.spreadsheet_url }}";
+
+            // Extraer spreadsheetId de la URL
+            const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+            if (!match) {
+              console.error("URL invalida: no se pudo extraer el ID del spreadsheet");
+              process.exit(1);
+            }
+            const spreadsheetId = match[1];
+            console.log("Spreadsheet ID: " + spreadsheetId);
+
+            // Leer token de clasp
+            const clasprc = JSON.parse(fs.readFileSync(process.env.HOME + "/.clasprc.json", "utf8"));
+            const token = clasprc.token;
+
+            // Configurar cliente OAuth2
+            const oauth2 = new google.auth.OAuth2(
+              token.client_id,
+              token.client_secret,
+              "https://developers.google.com/oauthplayground"
+            );
+            oauth2.setCredentials({
+              access_token: token.access_token,
+              refresh_token: token.refresh_token
+            });
+
+            // Buscar el script vinculado al spreadsheet via Apps Script API
+            const script = google.script({ version: "v1", auth: oauth2 });
+            const res = await script.projects.list();
+            const projects = res.data.projects || [];
+
+            const project = projects.find(p => p.parentId === spreadsheetId);
+            if (!project) {
+              console.error("No se encontro un Apps Script vinculado a este spreadsheet");
+              console.error("Asegurate de que la hoja esta compartida con gestorcitasactualizador@gmail.com como Editor");
+              process.exit(1);
+            }
+
+            const scriptId = project.scriptId;
+            console.log("Script ID: " + scriptId);
+
+            // Obtener deploymentId
+            const deployRes = await script.projects.deployments.list({ scriptId });
+            const deployments = deployRes.data.deployments || [];
+
+            // Buscar la implementacion con el tag "HEAD" (la mas reciente)
+            const headDeployment = deployments.find(d => d.deploymentConfig && d.deploymentConfig.versionNumber === "0");
+            let deploymentId;
+
+            if (headDeployment) {
+              deploymentId = headDeployment.deploymentId;
+            } else if (deployments.length > 0) {
+              deploymentId = deployments[0].deploymentId;
+            } else {
+              console.error("No hay implementaciones para este script. Crea una implementacion en el editor de Apps Script primero.");
+              process.exit(1);
+            }
+
+            console.log("Deployment ID: " + deploymentId);
+
+            // Guardar resultados en archivo temporal
+            const result = {
+              slug: slug,
+              scriptId: scriptId,
+              deploymentId: deploymentId,
+              spreadsheetId: spreadsheetId
+            };
+            fs.writeFileSync("/tmp/cliente-detectado.json", JSON.stringify(result, null, 2));
+            console.log("Cliente detectado correctamente");
+          '
+
+      - name: Agregar a clientes.json
+        run: |
+          node -e '
+            const fs = require("fs");
+            const cliente = JSON.parse(fs.readFileSync("/tmp/cliente-detectado.json", "utf8"));
+            const clientesPath = "./deploy/clientes.json";
+
+            let clientes = [];
+            if (fs.existsSync(clientesPath)) {
+              clientes = JSON.parse(fs.readFileSync(clientesPath, "utf8"));
+            }
+
+            // Verificar que no exista ya
+            if (clientes.some(c => c.slug === cliente.slug)) {
+              console.error("Ya existe un cliente con el slug: " + cliente.slug);
+              process.exit(1);
+            }
+
+            // Agregar nuevo cliente
+            clientes.push({
+              slug: cliente.slug,
+              scriptId: cliente.scriptId,
+              deploymentId: cliente.deploymentId,
+              spreadsheetId: cliente.spreadsheetId,
+              activo: true
+            });
+
+            fs.writeFileSync(clientesPath, JSON.stringify(clientes, null, 2));
+            console.log("Cliente agregado: " + cliente.slug);
+          '
+
+      - name: Commit cambios
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add deploy/clientes.json
+          git commit -m "feat: agregar cliente ${{ github.event.inputs.slug }}"
+          git push
