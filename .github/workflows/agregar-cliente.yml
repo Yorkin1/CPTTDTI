@@ -30,7 +30,7 @@ jobs:
       - name: Detectar scriptId y deploymentId
         id: detectar
         run: |
-          node -e '
+          node --input-type=commonjs -e '
             const fs = require("fs");
             const { google } = require("googleapis");
 
@@ -108,7 +108,7 @@ jobs:
 
       - name: Agregar a clientes.json
         run: |
-          node -e '
+          node --input-type=commonjs -e '
             const fs = require("fs");
             const cliente = JSON.parse(fs.readFileSync("/tmp/cliente-detectado.json", "utf8"));
             const clientesPath = "./deploy/clientes.json";
