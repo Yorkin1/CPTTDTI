@@ -23,22 +23,7 @@ jobs:
       - run: npm install googleapis
 
       - name: Restaurar credenciales de clasp
-        run: |
-          echo "$CLASP_CREDENTIALS" > /tmp/raw-clasprc.json
-          node --input-type=commonjs -e '
-            const fs = require("fs");
-            const raw = JSON.parse(fs.readFileSync("/tmp/raw-clasprc.json", "utf8"));
-            let output;
-            if (raw.tokens && raw.tokens.default) {
-              output = { token: raw.tokens.default };
-            } else if (raw.token) {
-              output = raw;
-            } else {
-              output = raw;
-            }
-            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output, null, 2));
-            console.log("Credenciales restauradas");
-          '
+        run: echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
@@ -53,10 +38,7 @@ jobs:
               const slug = "${{ github.event.inputs.slug }}";
               let scriptIdInput = "${{ github.event.inputs.script_id }}";
 
-              // Detectar si es una URL y extraer el scriptId
               if (scriptIdInput.includes("script.google.com")) {
-                // URL del editor: https://script.google.com/macros/s/SCRIPT_ID/exec
-                // o: https://script.google.com/home/projects/SCRIPT_ID/edit
                 const matchMacro = scriptIdInput.match(/\/macros\/s\/([a-zA-Z0-9_-]+)/);
                 const matchProject = scriptIdInput.match(/\/projects\/([a-zA-Z0-9_-]+)/);
                 if (matchMacro) {
@@ -77,10 +59,12 @@ jobs:
               const scriptId = scriptIdInput;
               console.log("Script ID: " + scriptId);
 
-              const clasprcPath = process.env.HOME + "/.clasprc.json";
-              const clasprc = JSON.parse(fs.readFileSync(clasprcPath, "utf8"));
+              // Leer credenciales del secret directamente (formato tokens.default)
+              const rawPath = "/tmp/raw-clasprc.json";
+              fs.writeFileSync(rawPath, process.env.CLASP_CREDENTIALS || fs.readFileSync(process.env.HOME + "/.clasprc.json", "utf8"));
+              const clasprc = JSON.parse(fs.readFileSync(rawPath, "utf8"));
 
-              const tokenObj = clasprc.token || clasprc.tokens?.default || clasprc;
+              const tokenObj = clasprc.tokens?.default || clasprc.token || clasprc;
               const clientId = tokenObj.client_id || "";
               const clientSecret = tokenObj.client_secret || "";
               const accessToken = tokenObj.access_token;
@@ -88,6 +72,7 @@ jobs:
 
               if (!accessToken || !refreshToken || !clientId || !clientSecret) {
                 console.error("Faltan campos en las credenciales");
+                console.error("Estructura:", JSON.stringify(Object.keys(clasprc)));
                 process.exit(1);
               }
 
@@ -131,6 +116,8 @@ jobs:
               console.log("Cliente detectado correctamente");
             })();
           '
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
       - name: Agregar a clientes.json
         run: |
