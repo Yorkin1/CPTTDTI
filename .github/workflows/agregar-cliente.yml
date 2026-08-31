@@ -22,8 +22,22 @@ jobs:
 
       - run: npm install googleapis
 
-      - name: Restaurar credenciales de clasp
-        run: echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+      - name: Restaurar credenciales
+        run: |
+          node --input-type=commonjs -e '
+            const fs = require("fs");
+            const raw = JSON.parse(process.env.CLASP_CREDENTIALS);
+            let output;
+            if (raw.tokens && raw.tokens.default) {
+              output = { token: raw.tokens.default };
+            } else if (raw.token) {
+              output = raw;
+            } else {
+              output = raw;
+            }
+            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output));
+            console.log("OK: credenciales restauradas");
+          '
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
