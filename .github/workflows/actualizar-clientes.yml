@@ -20,6 +20,7 @@ jobs:
           echo "$CLASP_CREDENTIALS" > /tmp/clasp-raw.json
           node --input-type=commonjs -e '
             const fs = require("fs");
+            const os = require("os");
             const raw = JSON.parse(fs.readFileSync("/tmp/clasp-raw.json", "utf8"));
             let output;
             if (raw.tokens && raw.tokens.default) {
@@ -29,11 +30,24 @@ jobs:
             } else {
               output = raw;
             }
-            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output));
-            console.log("OK");
+            const homeDir = os.homedir();
+            const outPath = homeDir + "/.clasprc.json";
+            fs.writeFileSync(outPath, JSON.stringify(output));
+            console.log("HOME=" + homeDir);
+            console.log("Escrito en: " + outPath);
+            console.log("Existe: " + fs.existsSync(outPath));
+            console.log("Token presente: " + !!output.token);
           '
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+
+      - name: Verificar clasprc.json
+        run: |
+          echo "HOME=$HOME"
+          echo "Archivo existe:"
+          ls -la ~/.clasprc.json 2>&1 || echo "NO EXISTE"
+          echo "Contenido (sin tokens):"
+          node --input-type=commonjs -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync(require("os").homedir()+"/.clasprc.json","utf8"));console.log("Keys:",Object.keys(c));console.log("Token keys:",Object.keys(c.token||{}))'
 
       - name: Generar appsscript.json
         run: |
