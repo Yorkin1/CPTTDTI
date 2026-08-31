@@ -6,8 +6,8 @@ on:
       slug:
         description: "Nombre corto del cliente (ej: barberia)"
         required: true
-      spreadsheet_url:
-        description: "URL completa de la hoja de cálculo compartida"
+      script_id:
+        description: "Script ID del Apps Script (de la URL del editor)"
         required: true
 
 jobs:
@@ -23,11 +23,26 @@ jobs:
       - run: npm install googleapis
 
       - name: Restaurar credenciales de clasp
-        run: echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+        run: |
+          echo "$CLASP_CREDENTIALS" > /tmp/raw-clasprc.json
+          node --input-type=commonjs -e '
+            const fs = require("fs");
+            const raw = JSON.parse(fs.readFileSync("/tmp/raw-clasprc.json", "utf8"));
+            let output;
+            if (raw.tokens && raw.tokens.default) {
+              output = { token: raw.tokens.default };
+            } else if (raw.token) {
+              output = raw;
+            } else {
+              output = raw;
+            }
+            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output, null, 2));
+            console.log("Credenciales restauradas");
+          '
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
-      - name: Detectar scriptId y deploymentId
+      - name: Obtener datos del cliente
         id: detectar
         run: |
           node --input-type=commonjs -e '
@@ -36,29 +51,20 @@ jobs:
               const { google } = require("googleapis");
 
               const slug = "${{ github.event.inputs.slug }}";
-              const url = "${{ github.event.inputs.spreadsheet_url }}";
-
-              const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-              if (!match) {
-                console.error("URL invalida: no se pudo extraer el ID del spreadsheet");
-                process.exit(1);
-              }
-              const spreadsheetId = match[1];
-              console.log("Spreadsheet ID: " + spreadsheetId);
+              const scriptId = "${{ github.event.inputs.script_id }}";
+              console.log("Script ID: " + scriptId);
 
               const clasprcPath = process.env.HOME + "/.clasprc.json";
-              console.log("Leyendo credenciales de: " + clasprcPath);
               const clasprc = JSON.parse(fs.readFileSync(clasprcPath, "utf8"));
 
-              // Estructura: { tokens: { default: { client_id, client_secret, access_token, refresh_token } } }
-              const tokenObj = clasprc.tokens?.default || clasprc.token || clasprc;
+              const tokenObj = clasprc.token || clasprc.tokens?.default || clasprc;
               const clientId = tokenObj.client_id || "";
               const clientSecret = tokenObj.client_secret || "";
               const accessToken = tokenObj.access_token;
               const refreshToken = tokenObj.refresh_token;
 
               if (!accessToken || !refreshToken || !clientId || !clientSecret) {
-                console.error("Faltan campos en las credenciales. Estructura encontrada:", JSON.stringify(clasprc, null, 2));
+                console.error("Faltan campos en las credenciales");
                 process.exit(1);
               }
 
@@ -69,18 +75,11 @@ jobs:
               });
 
               const script = google.script({ version: "v1", auth: oauth2 });
-              const res = await script.projects.list();
-              const projects = res.data.projects || [];
 
-              const project = projects.find(p => p.parentId === spreadsheetId);
-              if (!project) {
-                console.error("No se encontro un Apps Script vinculado a este spreadsheet");
-                console.error("Asegurate de que la hoja esta compartida con gestorcitasactualizador@gmail.com como Editor");
-                process.exit(1);
-              }
-
-              const scriptId = project.scriptId;
-              console.log("Script ID: " + scriptId);
+              const projectRes = await script.projects.get({ scriptId });
+              const project = projectRes.data;
+              const spreadsheetId = project.parentId || "";
+              console.log("Spreadsheet ID: " + spreadsheetId);
 
               const deployRes = await script.projects.deployments.list({ scriptId });
               const deployments = deployRes.data.deployments || [];
@@ -93,7 +92,7 @@ jobs:
               } else if (deployments.length > 0) {
                 deploymentId = deployments[0].deploymentId;
               } else {
-                console.error("No hay implementaciones para este script. Crea una implementacion en el editor de Apps Script primero.");
+                console.error("No hay implementaciones. Crea una implementacion en el editor de Apps Script primero.");
                 process.exit(1);
               }
 
@@ -122,13 +121,11 @@ jobs:
               clientes = JSON.parse(fs.readFileSync(clientesPath, "utf8"));
             }
 
-            // Verificar que no exista ya
             if (clientes.some(c => c.slug === cliente.slug)) {
               console.error("Ya existe un cliente con el slug: " + cliente.slug);
               process.exit(1);
             }
 
-            // Agregar nuevo cliente
             clientes.push({
               slug: cliente.slug,
               scriptId: cliente.scriptId,
