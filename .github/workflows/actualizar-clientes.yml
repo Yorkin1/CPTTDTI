@@ -16,7 +16,22 @@ jobs:
       - run: npm install -g @google/clasp
 
       - name: Restaurar credenciales de clasp
-        run: echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+        run: |
+          echo "$CLASP_CREDENTIALS" > /tmp/clasp-raw.json
+          node --input-type=commonjs -e '
+            const fs = require("fs");
+            const raw = JSON.parse(fs.readFileSync("/tmp/clasp-raw.json", "utf8"));
+            let output;
+            if (raw.tokens && raw.tokens.default) {
+              output = { token: raw.tokens.default };
+            } else if (raw.token) {
+              output = raw;
+            } else {
+              output = raw;
+            }
+            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output));
+            console.log("OK");
+          '
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
