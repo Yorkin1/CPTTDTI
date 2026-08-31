@@ -51,7 +51,30 @@ jobs:
               const { google } = require("googleapis");
 
               const slug = "${{ github.event.inputs.slug }}";
-              const scriptId = "${{ github.event.inputs.script_id }}";
+              let scriptIdInput = "${{ github.event.inputs.script_id }}";
+
+              // Detectar si es una URL y extraer el scriptId
+              if (scriptIdInput.includes("script.google.com")) {
+                // URL del editor: https://script.google.com/macros/s/SCRIPT_ID/exec
+                // o: https://script.google.com/home/projects/SCRIPT_ID/edit
+                const matchMacro = scriptIdInput.match(/\/macros\/s\/([a-zA-Z0-9_-]+)/);
+                const matchProject = scriptIdInput.match(/\/projects\/([a-zA-Z0-9_-]+)/);
+                if (matchMacro) {
+                  scriptIdInput = matchMacro[1];
+                } else if (matchProject) {
+                  scriptIdInput = matchProject[1];
+                } else {
+                  console.error("No se pudo extraer el Script ID de la URL del editor");
+                  process.exit(1);
+                }
+              } else if (scriptIdInput.includes("docs.google.com") || scriptIdInput.includes("spreadsheets")) {
+                console.error("ERROR: Pusiste la URL del spreadsheet, no del Apps Script.");
+                console.error("Necesitas ir a Extensiones > Apps Script en la hoja, y copiar el ID de la URL del editor.");
+                console.error("Ejemplo: https://script.google.com/macros/s/ESTE_ES_EL_ID/exec");
+                process.exit(1);
+              }
+
+              const scriptId = scriptIdInput;
               console.log("Script ID: " + scriptId);
 
               const clasprcPath = process.env.HOME + "/.clasprc.json";
