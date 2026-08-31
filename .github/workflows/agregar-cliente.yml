@@ -154,4 +154,5 @@ jobs:
           git config user.email "actions@github.com"
           git add deploy/clientes.json
           git commit -m "feat: agregar cliente ${{ github.event.inputs.slug }}"
+          git remote set-url origin https://x-access-token:${{ secrets.GIT_TOKEN }}@github.com/Yorkin1/CPTTDTI.git
           git push
