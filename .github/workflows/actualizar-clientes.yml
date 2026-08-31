@@ -16,7 +16,9 @@ jobs:
       - run: npm install -g @google/clasp
 
       - name: Restaurar credenciales de clasp
-        run: echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+        run: echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
       - name: Empujar a cada cliente activo
         run: |
