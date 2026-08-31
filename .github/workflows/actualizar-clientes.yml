@@ -22,14 +22,39 @@ jobs:
             const raw = JSON.parse(process.env.CLASP_CREDENTIALS);
             let output;
             if (raw.tokens && raw.tokens.default) {
-              output = { token: raw.tokens.default };
-            } else if (raw.token) {
               output = raw;
+              console.log("Formato V3 detectado (tokens.default)");
+            } else if (raw.token && raw.oauth2ClientSettings) {
+              output = raw;
+              console.log("Formato V1 local detectado");
+            } else if (raw.token) {
+              output = {
+                token: raw.token,
+                oauth2ClientSettings: {
+                  clientId: raw.token.client_id,
+                  clientSecret: raw.token.client_secret
+                }
+              };
+              console.log("Formato V1 sin oauth2ClientSettings, completado");
+            } else if (raw.access_token) {
+              output = {
+                tokens: {
+                  default: {
+                    access_token: raw.access_token,
+                    refresh_token: raw.refresh_token,
+                    token_type: raw.token_type || "Bearer",
+                    client_id: raw.client_id || "1072944905499-vm2v2i5dvn0a0d2o4ca36i1vge8cvbn0.apps.googleusercontent.com",
+                    client_secret: raw.client_secret || "v6V3fKV_zWU7iw1DrpO1rknX"
+                  }
+                }
+              };
+              console.log("Formato V1 global, convertido a V3");
             } else {
               output = raw;
+              console.log("Formato desconocido, usando tal cual");
             }
-            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output));
-            console.log("Credenciales escritas OK (formato: " + (output.token ? "token" : "raw") + ")");
+            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output, null, 2));
+            console.log("Credenciales escritas en: " + process.env.HOME + "/.clasprc.json");
           '
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
