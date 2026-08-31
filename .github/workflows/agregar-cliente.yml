@@ -23,9 +23,7 @@ jobs:
       - run: npm install googleapis
 
       - name: Restaurar credenciales de clasp
-        run: |
-          echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
-          node --input-type=commonjs -e 'const fs=require("fs");const c=JSON.parse(fs.readFileSync(process.env.HOME+"/.clasprc.json","utf8"));console.log("Clasprc keys:",JSON.stringify(Object.keys(c)));if(c.tokens){console.log("Tokens keys:",JSON.stringify(Object.keys(c.tokens)));console.log("Tokens type:",typeof c.tokens);if(typeof c.tokens==="object"&&!Array.isArray(c.tokens)){console.log("Tokens object keys:",JSON.stringify(Object.keys(c.tokens)))}else if(Array.isArray(c.tokens)){console.log("Tokens is array, first item keys:",c.tokens.length>0?JSON.stringify(Object.keys(c.tokens[0])):"empty")}}else if(c.token){console.log("Token keys:",JSON.stringify(Object.keys(c.token)))}else{console.log("No token/tokens field")}'
+        run: echo "$CLASP_CREDENTIALS" > ~/.clasprc.json
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
@@ -51,12 +49,11 @@ jobs:
               const clasprcPath = process.env.HOME + "/.clasprc.json";
               console.log("Leyendo credenciales de: " + clasprcPath);
               const clasprc = JSON.parse(fs.readFileSync(clasprcPath, "utf8"));
-              console.log("Estructura clasprc:", JSON.stringify(Object.keys(clasprc)));
 
-              // Buscar token en diferentes estructuras posibles
-              const tokenObj = clasprc.token || clasprc.tokens || clasprc;
-              const clientId = tokenObj.client_id || clasprc.client_id || "";
-              const clientSecret = tokenObj.client_secret || clasprc.client_secret || "";
+              // Estructura: { tokens: { default: { client_id, client_secret, access_token, refresh_token } } }
+              const tokenObj = clasprc.tokens?.default || clasprc.token || clasprc;
+              const clientId = tokenObj.client_id || "";
+              const clientSecret = tokenObj.client_secret || "";
               const accessToken = tokenObj.access_token;
               const refreshToken = tokenObj.refresh_token;
 
