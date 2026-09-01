@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GIT_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -94,8 +96,11 @@ jobs:
             const clientes = require("./deploy/clientes.json");
             const { execSync } = require("child_process");
             const fs = require("fs");
+            const sha = (process.env.GITHUB_SHA || "").slice(0, 7);
             let fallos = [];
             let exitosos = [];
+            let clientesModificados = false;
+
             for (const c of clientes) {
               if (!c.activo) {
                 console.log("⊘ " + c.slug + " (inactivo, saltando)");
@@ -113,14 +118,51 @@ jobs:
               }, null, 2));
               try {
                 execSync("clasp push -f", { stdio: "inherit" });
-                execSync("clasp deploy -i " + c.deploymentId + " -d \"auto: " + (process.env.GITHUB_SHA || "").slice(0,7) + "\"", { stdio: "inherit" });
-                console.log("✓ " + c.slug + " actualizado");
-                exitosos.push(c.slug);
+
+                // Paso 1: Intentar actualizar la implementación existente
+                try {
+                  execSync("clasp deploy -i " + c.deploymentId + " -d \"auto: " + sha + "\"", { stdio: "inherit" });
+                  console.log("✓ " + c.slug + " actualizado");
+                  exitosos.push(c.slug);
+                } catch (deployErr) {
+                  // Paso 2: Si falla (implementación archivada), crear nueva
+                  console.log("⚠ " + c.slug + ": implementación archivada, creando nueva...");
+                  try {
+                    const output = execSync("clasp deploy -d \"auto: " + sha + "\"", { encoding: "utf8", stdio: "pipe" });
+                    console.log(output);
+
+                    // Extraer el nuevo deploymentId de la salida
+                    // clasp deploy muestra: "Uploaded XXXX" o "Deployed XXXX"
+                    const match = output.match(/(?:Uploaded|Deployed)\s+([a-zA-Z0-9_-]+)/);
+                    if (match && match[1]) {
+                      const nuevoId = match[1];
+                      console.log("Nuevo deploymentId: " + nuevoId);
+                      c.deploymentId = nuevoId;
+                      clientesModificados = true;
+                      console.log("✓ " + c.slug + " nueva implementación creada");
+                      exitosos.push(c.slug);
+                    } else {
+                      console.error("✗ " + c.slug + ": no se pudo extraer el nuevo deploymentId");
+                      fallos.push(c.slug);
+                    }
+                  } catch (newDeployErr) {
+                    console.error("✗ " + c.slug + ": falló al crear nueva implementación");
+                    console.error(newDeployErr.message);
+                    fallos.push(c.slug);
+                  }
+                }
               } catch (e) {
-                console.error("✗ Falló " + c.slug);
+                console.error("✗ Falló " + c.slug + ": " + e.message);
                 fallos.push(c.slug);
               }
             }
+
+            // Si se actualizaron deploymentIds, guardar cambios
+            if (clientesModificados) {
+              fs.writeFileSync("./deploy/clientes.json", JSON.stringify(clientes, null, 2) + "\n");
+              console.log("\nArchivos de clientes actualizados.");
+            }
+
             console.log("");
             console.log("Resumen: " + exitosos.length + " exitosos, " + fallos.length + " fallidos");
             if (fallos.length) {
@@ -128,3 +170,12 @@ jobs:
               process.exit(1);
             }
           '
+
+      - name: Commit cambios de deploymentId si hubo reemplazos
+        if: success()
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add deploy/clientes.json
+          git diff --cached --quiet || git commit -m "fix: actualizar deploymentIds archivados automaticamente"
+          git push
