@@ -1,0 +1,36 @@
+{
+  "ultimaActualizacion": "1/9/2026, 10:34:31 a. m.",
+  "commit": "64f4e78",
+  "resumen": {
+    "total": 2,
+    "exitosos": 2,
+    "fallidos": 0,
+    "saltados": 0
+  },
+  "clientes": [
+    {
+      "slug": "taller",
+      "activo": true,
+      "scriptId": "1vijM8qHNKti0w-2WdL6AdoA_JNAhO9Svgh0rvJEvCf8tIuyi7l7MciZB",
+      "deploymentId": "AKfycbzZHuv0sBXm5ls6EV670jEeKvmmiyI5NS8XkkiOOdtlekwpEXz8OKdZiteBhVVbFKpa",
+      "spreadsheetId": "1mRF0bTeN19rf4aRBxoNeQMaE4ZJ2jxa0rMsoIr9Z3Ps",
+      "status": "ok",
+      "healthCheck": "ok",
+      "url": "https://script.google.com/macros/s/AKfycbzZHuv0sBXm5ls6EV670jEeKvmmiyI5NS8XkkiOOdtlekwpEXz8OKdZiteBhVVbFKpa/exec",
+      "ultimoUpdate": "1/9/2026, 10:34:31 a. m.",
+      "error": null
+    },
+    {
+      "slug": "York",
+      "activo": true,
+      "scriptId": "1rXlotuIUavFxiLgKM6tAGBb3s2gs5Yl21avELOYYaxpw0EdAfn5NipXc",
+      "deploymentId": "AKfycbx9kJsUmdL9tVV5oO-caLPHxvPPTtSrtLucvgBJ83o",
+      "spreadsheetId": "114EuStaXnbdkuk0Jeo6dgXVQWaQt4PkH5JDoCG_X8J0",
+      "status": "ok",
+      "healthCheck": "ok",
+      "url": "https://script.google.com/macros/s/AKfycbx9kJsUmdL9tVV5oO-caLPHxvPPTtSrtLucvgBJ83o/exec",
+      "ultimoUpdate": "1/9/2026, 10:34:31 a. m.",
+      "error": null
+    }
+  ]
+}
