@@ -34,19 +34,42 @@
         <textarea id="cli_notas"></textarea>
       </div>
       <div class="campo ancho-completo">
-        <label for="cli_foto_url">Foto (URL)</label>
-        <input type="url" id="cli_foto_url" placeholder="pegue aquí un enlace de imagen (https://…)">
-      </div>
-      <div class="campo ancho-completo">
-        <label for="cli_foto_archivo">O subir imagen desde el equipo</label>
-        <input type="file" id="cli_foto_archivo" accept="image/png,image/jpeg,image/gif,image/webp">
-        <img id="cli_foto_preview" class="foto-preview" alt="Vista previa" style="display:none;">
-        <button type="button" class="btn btn-secundario btn-pequeno" id="btnQuitarFoto" style="display:none;">Quitar foto</button>
+        <label>Foto del cliente</label>
+        <div class="foto-cliente-editor">
+          <img id="cli_foto_preview" class="foto-preview" alt="Vista previa" style="display:none;">
+          <div class="foto-cliente-botones">
+            <button type="button" class="btn btn-secundario btn-pequeno" id="btnAbrirModalFoto">Subir foto</button>
+            <button type="button" class="btn btn-secundario btn-pequeno" id="btnQuitarFoto" style="display:none;">Quitar foto</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="acciones-form">
       <button type="submit" class="btn btn-primario" id="btnGuardarCliente">Guardar cliente</button>
       <button type="button" class="btn btn-secundario" id="btnCancelarCliente" style="display:none;">Cancelar</button>
+    </div>
+
+    <div id="modalFotoCliente" class="modal-fondo" style="display:none;">
+      <div class="modal">
+        <div class="modal-cabecera">
+          <h2>Foto del cliente</h2>
+          <button type="button" class="modal-cerrar" id="btnCerrarModalFoto" aria-label="Cerrar">&times;</button>
+        </div>
+        <input type="hidden" id="cli_foto_url">
+        <div class="grid-form">
+          <div class="campo ancho-completo">
+            <label for="cli_foto_archivo">Subir imagen desde el equipo</label>
+            <input type="file" id="cli_foto_archivo" accept="image/png,image/jpeg,image/gif,image/webp">
+          </div>
+          <div class="campo ancho-completo">
+            <img id="cli_foto_preview_modal" class="foto-preview" alt="Vista previa" style="display:none;">
+          </div>
+        </div>
+        <div class="acciones-form">
+          <button type="button" class="btn btn-primario" id="btnUsarFoto">Usar esta foto</button>
+          <button type="button" class="btn btn-secundario" id="btnCancelarModalFoto">Cancelar</button>
+        </div>
+      </div>
     </div>
   </form>
 </div>

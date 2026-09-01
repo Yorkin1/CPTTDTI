@@ -355,9 +355,13 @@
       renderTablaClientes(e.target.value);
     }, 250));
     var fotoArchivo = document.getElementById('cli_foto_archivo');
-    if (fotoArchivo) fotoArchivo.addEventListener('change', previsualizarFotoCliente);
+    if (fotoArchivo) fotoArchivo.addEventListener('change', previsualizarFotoClienteModal);
     var btnQuitar = document.getElementById('btnQuitarFoto');
     if (btnQuitar) btnQuitar.addEventListener('click', limpiarFotoCliente);
+    document.getElementById('btnAbrirModalFoto').addEventListener('click', abrirModalFoto);
+    document.getElementById('btnCerrarModalFoto').addEventListener('click', cerrarModalFoto);
+    document.getElementById('btnCancelarModalFoto').addEventListener('click', cerrarModalFoto);
+    document.getElementById('btnUsarFoto').addEventListener('click', usarFotoSeleccionada);
     cargarClientes();
   }
 
@@ -505,17 +509,50 @@
       .obtenerFirmaCambios(tokenSesion());
   }
 
-  function previsualizarFotoCliente() {
+  function abrirModalFoto() {
+    var modal = document.getElementById('modalFotoCliente');
+    if (!modal) return;
+    var previaPrincipal = document.getElementById('cli_foto_preview');
+    var previaModal = document.getElementById('cli_foto_preview_modal');
+    if (previaModal) {
+      if (previaPrincipal && previaPrincipal.style.display !== 'none' && previaPrincipal.src) {
+        previaModal.src = previaPrincipal.src;
+        previaModal.style.display = 'block';
+      } else {
+        previaModal.src = '';
+        previaModal.style.display = 'none';
+      }
+    }
+    modal.style.display = 'flex';
+  }
+
+  function cerrarModalFoto() {
+    var modal = document.getElementById('modalFotoCliente');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function previsualizarFotoClienteModal() {
     var archivo = document.getElementById('cli_foto_archivo').files[0];
     if (!archivo) return;
+    document.getElementById('cli_foto_url').value = '';
     var lector = new FileReader();
     lector.onload = function() {
-      var img = document.getElementById('cli_foto_preview');
+      var img = document.getElementById('cli_foto_preview_modal');
       img.src = lector.result;
       img.style.display = 'block';
-      document.getElementById('btnQuitarFoto').style.display = 'inline-block';
     };
     lector.readAsDataURL(archivo);
+  }
+
+  function usarFotoSeleccionada() {
+    var previaModal = document.getElementById('cli_foto_preview_modal');
+    var previaPrincipal = document.getElementById('cli_foto_preview');
+    if (previaModal && previaModal.style.display !== 'none' && previaModal.src) {
+      previaPrincipal.src = previaModal.src;
+      previaPrincipal.style.display = 'block';
+      document.getElementById('btnQuitarFoto').style.display = 'inline-block';
+    }
+    cerrarModalFoto();
   }
 
   function limpiarFotoCliente() {
@@ -524,6 +561,8 @@
     var img = document.getElementById('cli_foto_preview');
     img.src = '';
     img.style.display = 'none';
+    var imgModal = document.getElementById('cli_foto_preview_modal');
+    if (imgModal) { imgModal.src = ''; imgModal.style.display = 'none'; }
     document.getElementById('btnQuitarFoto').style.display = 'none';
   }
 
@@ -644,6 +683,8 @@
         document.getElementById('formCliente').reset();
         var imgPrev = document.getElementById('cli_foto_preview');
         if (imgPrev) { imgPrev.src = ''; imgPrev.style.display = 'none'; }
+        var imgPrevModal = document.getElementById('cli_foto_preview_modal');
+        if (imgPrevModal) { imgPrevModal.src = ''; imgPrevModal.style.display = 'none'; }
         var btnQuitar = document.getElementById('btnQuitarFoto');
         if (btnQuitar) btnQuitar.style.display = 'none';
         cancelarEdicionCliente();
@@ -804,12 +845,21 @@
     if (esAdmin) {
       document.getElementById('formServicio').addEventListener('submit', guardarServicio);
       document.getElementById('btnCancelarServicio').addEventListener('click', cancelarEdicionServicio);
+      document.getElementById('ser_duracion').addEventListener('blur', formatearCampoDuracion);
+      document.getElementById('ser_duracion').addEventListener('keydown', function(e) { if (e.key === 'ArrowUp') { e.preventDefault(); ajustarDuracion(5); } else if (e.key === 'ArrowDown') { e.preventDefault(); ajustarDuracion(-5); } });
+      document.getElementById('btnDuracionSubir').addEventListener('click', function() { ajustarDuracion(5); });
+      document.getElementById('btnDuracionBajar').addEventListener('click', function() { ajustarDuracion(-5); });
     }
 
     cargarServicios(true);
     iniciarGestionReservas();
   }
 
+function duracionLegible(mins) { mins = parseInt(mins, 10) || 0; var h = Math.floor(mins / 60); var m = mins % 60; if (h && m) return h + 'h ' + m + 'min'; if (h) return h + 'h'; return m + 'min'; }
+function parsearDuracion(texto) { texto = String(texto || '').toLowerCase().trim(); var mh = texto.match(/(\d+)\s*h/); var mm = texto.match(/(\d+)\s*m/); var horas = mh ? parseInt(mh[1], 10) : 0; var mins = mm ? parseInt(mm[1], 10) : 0; if (!mh && !mm) { var soloNum = texto.match(/(\d+)/); if (soloNum) mins = parseInt(soloNum[1], 10); } var total = horas * 60 + mins; return total > 0 ? total : 60; }
+function formatearCampoDuracion() { var campo = document.getElementById('ser_duracion'); if (campo) campo.value = duracionLegible(parsearDuracion(campo.value)); }
+function ajustarDuracion(delta) { var campo = document.getElementById('ser_duracion'); if (!campo) return; var mins = parsearDuracion(campo.value) + delta; if (mins < 5) mins = 5; campo.value = duracionLegible(mins); }
+  
   // Formatea un número como dinero ("$ 1,234.50").
   function formatoMoneda(n) {
     n = parseFloat(n) || 0;
@@ -879,7 +929,7 @@
     var datos = {
       nombre: document.getElementById('ser_nombre').value.trim(),
       precio: document.getElementById('ser_precio').value,
-      duracionMins: document.getElementById('ser_duracion').value,
+      duracionMins: parsearDuracion(document.getElementById('ser_duracion').value),
       descripcion: document.getElementById('ser_descripcion').value.trim(),
       activo: document.getElementById('ser_activo').value
     };
@@ -960,7 +1010,7 @@
     document.getElementById('servicioId').value = s.ID_Servicio;
     setVal('ser_nombre', s.Nombre || '');
     setVal('ser_precio', s.Precio || '');
-    setVal('ser_duracion', s.Duracion_Mins || 60);
+    setVal('ser_duracion', duracionLegible(s.Duracion_Mins || 60));
     setVal('ser_descripcion', s.Descripcion || '');
     setVal('ser_activo', String(s.Activo || 'SI').toUpperCase() === 'NO' ? 'NO' : 'SI');
     document.getElementById('tituloFormServicio').textContent = 'Editar servicio';
@@ -974,7 +1024,7 @@
     if (form) form.reset();
     var idField = document.getElementById('servicioId');
     if (idField) idField.value = '';
-    setVal('ser_duracion', 60);
+    setVal('ser_duracion', duracionLegible(60));
     setVal('ser_activo', 'SI');
     document.getElementById('tituloFormServicio').textContent = 'Nuevo servicio';
     document.getElementById('btnGuardarServicio').textContent = 'Guardar servicio';
@@ -1569,6 +1619,8 @@
     // Al entrar se descarta la caché para no mostrar historial viejo.
     // Por defecto se muestra el historial de todos los clientes; el selector
     // de cliente es un filtro opcional.
+    var thAccionesHist = document.getElementById('thAccionesHistorial');
+    if (thAccionesHist) thAccionesHist.style.display = esAdminSesion() ? '' : 'none';
     Estado.cacheHistorial = {};
     var sel = document.getElementById('sel_cliente_historial');
     sel.addEventListener('change', function() {
@@ -1709,7 +1761,7 @@
       if (typeof callback === 'function') callback();
       return;
     }
-    tbody.innerHTML = '<tr><td colspan="8" class="cargando">Cargando…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="cargando">Cargando…</td></tr>';
     var continuar = function() {
       google.script.run
         .withSuccessHandler(function(registros) {
@@ -1719,7 +1771,7 @@
           if (typeof callback === 'function') callback();
         })
         .withFailureHandler(function(err) {
-          tbody.innerHTML = '<tr><td colspan="8" class="vacio">Error al cargar historial.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="vacio">Error al cargar historial.</td></tr>';
           mostrarToast(err.message, 'error');
           if (typeof callback === 'function') callback();
         })
@@ -1762,8 +1814,9 @@
   }
 
   function dibujarHistorial(tbody, registros) {
+    var esAdmin = esAdminSesion();
     if (!registros || registros.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="vacio">No hay historial registrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="' + (esAdmin ? 9 : 8) + '" class="vacio">No hay historial registrado.</td></tr>';
       return;
     }
     var mapa = _mapaCitas_();
@@ -1774,6 +1827,9 @@
       var serviciosHtml = d.servicios.length
         ? d.servicios.map(function(s) { return esc(s); }).join('<br>')
         : '<span class="vacio-accion">&mdash;</span>';
+      var accionesHtml = esAdmin
+        ? '<button class="btn btn-peligro btn-pequeno" title="Eliminar registro" onclick="confirmarEliminarRegistroHistorial(\'' + esc(r.ID_Registro) + '\')">✕</button>'
+        : '';
       return '<tr>' +
         '<td>' + celda(d.cliente) + '</td>' +
         '<td>' + celda(d.por) + '</td>' +
@@ -1783,8 +1839,32 @@
         '<td>' + celda(d.total) + '</td>' +
         '<td>' + celda(d.dur) + '</td>' +
         '<td>' + celda(d.resultado) + '</td>' +
+        (esAdmin ? '<td class="acciones-fila">' + accionesHtml + '</td>' : '') +
       '</tr>';
     }).join('');
+  }
+
+  function confirmarEliminarRegistroHistorial(id) {
+    if (!confirm('¿Está seguro de eliminar este registro del historial? Esta acción no se puede deshacer.')) return;
+    mostrarCargaZona('tablaHistorial', 'Eliminando registro…');
+    google.script.run
+      .withSuccessHandler(function(respuesta) {
+        ocultarCargaZona('tablaHistorial');
+        if (sesionInvalida(respuesta)) return;
+        if (respuesta.exito) {
+          mostrarToast(respuesta.mensaje, 'exito');
+          Object.keys(Estado.cacheHistorial).forEach(function(clave) {
+            Estado.cacheHistorial[clave] = (Estado.cacheHistorial[clave] || []).filter(function(r) {
+              return String(r.ID_Registro) !== String(id);
+            });
+          });
+          refrescarVistaHistorial();
+        } else {
+          mostrarToast(respuesta.mensaje, 'error');
+        }
+      })
+      .withFailureHandler(function(err) { ocultarCargaZona('tablaHistorial'); mostrarToast('Error: ' + err.message, 'error'); })
+      .eliminarRegistroHistorial(tokenSesion(), id);
   }
 
   function filtrarHistorial(registros) {
@@ -1993,6 +2073,41 @@
     if (archivoLogo) archivoLogo.addEventListener('change', previsualizarLogoConfiguracion);
     var btnQuitarLogo = document.getElementById('cfg2_logo_quitar');
     if (btnQuitarLogo) btnQuitarLogo.addEventListener('click', quitarLogoConfiguracion);
+    document.getElementById('btnAbrirModalLogo').addEventListener('click', abrirModalLogo);
+    document.getElementById('btnCerrarModalLogo').addEventListener('click', cerrarModalLogo);
+    document.getElementById('btnCancelarModalLogo').addEventListener('click', cerrarModalLogo);
+    document.getElementById('btnUsarLogo').addEventListener('click', usarLogoSeleccionado);
+  }
+
+  function abrirModalLogo() {
+    var modal = document.getElementById('modalLogoNegocio');
+    if (!modal) return;
+    var previaPrincipal = document.getElementById('cfg2_logo_preview');
+    var previaModal = document.getElementById('cfg2_logo_preview_modal');
+    if (previaModal) {
+      if (previaPrincipal && previaPrincipal.style.display !== 'none' && previaPrincipal.src) {
+        previaModal.src = previaPrincipal.src;
+        previaModal.style.display = 'block';
+      } else {
+        previaModal.src = '';
+        previaModal.style.display = 'none';
+      }
+    }
+    modal.style.display = 'flex';
+  }
+
+  function cerrarModalLogo() {
+    var modal = document.getElementById('modalLogoNegocio');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function usarLogoSeleccionado() {
+    var previaModal = document.getElementById('cfg2_logo_preview_modal');
+    if (previaModal && previaModal.style.display !== 'none' && previaModal.src) {
+      Estado.logoEliminado = false;
+      actualizarVistaLogoConfiguracion(previaModal.src);
+    }
+    cerrarModalLogo();
   }
 
   // Muestra/oculta la vista previa del logo según la URL (o imagen recién cargada).
@@ -2013,19 +2128,19 @@
   function previsualizarLogoConfiguracion() {
     var archivo = document.getElementById('cfg2_logo_archivo').files[0];
     if (!archivo) return;
-    Estado.logoEliminado = false;
     var lector = new FileReader();
     lector.onload = function() {
-      var img = document.getElementById('cfg2_logo_preview');
+      var img = document.getElementById('cfg2_logo_preview_modal');
       img.src = lector.result;
       img.style.display = 'block';
-      document.getElementById('cfg2_logo_quitar').style.display = 'inline-block';
     };
     lector.readAsDataURL(archivo);
   }
 
   function quitarLogoConfiguracion() {
     document.getElementById('cfg2_logo_archivo').value = '';
+    var imgModal = document.getElementById('cfg2_logo_preview_modal');
+    if (imgModal) { imgModal.src = ''; imgModal.style.display = 'none'; }
     Estado.logoEliminado = true;
     actualizarVistaLogoConfiguracion('');
   }
@@ -2982,6 +3097,10 @@
         logo.style.display = 'none';
       }
     }
+
+    // Favicon: duplica el logo del negocio en la pestaña del navegador.
+    var favicon = document.getElementById('faviconApp');
+    if (favicon && c.logoUrl) favicon.href = c.logoUrl;
 
     // Mensaje de bienvenida (máximo 5 veces por usuario; se oculta al cambiar de vista).
     var banner = document.getElementById('bannerBienvenida');
