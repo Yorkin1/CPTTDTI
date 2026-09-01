@@ -90,6 +90,87 @@ jobs:
             fs.writeFileSync("./src/appsscript.json", JSON.stringify(manifest, null, 2));
           '
 
+      - name: Limpiar versiones antiguas
+        run: |
+          node --input-type=commonjs -e '
+            const { google } = require("googleapis");
+            const fs = require("fs");
+
+            // Restaurar credenciales OAuth
+            const raw = JSON.parse(process.env.CLASP_CREDENTIALS);
+            const tokenObj = raw.tokens?.default || raw.token || raw;
+            const oauth2 = new google.auth.OAuth2(
+              tokenObj.client_id,
+              tokenObj.client_secret,
+              "https://developers.google.com/oauthplayground"
+            );
+            oauth2.setCredentials({
+              access_token: tokenObj.access_token,
+              refresh_token: tokenObj.refresh_token
+            });
+
+            const script = google.script({ version: "v1", auth: oauth2 });
+            const clientes = require("./deploy/clientes.json");
+            let totalLimpiadas = 0;
+
+            (async () => {
+              for (const c of clientes) {
+                if (!c.activo) continue;
+                console.log("Verificando versiones de: " + c.slug);
+                try {
+                  // Obtener implementaciones activas
+                  const deployRes = await script.projects.deployments.list({ scriptId: c.scriptId });
+                  const deployments = deployRes.data.deployments || [];
+                  const versionesConDeploy = new Set();
+                  for (const d of deployments) {
+                    const vn = d.deploymentConfig?.versionNumber;
+                    if (vn && vn !== "0") versionesConDeploy.add(vn);
+                  }
+
+                  // Obtener todas las versiones
+                  const verRes = await script.projects.versions.list({ scriptId: c.scriptId, pageSize: 200 });
+                  const versiones = verRes.data.versiones || [];
+                  console.log("  Versiones: " + versiones.length + " | Con implementacion activa: " + versionesConDeploy.size);
+
+                  // Eliminar versiones sin implementacion activa (excepto la mas reciente)
+                  const ordenadas = versiones.sort((a, b) => (b.versionNumber || 0) - (a.versionNumber || 0));
+                  let limpiadas = 0;
+                  for (let i = 1; i < ordenadas.length; i++) {
+                    const v = ordenadas[i];
+                    const vNum = String(v.versionNumber);
+                    if (!versionesConDeploy.has(vNum)) {
+                      try {
+                        await script.projects.versions.delete({ scriptId: c.scriptId, versionNumber: v.versionNumber });
+                        limpiadas++;
+                        console.log("  - Version " + vNum + " eliminada");
+                      } catch (e) {
+                        console.log("  ! No se pudo eliminar version " + vNum + ": " + e.message);
+                      }
+                    }
+                  }
+                  if (limpiadas > 0) {
+                    console.log("  Limpiadas: " + limpiadas);
+                    totalLimpiadas += limpiadas;
+                  }
+
+                  // Verificar cuantas quedan
+                  const verRes2 = await script.projects.versions.list({ scriptId: c.scriptId, pageSize: 200 });
+                  const restantes = (verRes2.data.versiones || []).length;
+                  if (restantes > 180) {
+                    console.log("  ADVERTENCIA: Quedan " + restantes + " versiones de 200 (limite proximo)");
+                  } else {
+                    console.log("  Quedan: " + restantes + " versiones");
+                  }
+                } catch (e) {
+                  console.log("  Error verificando versiones de " + c.slug + ": " + e.message);
+                }
+              }
+              console.log("\nTotal versiones limpiadas: " + totalLimpiadas);
+            })();
+          '
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+
       - name: Empujar a cada cliente activo + health check
         run: |
           node --input-type=commonjs -e '
@@ -97,6 +178,7 @@ jobs:
             const { execSync } = require("child_process");
             const fs = require("fs");
             const https = require("https");
+            const { google } = require("googleapis");
             const sha = (process.env.GITHUB_SHA || "").slice(0, 7);
             const ahora = new Date();
             const fechaLegible = ahora.toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" });
@@ -104,6 +186,21 @@ jobs:
             let exitosos = [];
             let saltados = [];
             let clientesModificados = false;
+            let infoVersiones = {};
+
+            // OAuth para consultar versiones
+            const raw = JSON.parse(process.env.CLASP_CREDENTIALS);
+            const tokenObj = raw.tokens?.default || raw.token || raw;
+            const oauth2 = new google.auth.OAuth2(
+              tokenObj.client_id,
+              tokenObj.client_secret,
+              "https://developers.google.com/oauthplayground"
+            );
+            oauth2.setCredentials({
+              access_token: tokenObj.access_token,
+              refresh_token: tokenObj.refresh_token
+            });
+            const scriptApi = google.script({ version: "v1", auth: oauth2 });
 
             // Funcion para health check
             function healthCheck(deploymentId) {
@@ -115,6 +212,16 @@ jobs:
                 req.on("error", () => resolve({ ok: false, statusCode: 0 }));
                 req.on("timeout", () => { req.destroy(); resolve({ ok: false, statusCode: 0 }); });
               });
+            }
+
+            // Funcion para contar versiones
+            async function contarVersiones(scriptId) {
+              try {
+                const res = await scriptApi.projects.versions.list({ scriptId, pageSize: 200 });
+                return (res.data.versiones || []).length;
+              } catch (e) {
+                return -1;
+              }
             }
 
             // Procesar cada cliente
@@ -130,7 +237,8 @@ jobs:
                   healthCheck: "no verificado",
                   url: "https://script.google.com/macros/s/" + c.deploymentId + "/exec",
                   ultimoUpdate: c.ultimoUpdate || null,
-                  error: null
+                  error: null,
+                  versiones: 0
                 };
 
                 if (!c.activo) {
@@ -151,6 +259,13 @@ jobs:
                   filePushOrder: [],
                   skipSubdirectories: false
                 }, null, 2));
+
+                // Contar versiones antes
+                const versionesAntes = await contarVersiones(c.scriptId);
+                registro.versiones = versionesAntes;
+                if (versionesAntes > 180) {
+                  console.log("  ADVERTENCIA: " + versionesAntes + " versiones (limite proximo)");
+                }
 
                 try {
                   execSync("clasp push -f", { stdio: "inherit" });
@@ -179,7 +294,7 @@ jobs:
                         console.error("  ✗ No se pudo extraer el nuevo deploymentId");
                       }
                     } catch (newDeployErr) {
-                      console.error("  ✗ Falló al crear nueva implementacion");
+                      console.error("  ✗ Fallo al crear nueva implementacion");
                     }
                   }
 
@@ -204,6 +319,10 @@ jobs:
                     registro.error = "Fallo al crear/actualizar implementacion";
                     fallos.push(c.slug);
                   }
+
+                  // Contar versiones despues
+                  const versionesDespues = await contarVersiones(c.scriptId);
+                  registro.versiones = versionesDespues;
                 } catch (e) {
                   console.error("  ✗ Fallo general: " + e.message);
                   registro.status = "error";
@@ -214,54 +333,46 @@ jobs:
                 c._registro = registro;
               }
 
-              // Guardar clientes.json actualizado (con deploymentIds nuevos y fechas)
+              // Guardar clientes.json actualizado
               if (clientesModificados) {
                 const clientesGuardar = clientes.map(c => {
-                  const r = {};
-                  r.slug = c.slug;
-                  r.scriptId = c.scriptId;
-                  r.deploymentId = c.deploymentId;
-                  r.spreadsheetId = c.spreadsheetId;
-                  r.activo = c.activo;
-                  if (c.ultimoUpdate) r.ultimoUpdate = c.ultimoUpdate;
-                  return r;
+                  return {
+                    slug: c.slug,
+                    scriptId: c.scriptId,
+                    deploymentId: c.deploymentId,
+                    spreadsheetId: c.spreadsheetId,
+                    activo: c.activo,
+                    ultimoUpdate: c.ultimoUpdate || undefined
+                  };
                 });
                 fs.writeFileSync("./deploy/clientes.json", JSON.stringify(clientesGuardar, null, 2) + "\n");
                 console.log("\nclientes.json actualizado.");
               }
 
-              // === GENERAR REPORTE JSON ===
-              const reporteJson = {
-                ultimaActualizacion: fechaLegible,
-                commit: sha,
-                resumen: {
-                  total: clientes.length,
-                  exitosos: exitosos.length,
-                  fallidos: fallos.length,
-                  saltados: saltados.length
-                },
-                clientes: clientes.map(c => ({
-                  slug: c.slug,
-                  activo: c.activo,
-                  scriptId: c.scriptId,
-                  deploymentId: c.deploymentId,
-                  spreadsheetId: c.spreadsheetId,
-                  status: c._registro ? c._registro.status : "sin_datos",
-                  healthCheck: c._registro ? c._registro.healthCheck : "no verificado",
-                  url: "https://script.google.com/macros/s/" + c.deploymentId + "/exec",
-                  ultimoUpdate: c._registro ? c._registro.ultimoUpdate : null,
-                  error: c._registro ? c._registro.error : null
-                }))
-              };
-              fs.writeFileSync("./deploy/status.json", JSON.stringify(reporteJson, null, 2) + "\n");
-
               // === GENERAR REPORTE MARKDOWN ===
               let md = "";
               md += "# Reporte de Clientes\n\n";
               md += "**Ultima actualizacion:** " + fechaLegible + "  \n";
-              md += "**Commit:** " + sha + "  \n";
-              md += "**Total clientes:** " + clientes.length + " | Exitosos: " + exitosos.length + " | Fallidos: " + fallos.length + " | Saltados: " + saltados.length + "\n\n";
-              md += "---\n\n";
+              md += "**Commit:** " + sha + "\n\n";
+              md += "## Resumen\n\n";
+              md += "- **Total:** " + clientes.length + "\n";
+              md += "- **Exitosos:** " + exitosos.length + "\n";
+              md += "- **Fallidos:** " + fallos.length + "\n";
+              md += "- **Saltados:** " + saltados.length + "\n\n";
+
+              // Seccion de versiones
+              md += "## Versiones\n\n";
+              md += "| Cliente | Versiones | Estado |\n";
+              md += "|---------|-----------|--------|\n";
+              for (const c of clientes) {
+                if (!c.activo) continue;
+                const r = c._registro || {};
+                const v = r.versiones || 0;
+                const estado = v > 180 ? "ADVERTENCIA" : (v > 0 ? "OK" : "—");
+                md += "| " + c.slug + " | " + v + " / 200 | " + estado + " |\n";
+              }
+
+              md += "\n---\n\n";
               md += "## Estado de clientes\n\n";
               md += "| Cliente | Estado | Health Check | Ultimo Update | Error |\n";
               md += "|---------|--------|--------------|---------------|-------|\n";
@@ -285,6 +396,7 @@ jobs:
                 md += "- **Spreadsheet ID:** " + c.spreadsheetId + "\n";
                 md += "- **URL:** " + "https://script.google.com/macros/s/" + c.deploymentId + "/exec\n";
                 md += "- **Estado:** " + (c._registro ? c._registro.status : "sin_datos") + "\n";
+                md += "- **Versiones:** " + (c._registro ? c._registro.versiones : "?") + " / 200\n";
                 if (c._registro && c._registro.error) {
                   md += "- **Error:** " + c._registro.error + "\n";
                 }
@@ -300,19 +412,21 @@ jobs:
               if (exitosos.length) console.log("  OK: " + exitosos.join(", "));
               if (fallos.length) console.log("  FAIL: " + fallos.join(", "));
               if (saltados.length) console.log("  SKIP: " + saltados.join(", "));
-              console.log("Reportes generados: deploy/status.json + deploy/REPORT.md");
+              console.log("Reporte: deploy/REPORT.md");
 
               if (fallos.length) {
                 process.exit(1);
               }
             })();
           '
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
       - name: Commit reportes y cambios
         if: success()
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add deploy/clientes.json deploy/status.json deploy/REPORT.md
-          git diff --cached --quiet || git commit -m "reporte: actualizar clientes + health check"
+          git add deploy/clientes.json deploy/REPORT.md
+          git diff --cached --quiet || git commit -m "reporte: actualizar clientes + health check + versiones"
           git push
