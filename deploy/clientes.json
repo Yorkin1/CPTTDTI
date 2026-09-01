@@ -5,5 +5,12 @@
     "deploymentId": "AKfycbzZHuv0sBXm5ls6EV670jEeKvmmiyI5NS8XkkiOOdtlekwpEXz8OKdZiteBhVVbFKpa",
     "spreadsheetId": "1mRF0bTeN19rf4aRBxoNeQMaE4ZJ2jxa0rMsoIr9Z3Ps",
     "activo": true
+  },
+  {
+    "slug": "York",
+    "scriptId": "1rXlotuIUavFxiLgKM6tAGBb3s2gs5Yl21avELOYYaxpw0EdAfn5NipXc",
+    "deploymentId": "AKfycbx9kJsUmdL9tVV5oO-caLPHxvPPTtSrtLucvgBJ83o",
+    "spreadsheetId": "114EuStaXnbdkuk0Jeo6dgXVQWaQt4PkH5JDoCG_X8J0",
+    "activo": true
   }
 ]
