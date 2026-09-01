@@ -90,87 +90,6 @@ jobs:
             fs.writeFileSync("./src/appsscript.json", JSON.stringify(manifest, null, 2));
           '
 
-      - name: Limpiar versiones antiguas
-        run: |
-          node --input-type=commonjs -e '
-            const { google } = require("googleapis");
-            const fs = require("fs");
-
-            // Restaurar credenciales OAuth
-            const raw = JSON.parse(process.env.CLASP_CREDENTIALS);
-            const tokenObj = raw.tokens?.default || raw.token || raw;
-            const oauth2 = new google.auth.OAuth2(
-              tokenObj.client_id,
-              tokenObj.client_secret,
-              "https://developers.google.com/oauthplayground"
-            );
-            oauth2.setCredentials({
-              access_token: tokenObj.access_token,
-              refresh_token: tokenObj.refresh_token
-            });
-
-            const script = google.script({ version: "v1", auth: oauth2 });
-            const clientes = require("./deploy/clientes.json");
-            let totalLimpiadas = 0;
-
-            (async () => {
-              for (const c of clientes) {
-                if (!c.activo) continue;
-                console.log("Verificando versiones de: " + c.slug);
-                try {
-                  // Obtener implementaciones activas
-                  const deployRes = await script.projects.deployments.list({ scriptId: c.scriptId });
-                  const deployments = deployRes.data.deployments || [];
-                  const versionesConDeploy = new Set();
-                  for (const d of deployments) {
-                    const vn = d.deploymentConfig?.versionNumber;
-                    if (vn && vn !== "0") versionesConDeploy.add(vn);
-                  }
-
-                  // Obtener todas las versiones
-                  const verRes = await script.projects.versions.list({ scriptId: c.scriptId, pageSize: 200 });
-                  const versiones = verRes.data.versiones || [];
-                  console.log("  Versiones: " + versiones.length + " | Con implementacion activa: " + versionesConDeploy.size);
-
-                  // Eliminar versiones sin implementacion activa (excepto la mas reciente)
-                  const ordenadas = versiones.sort((a, b) => (b.versionNumber || 0) - (a.versionNumber || 0));
-                  let limpiadas = 0;
-                  for (let i = 1; i < ordenadas.length; i++) {
-                    const v = ordenadas[i];
-                    const vNum = String(v.versionNumber);
-                    if (!versionesConDeploy.has(vNum)) {
-                      try {
-                        await script.projects.versions.delete({ scriptId: c.scriptId, versionNumber: v.versionNumber });
-                        limpiadas++;
-                        console.log("  - Version " + vNum + " eliminada");
-                      } catch (e) {
-                        console.log("  ! No se pudo eliminar version " + vNum + ": " + e.message);
-                      }
-                    }
-                  }
-                  if (limpiadas > 0) {
-                    console.log("  Limpiadas: " + limpiadas);
-                    totalLimpiadas += limpiadas;
-                  }
-
-                  // Verificar cuantas quedan
-                  const verRes2 = await script.projects.versions.list({ scriptId: c.scriptId, pageSize: 200 });
-                  const restantes = (verRes2.data.versiones || []).length;
-                  if (restantes > 180) {
-                    console.log("  ADVERTENCIA: Quedan " + restantes + " versiones de 200 (limite proximo)");
-                  } else {
-                    console.log("  Quedan: " + restantes + " versiones");
-                  }
-                } catch (e) {
-                  console.log("  Error verificando versiones de " + c.slug + ": " + e.message);
-                }
-              }
-              console.log("\nTotal versiones limpiadas: " + totalLimpiadas);
-            })();
-          '
-        env:
-          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
-
       - name: Empujar a cada cliente activo + health check
         run: |
           node --input-type=commonjs -e '
@@ -218,7 +137,7 @@ jobs:
             async function contarVersiones(scriptId) {
               try {
                 const res = await scriptApi.projects.versions.list({ scriptId, pageSize: 200 });
-                return (res.data.versiones || []).length;
+                return (res.data.versions || []).length;
               } catch (e) {
                 return -1;
               }
