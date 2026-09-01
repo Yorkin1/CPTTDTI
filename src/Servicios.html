@@ -18,8 +18,14 @@
         <input type="number" id="ser_precio" min="0" step="0.01" required placeholder="Ej. 1500.00">
       </div>
       <div class="campo">
-        <label for="ser_duracion">Duración (minutos)</label>
-        <input type="number" id="ser_duracion" min="5" step="5" value="60">
+        <label for="ser_duracion">Duración</label>
+        <div class="duracion-stepper">
+          <input type="text" id="ser_duracion" value="1h" placeholder="Ej. 1h 30min" inputmode="text" autocomplete="off">
+          <div class="duracion-flechas">
+            <button type="button" id="btnDuracionSubir" tabindex="-1" aria-label="Aumentar duración">▲</button>
+            <button type="button" id="btnDuracionBajar" tabindex="-1" aria-label="Disminuir duración">▼</button>
+          </div>
+        </div>
       </div>
       <div class="campo ancho-completo">
         <label for="ser_descripcion">Descripción</label>
