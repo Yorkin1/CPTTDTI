@@ -3501,6 +3501,30 @@ function obtenerHistorial(token, idCliente) {
 }
 
 /**
+ * Elimina un registro del historial por su ID (solo administrador).
+ * @param {string} token
+ * @param {string} idRegistro  ID_Registro.
+ * @return {Object}
+ */
+function eliminarRegistroHistorial(token, idRegistro) {
+  try {
+    var usuario = _validarSesion_(token);
+    if (!usuario) return _respuestaSesionExpirada_();
+    if (!_esAdmin_(usuario)) return { exito: false, mensaje: 'Solo el administrador puede eliminar registros del historial.' };
+    var hoja = obtenerHoja_(HOJA_HISTORIAL);
+    var fila = buscarFilaPorId_(hoja, 'ID_Registro', idRegistro);
+    if (!fila) return { exito: false, mensaje: 'No se encontró el registro indicado.' };
+    hoja.deleteRow(fila);
+    Logger.log('Registro de historial eliminado: ' + idRegistro);
+    _registrarActividad_(token, 'Historial', 'Eliminó registro de historial', 'ID ' + idRegistro);
+    return { exito: true, mensaje: 'Registro eliminado correctamente.' };
+  } catch (err) {
+    Logger.log('Error al eliminar registro de historial: ' + err);
+    return { exito: false, mensaje: 'Error al eliminar el registro: ' + err.message };
+  }
+}
+
+/**
  * Genera un PDF del historial a partir de las filas ya preparadas en el cliente.
  * Usa una hoja de cálculo temporal (SpreadsheetApp, ya autorizado) y la convierte
  * a PDF; luego manda la hoja a la papelera. No requiere nuevos permisos.
