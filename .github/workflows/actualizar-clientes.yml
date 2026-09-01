@@ -90,92 +90,229 @@ jobs:
             fs.writeFileSync("./src/appsscript.json", JSON.stringify(manifest, null, 2));
           '
 
-      - name: Empujar a cada cliente activo
+      - name: Empujar a cada cliente activo + health check
         run: |
           node --input-type=commonjs -e '
             const clientes = require("./deploy/clientes.json");
             const { execSync } = require("child_process");
             const fs = require("fs");
+            const https = require("https");
             const sha = (process.env.GITHUB_SHA || "").slice(0, 7);
+            const ahora = new Date();
+            const fechaLegible = ahora.toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" });
             let fallos = [];
             let exitosos = [];
+            let saltados = [];
             let clientesModificados = false;
 
-            for (const c of clientes) {
-              if (!c.activo) {
-                console.log("⊘ " + c.slug + " (inactivo, saltando)");
-                continue;
-              }
-              console.log("→ " + c.slug);
-              fs.writeFileSync(".clasp.json", JSON.stringify({
-                scriptId: c.scriptId,
-                rootDir: "./src",
-                scriptExtensions: [".js", ".gs"],
-                htmlExtensions: [".html"],
-                jsonExtensions: [".json"],
-                filePushOrder: [],
-                skipSubdirectories: false
-              }, null, 2));
-              try {
-                execSync("clasp push -f", { stdio: "inherit" });
+            // Funcion para health check
+            function healthCheck(deploymentId) {
+              return new Promise((resolve) => {
+                const url = "https://script.google.com/macros/s/" + deploymentId + "/exec";
+                const req = https.get(url, { timeout: 15000 }, (res) => {
+                  resolve({ ok: res.statusCode === 200 || res.statusCode === 302, statusCode: res.statusCode });
+                });
+                req.on("error", () => resolve({ ok: false, statusCode: 0 }));
+                req.on("timeout", () => { req.destroy(); resolve({ ok: false, statusCode: 0 }); });
+              });
+            }
 
-                // Paso 1: Intentar actualizar la implementación existente
+            // Procesar cada cliente
+            (async () => {
+              for (const c of clientes) {
+                const registro = {
+                  slug: c.slug,
+                  activo: c.activo,
+                  scriptId: c.scriptId,
+                  deploymentId: c.deploymentId,
+                  spreadsheetId: c.spreadsheetId,
+                  status: "pendiente",
+                  healthCheck: "no verificado",
+                  url: "https://script.google.com/macros/s/" + c.deploymentId + "/exec",
+                  ultimoUpdate: c.ultimoUpdate || null,
+                  error: null
+                };
+
+                if (!c.activo) {
+                  console.log("⊘ " + c.slug + " (inactivo, saltando)");
+                  registro.status = "saltado";
+                  saltados.push(c.slug);
+                  c._registro = registro;
+                  continue;
+                }
+
+                console.log("→ " + c.slug);
+                fs.writeFileSync(".clasp.json", JSON.stringify({
+                  scriptId: c.scriptId,
+                  rootDir: "./src",
+                  scriptExtensions: [".js", ".gs"],
+                  htmlExtensions: [".html"],
+                  jsonExtensions: [".json"],
+                  filePushOrder: [],
+                  skipSubdirectories: false
+                }, null, 2));
+
                 try {
-                  execSync("clasp deploy -i " + c.deploymentId + " -d \"auto: " + sha + "\"", { stdio: "inherit" });
-                  console.log("✓ " + c.slug + " actualizado");
-                  exitosos.push(c.slug);
-                } catch (deployErr) {
-                  // Paso 2: Si falla (implementación archivada), crear nueva
-                  console.log("⚠ " + c.slug + ": implementación archivada, creando nueva...");
-                  try {
-                    const output = execSync("clasp deploy -d \"auto: " + sha + "\"", { encoding: "utf8", stdio: "pipe" });
-                    console.log(output);
+                  execSync("clasp push -f", { stdio: "inherit" });
 
-                    // Extraer el nuevo deploymentId de la salida
-                    // clasp deploy muestra: "Uploaded XXXX" o "Deployed XXXX"
-                    const match = output.match(/(?:Uploaded|Deployed)\s+([a-zA-Z0-9_-]+)/);
-                    if (match && match[1]) {
-                      const nuevoId = match[1];
-                      console.log("Nuevo deploymentId: " + nuevoId);
-                      c.deploymentId = nuevoId;
-                      clientesModificados = true;
-                      console.log("✓ " + c.slug + " nueva implementación creada");
+                  // Paso 1: Intentar actualizar la implementacion existente
+                  let deployOk = false;
+                  try {
+                    execSync("clasp deploy -i " + c.deploymentId + " -d \"auto: " + sha + "\"", { stdio: "inherit" });
+                    console.log("  ✓ Implementacion actualizada");
+                    deployOk = true;
+                  } catch (deployErr) {
+                    // Paso 2: Si falla (implementacion archivada), crear nueva
+                    console.log("  ⚠ Implementacion archivada, creando nueva...");
+                    try {
+                      const output = execSync("clasp deploy -d \"auto: " + sha + "\"", { encoding: "utf8", stdio: "pipe" });
+                      console.log(output);
+                      const match = output.match(/(?:Uploaded|Deployed)\s+([a-zA-Z0-9_-]+)/);
+                      if (match && match[1]) {
+                        c.deploymentId = match[1];
+                        registro.deploymentId = match[1];
+                        registro.url = "https://script.google.com/macros/s/" + match[1] + "/exec";
+                        clientesModificados = true;
+                        console.log("  ✓ Nueva implementacion: " + match[1]);
+                        deployOk = true;
+                      } else {
+                        console.error("  ✗ No se pudo extraer el nuevo deploymentId");
+                      }
+                    } catch (newDeployErr) {
+                      console.error("  ✗ Falló al crear nueva implementacion");
+                    }
+                  }
+
+                  // Health check
+                  if (deployOk) {
+                    const hc = await healthCheck(c.deploymentId);
+                    registro.healthCheck = hc.ok ? "ok" : "fallo_http_" + hc.statusCode;
+                    console.log("  Health check: " + (hc.ok ? "✓ OK (HTTP " + hc.statusCode + ")" : "✗ Fallo (HTTP " + hc.statusCode + ")"));
+
+                    if (hc.ok) {
+                      registro.status = "ok";
+                      registro.ultimoUpdate = fechaLegible;
+                      c.ultimoUpdate = fechaLegible;
                       exitosos.push(c.slug);
                     } else {
-                      console.error("✗ " + c.slug + ": no se pudo extraer el nuevo deploymentId");
-                      fallos.push(c.slug);
+                      registro.status = "warning";
+                      registro.error = "Deploy exitoso pero health check fallo HTTP " + hc.statusCode;
+                      exitosos.push(c.slug);
                     }
-                  } catch (newDeployErr) {
-                    console.error("✗ " + c.slug + ": falló al crear nueva implementación");
-                    console.error(newDeployErr.message);
+                  } else {
+                    registro.status = "error";
+                    registro.error = "Fallo al crear/actualizar implementacion";
                     fallos.push(c.slug);
                   }
+                } catch (e) {
+                  console.error("  ✗ Fallo general: " + e.message);
+                  registro.status = "error";
+                  registro.error = e.message;
+                  fallos.push(c.slug);
                 }
-              } catch (e) {
-                console.error("✗ Falló " + c.slug + ": " + e.message);
-                fallos.push(c.slug);
+
+                c._registro = registro;
               }
-            }
 
-            // Si se actualizaron deploymentIds, guardar cambios
-            if (clientesModificados) {
-              fs.writeFileSync("./deploy/clientes.json", JSON.stringify(clientes, null, 2) + "\n");
-              console.log("\nArchivos de clientes actualizados.");
-            }
+              // Guardar clientes.json actualizado (con deploymentIds nuevos y fechas)
+              if (clientesModificados) {
+                const clientesGuardar = clientes.map(c => {
+                  const r = {};
+                  r.slug = c.slug;
+                  r.scriptId = c.scriptId;
+                  r.deploymentId = c.deploymentId;
+                  r.spreadsheetId = c.spreadsheetId;
+                  r.activo = c.activo;
+                  if (c.ultimoUpdate) r.ultimoUpdate = c.ultimoUpdate;
+                  return r;
+                });
+                fs.writeFileSync("./deploy/clientes.json", JSON.stringify(clientesGuardar, null, 2) + "\n");
+                console.log("\nclientes.json actualizado.");
+              }
 
-            console.log("");
-            console.log("Resumen: " + exitosos.length + " exitosos, " + fallos.length + " fallidos");
-            if (fallos.length) {
-              console.error("Fallaron: " + fallos.join(", "));
-              process.exit(1);
-            }
+              // === GENERAR REPORTE JSON ===
+              const reporteJson = {
+                ultimaActualizacion: fechaLegible,
+                commit: sha,
+                resumen: {
+                  total: clientes.length,
+                  exitosos: exitosos.length,
+                  fallidos: fallos.length,
+                  saltados: saltados.length
+                },
+                clientes: clientes.map(c => ({
+                  slug: c.slug,
+                  activo: c.activo,
+                  scriptId: c.scriptId,
+                  deploymentId: c.deploymentId,
+                  spreadsheetId: c.spreadsheetId,
+                  status: c._registro ? c._registro.status : "sin_datos",
+                  healthCheck: c._registro ? c._registro.healthCheck : "no verificado",
+                  url: "https://script.google.com/macros/s/" + c.deploymentId + "/exec",
+                  ultimoUpdate: c._registro ? c._registro.ultimoUpdate : null,
+                  error: c._registro ? c._registro.error : null
+                }))
+              };
+              fs.writeFileSync("./deploy/status.json", JSON.stringify(reporteJson, null, 2) + "\n");
+
+              // === GENERAR REPORTE MARKDOWN ===
+              let md = "";
+              md += "# Reporte de Clientes\n\n";
+              md += "**Ultima actualizacion:** " + fechaLegible + "  \n";
+              md += "**Commit:** " + sha + "  \n";
+              md += "**Total clientes:** " + clientes.length + " | Exitosos: " + exitosos.length + " | Fallidos: " + fallos.length + " | Saltados: " + saltados.length + "\n\n";
+              md += "---\n\n";
+              md += "## Estado de clientes\n\n";
+              md += "| Cliente | Estado | Health Check | Ultimo Update | Error |\n";
+              md += "|---------|--------|--------------|---------------|-------|\n";
+
+              for (const c of clientes) {
+                const r = c._registro || {};
+                const iconoStatus = r.status === "ok" ? "ok" : (r.status === "warning" ? "warning" : (r.status === "error" ? "error" : "saltado"));
+                const iconoHc = r.healthCheck === "ok" ? "ok" : (r.healthCheck === "no verificado" ? "—" : "fallo");
+                const error = r.error || "—";
+                md += "| " + c.slug + " | " + iconoStatus + " | " + iconoHc + " | " + (r.ultimoUpdate || "—") + " | " + error + " |\n";
+              }
+
+              md += "\n---\n\n";
+              md += "## Detalle\n\n";
+
+              for (const c of clientes) {
+                if (!c.activo) continue;
+                md += "### " + c.slug + "\n";
+                md += "- **Script ID:** " + c.scriptId + "\n";
+                md += "- **Deployment ID:** " + c.deploymentId + "\n";
+                md += "- **Spreadsheet ID:** " + c.spreadsheetId + "\n";
+                md += "- **URL:** " + "https://script.google.com/macros/s/" + c.deploymentId + "/exec\n";
+                md += "- **Estado:** " + (c._registro ? c._registro.status : "sin_datos") + "\n";
+                if (c._registro && c._registro.error) {
+                  md += "- **Error:** " + c._registro.error + "\n";
+                }
+                md += "\n";
+              }
+
+              fs.writeFileSync("./deploy/REPORT.md", md);
+
+              // Resumen final
+              console.log("");
+              console.log("=== RESUMEN ===");
+              console.log("Exitosos: " + exitosos.length + " | Fallidos: " + fallos.length + " | Saltados: " + saltados.length);
+              if (exitosos.length) console.log("  OK: " + exitosos.join(", "));
+              if (fallos.length) console.log("  FAIL: " + fallos.join(", "));
+              if (saltados.length) console.log("  SKIP: " + saltados.join(", "));
+              console.log("Reportes generados: deploy/status.json + deploy/REPORT.md");
+
+              if (fallos.length) {
+                process.exit(1);
+              }
+            })();
           '
 
-      - name: Commit cambios de deploymentId si hubo reemplazos
+      - name: Commit reportes y cambios
         if: success()
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add deploy/clientes.json
-          git diff --cached --quiet || git commit -m "fix: actualizar deploymentIds archivados automaticamente"
+          git add deploy/clientes.json deploy/status.json deploy/REPORT.md
+          git diff --cached --quiet || git commit -m "reporte: actualizar clientes + health check"
           git push
