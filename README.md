@@ -247,4 +247,43 @@ El manifiesto (`appsscript.json`) solicita únicamente lo necesario:
 
 ---
 
+## Actualizaciones vía GitHub Actions
+
+Este repositorio incluye un sistema para enviar actualizaciones a múltiples
+copias de clientes de forma automatizada.
+
+### Cómo funciona
+
+1. Editas el código en `src/` (localmente o en GitHub)
+2. Haces push a GitHub
+3. Disparas el workflow "Actualizar copias de clientes"
+4. El sistema envía los cambios a cada cliente activo automáticamente
+
+### Clientes activos
+
+La lista de clientes está en `deploy/clientes.json`. Cada cliente tiene:
+
+- `slug`: nombre corto
+- `scriptId`: ID del proyecto Apps Script
+- `deploymentId`: ID de la implementación desplegada
+- `spreadsheetId`: ID de la hoja de cálculo
+- `activo`: true/false
+
+### Agregar un cliente nuevo
+
+1. Crear la copia del Apps Script
+2. Compartir con la cuenta de actualizaciones como Editor
+3. GitHub → Actions → "Agregar cliente" → llenar slug + URL
+
+### Publicar cambios
+
+1. GitHub → Actions → "Actualizar copias de clientes" → Run workflow
+2. Ver resultado en `deploy/REPORT.md`
+
+### Pausar un cliente
+
+Cambiar `"activo": false` en `deploy/clientes.json`
+
+---
+
 ¡Listo! Copie la plantilla, ejecute la configuración, despliegue la app web y personalícela. 🚀
