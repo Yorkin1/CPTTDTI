@@ -204,7 +204,6 @@ jobs:
                 console.error("Fallaron: " + fallos.join(", "));
                 process.exit(1);
               }
-            })();
           '
 
       - name: Commit reportes y deploymentIds
