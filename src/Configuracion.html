@@ -52,10 +52,7 @@
         <label for="cfg2_etiqueta_cita">Etiqueta de cita</label>
         <input type="text" id="cfg2_etiqueta_cita" placeholder="Ej. Cita, Consulta, Visita">
       </div>
-      <div class="campo">
-        <label for="cfg2_duracion_cita_def">Duración predeterminada de cita (minutos)</label>
-        <input type="number" id="cfg2_duracion_cita_def" min="5" step="5" placeholder="Ej. 60">
-      </div>
+
       <div class="campo">
         <label for="cfg2_color_primario">Color primario</label>
         <input type="color" id="cfg2_color_primario">
@@ -71,7 +68,7 @@
           <option value="oscuro">Oscuro</option>
         </select>
       </div>
-      <div class="campo ancho-completo">
+      <div id="seccionMonitorConfig" class="campo ancho-completo" style="display:none;">
         <label style="font-weight:600; cursor:pointer;">
           <input type="checkbox" id="cfg2_monitor_habilitar" style="width:auto; margin-right:8px; accent-color:var(--color-primario);">
           Habilitar monitor de actividad del dueño
