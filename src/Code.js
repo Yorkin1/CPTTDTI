@@ -1847,6 +1847,22 @@ function _esAdmin_(usuario) {
 }
 
 /**
+ * Devuelve el nivel jerárquico del rol de un usuario:
+ *   3 = administrador principal (dueño)
+ *   2 = administrador
+ *   1 = editor
+ *   0 = no encontrado / inactivo
+ */
+function _nivelRol_(usuario) {
+  var u = _buscarUsuario_(usuario);
+  if (!u || String(u.Activo).toUpperCase() === 'NO') return 0;
+  if (String(u.Rol).toLowerCase() === 'administrador') {
+    return _esUsuarioPrincipal_(usuario) ? 3 : 2;
+  }
+  return 1;
+}
+
+/**
  * Devuelve true si el usuario es el administrador principal
  * (el PRIMER administrador registrado: el dueño). Ese usuario
  * no puede eliminarse, quitarse su rol ni desactivarse.
@@ -2258,6 +2274,11 @@ function actualizarUsuario(token, datos) {
   if (esPrincipal && String(usuarioSesion).toLowerCase() !== String(usuario).toLowerCase()) {
     return { exito: false, mensaje: 'El administrador principal solo puede modificar su propia información.' };
   }
+  var nivelSesion = _nivelRol_(usuarioSesion);
+  var nivelObjetivo = _nivelRol_(usuario);
+  if (nivelObjetivo >= nivelSesion && String(usuarioSesion).toLowerCase() !== String(usuario).toLowerCase()) {
+    return { exito: false, mensaje: 'No tiene permisos para modificar a un usuario de igual o mayor jerarquía.' };
+  }
   var hoja = obtenerHoja_(HOJA_USUARIOS);
   var colRol = ENCABEZADOS.Usuarios.indexOf('Rol') + 1;
   var colNombre = ENCABEZADOS.Usuarios.indexOf('Nombre') + 1;
@@ -2372,6 +2393,11 @@ function eliminarUsuario(token, usuario) {
   }
   if (_esUsuarioPrincipal_(usuario)) {
     return { exito: false, mensaje: 'El administrador principal no puede eliminarse.' };
+  }
+  var nivelSesion = _nivelRol_(usuarioSesion);
+  var nivelObjetivo = _nivelRol_(usuario);
+  if (nivelObjetivo >= nivelSesion) {
+    return { exito: false, mensaje: 'No tiene permisos para eliminar a un usuario de igual o mayor jerarquía.' };
   }
   var hoja = obtenerHoja_(HOJA_USUARIOS);
   hoja.deleteRow(u._fila);

@@ -3189,17 +3189,20 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       return;
     }
     var sesion = obtenerSesion();
+    var nivelSesion = sesion.principal ? 3 : (sesion.rol === 'administrador' ? 2 : 1);
     tbody.innerHTML = usuarios.map(function(u) {
       var esYo = String(u.usuario).toLowerCase() === String(sesion.usuario).toLowerCase();
+      var nivelU = u.principal ? 3 : (u.rol === 'administrador' ? 2 : 1);
+      var puedeEditar = esYo || (nivelSesion > nivelU);
+      var puedeEliminar = !esYo && !u.principal && (nivelSesion > nivelU);
       return '<tr>' +
         '<td>' + esc(u.usuario) + (esYo ? ' <span class="etiqueta etiqueta-programada">usted</span>' : '') + (u.principal ? ' <span class="etiqueta etiqueta-programada">Propietario</span>' : '') + '</td>' +
         '<td>' + esc(u.nombre) + '</td>' +
         '<td>' + (u.rol === 'administrador' ? 'Administrador' : 'Editor') + '</td>' +
         '<td>' + (u.activo ? 'Activo' : 'Inactivo') + '</td>' +
         '<td class="acciones-fila">' +
-          (!u.principal && !esYo ? '<span class="vacio-accion">—</span>' : '') +
-          ((!u.principal || esYo) ? '<button class="btn btn-secundario btn-pequeno" onclick="editarUsuario(\'' + esc(u.usuario) + '\')">Editar</button>' : '') +
-          (!esYo && !u.principal ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarUsuario(\'' + esc(u.usuario) + '\')">Eliminar</button>' : '') +
+          (puedeEditar ? '<button class="btn btn-secundario btn-pequeno" onclick="editarUsuario(\'' + esc(u.usuario) + '\')">Editar</button>' : '<span class="vacio-accion">—</span>') +
+          (puedeEliminar ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarUsuario(\'' + esc(u.usuario) + '\')">Eliminar</button>' : '') +
         '</td>' +
       '</tr>';
     }).join('');
