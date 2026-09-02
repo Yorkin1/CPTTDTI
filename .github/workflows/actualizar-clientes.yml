@@ -97,6 +97,9 @@ jobs:
             const { execSync } = require("child_process");
             const fs = require("fs");
             const sha = (process.env.GITHUB_SHA || "").slice(0, 7);
+            const commitMsg = execSync("git log -1 --format=%s " + (process.env.GITHUB_SHA || "HEAD"), { encoding: "utf8" }).trim();
+            const fecha = new Date().toISOString().slice(0, 10);
+            const desc = fecha + ": " + commitMsg;
             let fallos = [];
             let exitosos = [];
             let clientesModificados = false;
@@ -120,13 +123,13 @@ jobs:
                 execSync("clasp push -f", { stdio: "inherit" });
 
                 try {
-                  execSync("clasp deploy -i " + c.deploymentId + " -d \"auto: " + sha + "\"", { stdio: "inherit" });
+                  execSync("clasp deploy -i " + c.deploymentId + " -d \"" + desc + "\"", { stdio: "inherit" });
                   console.log("✓ " + c.slug + " actualizado");
                   exitosos.push(c.slug);
                 } catch (deployErr) {
                   console.log("⚠ " + c.slug + ": implementación archivada, creando nueva...");
                   try {
-                    const output = execSync("clasp deploy -d \"auto: " + sha + "\"", { encoding: "utf8", stdio: "pipe" });
+                    const output = execSync("clasp deploy -d \"" + desc + "\"", { encoding: "utf8", stdio: "pipe" });
                     console.log(output);
                     const match = output.match(/(?:Uploaded|Deployed)\s+([a-zA-Z0-9_-]+)/);
                     if (match && match[1]) {
