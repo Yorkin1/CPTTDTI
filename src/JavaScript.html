@@ -2059,12 +2059,13 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('cfg2_nombre_negocio', c.nombreNegocio || '');
     setVal('cfg2_mensaje_bienvenida', c.mensajeBienvenida || '');
     setVal('cfg2_etiqueta_cita', c.etiquetaCita || '');
-    setVal('cfg2_duracion_cita_def', parseInt(c.duracionCitaPredeterminada, 10) || 60);
     setVal('cfg2_color_primario', c.colorPrimario || '#4285F4');
     setVal('cfg2_color_secundario', c.colorSecundario || '#16a34a');
     setVal('cfg2_tema', c.tema || 'claro');
     var chkMon = document.getElementById('cfg2_monitor_habilitar');
     if (chkMon) chkMon.checked = !!c.habilitarMonitor;
+    var seccionMon = document.getElementById('seccionMonitorConfig');
+    if (seccionMon) seccionMon.style.display = esDuenoSesion() ? '' : 'none';
     Estado.logoEliminado = false;
     actualizarVistaLogoConfiguracion(c.logoUrl || '');
 
@@ -2255,21 +2256,14 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       return;
     }
 
-    var durDef = parseInt(document.getElementById('cfg2_duracion_cita_def').value, 10);
-    if (isNaN(durDef) || durDef < 1) {
-      mostrarToast('La duración predeterminada de cita debe ser un número mayor que 0.', 'error');
-      return;
-    }
-
     var datos = {
       NOMBRE_NEGOCIO: nombreNegocio,
       MENSAJE_BIENVENIDA: document.getElementById('cfg2_mensaje_bienvenida').value.trim() || 'Bienvenido a nuestro sistema de gestión',
       ETIQUETA_CITA: document.getElementById('cfg2_etiqueta_cita').value.trim() || 'Cita',
-      DURACION_CITA_PREDETERMINADA: String(durDef),
       COLOR_PRIMARIO: document.getElementById('cfg2_color_primario').value || '#4285F4',
       COLOR_SECUNDARIO: document.getElementById('cfg2_color_secundario').value || '#16a34a',
       TEMA: document.getElementById('cfg2_tema').value || 'claro',
-      HABILITAR_MONITOR: document.getElementById('cfg2_monitor_habilitar').checked ? 'SI' : 'NO'
+      HABILITAR_MONITOR: esDuenoSesion() ? (document.getElementById('cfg2_monitor_habilitar').checked ? 'SI' : 'NO') : undefined
     };
 
     var btn = document.getElementById('btnGuardarConfiguracionGeneral');
@@ -2753,7 +2747,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('cfg_nombre_negocio', p.NOMBRE_NEGOCIO || '');
     setVal('cfg_mensaje_bienvenida', p.MENSAJE_BIENVENIDA || '');
     setVal('cfg_etiqueta_cita', p.ETIQUETA_CITA || '');
-    setVal('cfg_duracion_cita_def', p.DURACION_CITA_PREDETERMINADA || '60');
     setVal('cfg_color_primario', p.COLOR_PRIMARIO || '#4285F4');
     setVal('cfg_color_secundario', p.COLOR_SECUNDARIO || '#16a34a');
     setVal('cfg_tema', p.TEMA || 'claro');
@@ -2772,7 +2765,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('cfg_nombre_negocio', c.nombreNegocio && c.nombreNegocio !== 'Mi Negocio' ? c.nombreNegocio : '');
     setVal('cfg_mensaje_bienvenida', c.mensajeBienvenida || '');
     setVal('cfg_etiqueta_cita', c.etiquetaCita || '');
-    setVal('cfg_duracion_cita_def', parseInt(c.duracionCitaPredeterminada, 10) || 60);
     setVal('cfg_color_primario', c.colorPrimario || '#4285F4');
     setVal('cfg_color_secundario', c.colorSecundario || '#16a34a');
     setVal('cfg_tema', c.tema || 'claro');
@@ -2849,18 +2841,11 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       return;
     }
 
-    var durDef = parseInt(document.getElementById('cfg_duracion_cita_def').value, 10);
-    if (isNaN(durDef) || durDef < 1) {
-      mostrarToast('La duración predeterminada de cita debe ser un número mayor que 0.', 'error');
-      return;
-    }
-
     var datos = {
       NOMBRE_NEGOCIO: nombreNegocio,
       MENSAJE_BIENVENIDA: document.getElementById('cfg_mensaje_bienvenida').value.trim() ||
         'Bienvenido a nuestro sistema de gestión',
       ETIQUETA_CITA: document.getElementById('cfg_etiqueta_cita').value.trim() || 'Cita',
-      DURACION_CITA_PREDETERMINADA: String(durDef),
       COLOR_PRIMARIO: document.getElementById('cfg_color_primario').value || '#4285F4',
       COLOR_SECUNDARIO: document.getElementById('cfg_color_secundario').value || '#16a34a',
       TEMA: document.getElementById('cfg_tema').value || 'claro',
