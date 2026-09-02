@@ -183,9 +183,9 @@ jobs:
                     if (!deployOk) {
                       const newDeploy = await scriptApi.projects.deployments.create({
                         scriptId: c.scriptId,
-                        requestBody: {
+                        resource: {
                           deploymentConfig: {
-                            versionNumber: versionNumber,
+                            versionNumber: String(versionNumber),
                             description: desc
                           }
                         }
