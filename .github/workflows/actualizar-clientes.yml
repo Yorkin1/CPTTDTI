@@ -16,6 +16,7 @@ jobs:
           node-version: 20
 
       - run: npm install -g @google/clasp
+      - run: npm install googleapis
 
       - name: Restaurar credenciales de clasp
         run: |
@@ -93,107 +94,168 @@ jobs:
       - name: Empujar a cada cliente activo
         run: |
           node --input-type=commonjs -e '
-            const clientes = require("./deploy/clientes.json");
-            const { execSync } = require("child_process");
-            const fs = require("fs");
-            const sha = (process.env.GITHUB_SHA || "").slice(0, 7);
-            const commitMsg = execSync("git log -1 --format=%s " + (process.env.GITHUB_SHA || "HEAD"), { encoding: "utf8" }).trim();
-            const fecha = new Date().toISOString().slice(0, 10);
-            const desc = fecha + ": " + commitMsg;
-            let fallos = [];
-            let exitosos = [];
-            let clientesModificados = false;
+            (async () => {
+              const clientes = require("./deploy/clientes.json");
+              const { execSync } = require("child_process");
+              const fs = require("fs");
+              const { google } = require("googleapis");
+              const sha = (process.env.GITHUB_SHA || "").slice(0, 7);
+              const commitMsg = execSync("git log -1 --format=%s " + (process.env.GITHUB_SHA || "HEAD"), { encoding: "utf8" }).trim();
+              const fecha = new Date().toISOString().slice(0, 10);
+              const desc = fecha + ": " + commitMsg;
+              let fallos = [];
+              let exitosos = [];
+              let clientesModificados = false;
 
-            for (const c of clientes) {
-              if (!c.activo) {
-                console.log("⊘ " + c.slug + " (inactivo, saltando)");
-                continue;
-              }
-              console.log("→ " + c.slug);
-              fs.writeFileSync(".clasp.json", JSON.stringify({
-                scriptId: c.scriptId,
-                rootDir: "./src",
-                scriptExtensions: [".js", ".gs"],
-                htmlExtensions: [".html"],
-                jsonExtensions: [".json"],
-                filePushOrder: [],
-                skipSubdirectories: false
-              }, null, 2));
-              try {
-                execSync("clasp push -f", { stdio: "inherit" });
+              const clasprc = JSON.parse(fs.readFileSync(process.env.HOME + "/.clasprc.json", "utf8"));
+              const tokenObj = clasprc.tokens?.default || clasprc.token || clasprc;
+              const oauth2 = new google.auth.OAuth2(
+                tokenObj.client_id || "1072944905499-vm2v2i5dvn0a0d2o4ca36i1vge8cvbn0.apps.googleusercontent.com",
+                tokenObj.client_secret || "v6V3fKV_zWU7iw1DrpO1rknX",
+                "https://developers.google.com/oauthplayground"
+              );
+              oauth2.setCredentials({
+                access_token: tokenObj.access_token,
+                refresh_token: tokenObj.refresh_token
+              });
+              const scriptApi = google.script({ version: "v1", auth: oauth2 });
 
+              for (const c of clientes) {
+                if (!c.activo) {
+                  console.log("⊘ " + c.slug + " (inactivo, saltando)");
+                  continue;
+                }
+                console.log("→ " + c.slug);
+                fs.writeFileSync(".clasp.json", JSON.stringify({
+                  scriptId: c.scriptId,
+                  rootDir: "./src",
+                  scriptExtensions: [".js", ".gs"],
+                  htmlExtensions: [".html"],
+                  jsonExtensions: [".json"],
+                  filePushOrder: [],
+                  skipSubdirectories: false
+                }, null, 2));
                 try {
-                  execSync("clasp deploy -i " + c.deploymentId + " -d \"" + desc + "\"", { stdio: "inherit" });
-                  console.log("✓ " + c.slug + " actualizado");
-                  exitosos.push(c.slug);
-                } catch (deployErr) {
-                  console.log("⚠ " + c.slug + ": implementación archivada, creando nueva...");
+                  execSync("clasp push -f", { stdio: "inherit" });
+
+                  let deployOk = false;
+
                   try {
-                    const output = execSync("clasp deploy -d \"" + desc + "\"", { encoding: "utf8", stdio: "pipe" });
-                    console.log(output);
-                    const match = output.match(/(?:Uploaded|Deployed)\s+([a-zA-Z0-9_-]+)/);
-                    if (match && match[1]) {
-                      c.deploymentId = match[1];
-                      clientesModificados = true;
-                      console.log("✓ " + c.slug + " nueva implementación: " + match[1]);
-                      exitosos.push(c.slug);
-                    } else {
-                      console.error("✗ " + c.slug + ": no se pudo extraer el nuevo deploymentId");
-                      fallos.push(c.slug);
+                    const versionRes = await scriptApi.projects.versions.create({
+                      scriptId: c.scriptId,
+                      requestBody: { description: desc }
+                    });
+                    const versionNumber = versionRes.data.versionNumber;
+                    console.log("  Versión " + versionNumber + " creada");
+
+                    const deployRes = await scriptApi.projects.deployments.list({ scriptId: c.scriptId });
+                    const deployments = deployRes.data.deployments || [];
+                    const existing = deployments.find(d => d.deploymentId === c.deploymentId);
+
+                    if (existing) {
+                      try {
+                        await scriptApi.projects.deployments.update({
+                          scriptId: c.scriptId,
+                          deploymentId: c.deploymentId,
+                          requestBody: {
+                            deploymentConfig: {
+                              versionNumber: versionNumber,
+                              description: desc
+                            }
+                          }
+                        });
+                        console.log("  Deployment actualizado con versión " + versionNumber);
+                        deployOk = true;
+                      } catch (updateErr) {
+                        console.log("  Deployment read-only, creando nuevo...");
+                        try {
+                          await scriptApi.projects.deployments.delete({
+                            scriptId: c.scriptId,
+                            deploymentId: c.deploymentId
+                          });
+                          console.log("  Deployment viejo eliminado");
+                        } catch (delErr) {
+                          console.log("  No se pudo eliminar el viejo (continuando)");
+                        }
+                      }
                     }
-                  } catch (newDeployErr) {
-                    console.error("✗ " + c.slug + ": falló al crear nueva implementación");
+
+                    if (!deployOk) {
+                      const newDeploy = await scriptApi.projects.deployments.create({
+                        scriptId: c.scriptId,
+                        requestBody: {
+                          deploymentConfig: {
+                            versionNumber: versionNumber,
+                            description: desc
+                          }
+                        }
+                      });
+                      const newId = newDeploy.data.deploymentId;
+                      console.log("  Nuevo deployment: " + newId);
+                      if (newId !== c.deploymentId) {
+                        c.deploymentId = newId;
+                        clientesModificados = true;
+                      }
+                      deployOk = true;
+                    }
+
+                    if (deployOk) {
+                      console.log("✓ " + c.slug + " actualizado");
+                      exitosos.push(c.slug);
+                    }
+                  } catch (deployErr) {
+                    console.error("✗ " + c.slug + ": " + deployErr.message);
                     fallos.push(c.slug);
                   }
+                } catch (e) {
+                  console.error("✗ Falló " + c.slug + ": " + e.message);
+                  fallos.push(c.slug);
                 }
-              } catch (e) {
-                console.error("✗ Falló " + c.slug + ": " + e.message);
-                fallos.push(c.slug);
               }
-            }
 
-            if (clientesModificados) {
-              fs.writeFileSync("./deploy/clientes.json", JSON.stringify(clientes, null, 2) + "\n");
-              console.log("\nArchivos de clientes actualizados.");
-            }
+              if (clientesModificados) {
+                fs.writeFileSync("./deploy/clientes.json", JSON.stringify(clientes, null, 2) + "\n");
+                console.log("\nArchivos de clientes actualizados.");
+              }
 
-            const ahora = new Date();
-            const fechaLegible = ahora.toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" });
-            let md = "# Reporte de Clientes\n\n";
-            md += "**Fecha:** " + fechaLegible + "  \n";
-            md += "**Commit:** " + sha + "\n\n";
-            md += "## Resumen\n\n";
-            md += "- **Total:** " + clientes.length + "\n";
-            md += "- **Exitosos:** " + exitosos.length + "\n";
-            md += "- **Fallidos:** " + fallos.length + "\n\n";
-            md += "## Estado\n\n";
-            md += "| Cliente | Estado | URL |\n";
-            md += "|---------|--------|-----|\n";
-            for (const c of clientes) {
-              const ok = exitosos.includes(c.slug);
-              const fallo = fallos.includes(c.slug);
-              const estado = fallo ? "error" : (ok ? "ok" : "saltado");
-              const url = "https://script.google.com/macros/s/" + c.deploymentId + "/exec";
-              md += "| " + c.slug + " | " + estado + " | " + url + " |\n";
-            }
-            md += "\n---\n\n";
-            md += "## Detalle\n\n";
-            for (const c of clientes) {
-              md += "### " + c.slug + "\n";
-              md += "- **Script ID:** " + c.scriptId + "\n";
-              md += "- **Deployment ID:** " + c.deploymentId + "\n";
-              md += "- **Spreadsheet ID:** " + c.spreadsheetId + "\n";
-              md += "- **URL:** https://script.google.com/macros/s/" + c.deploymentId + "/exec\n\n";
-            }
-            fs.writeFileSync("./deploy/REPORT.md", md);
-            console.log("\nReporte: deploy/REPORT.md");
+              const ahora = new Date();
+              const fechaLegible = ahora.toLocaleString("es-DO", { timeZone: "America/Santo_Domingo" });
+              let md = "# Reporte de Clientes\n\n";
+              md += "**Fecha:** " + fechaLegible + "  \n";
+              md += "**Commit:** " + sha + "\n\n";
+              md += "## Resumen\n\n";
+              md += "- **Total:** " + clientes.length + "\n";
+              md += "- **Exitosos:** " + exitosos.length + "\n";
+              md += "- **Fallidos:** " + fallos.length + "\n\n";
+              md += "## Estado\n\n";
+              md += "| Cliente | Estado | URL |\n";
+              md += "|---------|--------|-----|\n";
+              for (const c of clientes) {
+                const ok = exitosos.includes(c.slug);
+                const fallo = fallos.includes(c.slug);
+                const estado = fallo ? "error" : (ok ? "ok" : "saltado");
+                const url = "https://script.google.com/macros/s/" + c.deploymentId + "/exec";
+                md += "| " + c.slug + " | " + estado + " | " + url + " |\n";
+              }
+              md += "\n---\n\n";
+              md += "## Detalle\n\n";
+              for (const c of clientes) {
+                md += "### " + c.slug + "\n";
+                md += "- **Script ID:** " + c.scriptId + "\n";
+                md += "- **Deployment ID:** " + c.deploymentId + "\n";
+                md += "- **Spreadsheet ID:** " + c.spreadsheetId + "\n";
+                md += "- **URL:** https://script.google.com/macros/s/" + c.deploymentId + "/exec\n\n";
+              }
+              fs.writeFileSync("./deploy/REPORT.md", md);
+              console.log("\nReporte: deploy/REPORT.md");
 
-            console.log("");
-            console.log("Resumen: " + exitosos.length + " exitosos, " + fallos.length + " fallidos");
-            if (fallos.length) {
-              console.error("Fallaron: " + fallos.join(", "));
-              process.exit(1);
-            }
+              console.log("");
+              console.log("Resumen: " + exitosos.length + " exitosos, " + fallos.length + " fallidos");
+              if (fallos.length) {
+                console.error("Fallaron: " + fallos.join(", "));
+                process.exit(1);
+              }
+            })();
           '
 
       - name: Commit reportes y deploymentIds
