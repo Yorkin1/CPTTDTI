@@ -143,6 +143,12 @@
           <button type="button" class="btn btn-secundario" id="btnElegirMejor">Elegir el mejor horario</button>
           <div class="parrilla-horarios" id="parrillaHorarios"></div>
           <p class="asistente-nota" id="notaHorarios"></p>
+          <div id="avisoLimiteDiario" style="display:none; margin:12px 0; padding:12px 16px; background:linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%); border-left:4px solid #f39c12; border-radius:6px; color:#7d6608; font-size:14px; box-shadow:0 2px 8px rgba(243,156,18,0.15);">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:20px;">⚠️</span>
+              <span id="avisoLimiteTexto" style="font-weight:500;"></span>
+            </div>
+          </div>
           <div class="acciones-form">
             <button type="button" class="btn btn-primario" id="btnContinuarHorario">Continuar con este horario</button>
             <button type="button" class="btn btn-secundario" id="btnVolverInicio">Cambiar fecha</button>
@@ -424,6 +430,16 @@
         return m[3] + '-' + m[2] + '-' + m[1];
       }
 
+      // Duración en minutos a texto legible ("10 h", "2 h", "1 h 30 min", "30 min").
+      function duracionLegibleReserva(mins) {
+        mins = parseInt(mins, 10) || 0;
+        var h = Math.floor(mins / 60);
+        var m = mins % 60;
+        if (h && m) return h + ' h ' + m + ' min';
+        if (h) return h + ' h';
+        return m + ' min';
+      }
+
       function nombreDiaReserva(indice) {
         var nombres = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
         return nombres[indice] || '';
@@ -454,7 +470,7 @@
         (Reserva.servicios || []).forEach(function(s) {
           opciones += '<option value="' + escReserva(s.id) + '">' +
             escReserva(s.nombre) + ' — ' + formatoMonedaReserva(s.precio) +
-            ' (' + (s.duracionMins || 60) + ' min)</option>';
+            ' (' + duracionLegibleReserva(s.duracionMins || 60) + ')</option>';
         });
         sel.innerHTML = opciones;
       }
@@ -684,6 +700,15 @@
             Reserva.seleccion.duracion = resp.duracion;
             Reserva.seleccion.slots = resp.slots || [];
             Reserva.seleccion.hora = '';
+            // Mostrar/ocultar aviso de límite diario.
+            var avisoLimite = document.getElementById('avisoLimiteDiario');
+            var avisoTexto = document.getElementById('avisoLimiteTexto');
+            if (resp.mensajeLimite && avisoLimite && avisoTexto) {
+              avisoTexto.textContent = resp.mensajeLimite;
+              avisoLimite.style.display = 'block';
+            } else if (avisoLimite) {
+              avisoLimite.style.display = 'none';
+            }
             renderParrilla();
             pasarAPaso('pasoHorarios');
           })
@@ -700,7 +725,7 @@
         var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
         document.getElementById('resumenDia').textContent =
           'Día ' + fechaDMYReserva(fecha) + ' (' + nombreDiaReserva(new Date(fecha + 'T00:00:00').getDay()) + ') · Duración: ' +
-          Reserva.seleccion.duracion + ' min';
+          duracionLegibleReserva(Reserva.seleccion.duracion);
 
         var contenedor = document.getElementById('parrillaHorarios');
         var slots = Reserva.seleccion.slots || [];
@@ -760,7 +785,7 @@
         var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
         var html = 'Usted va a reservar ' + articuloReserva(etiqueta) + ' <strong>' + escReserva(etiqueta) + '</strong> el <strong>' +
           escReserva(fechaDMYReserva(Reserva.seleccion.fecha)) + '</strong> a las <strong>' +
-          hora12Reserva(Reserva.seleccion.hora) + '</strong> (' + Reserva.seleccion.duracion + ' min).';
+          hora12Reserva(Reserva.seleccion.hora) + '</strong> (' + duracionLegibleReserva(Reserva.seleccion.duracion) + ').';
         var servicios = resumenServiciosHTML();
         if (servicios) {
           html += '<br><br><strong>Servicios:</strong><br>' + servicios;
@@ -864,7 +889,7 @@
         var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
         var html = '<strong>' + escReserva(etiqueta) + '</strong> el <strong>' +
           escReserva(fechaDMYReserva(Reserva.seleccion.fecha)) + '</strong> a las <strong>' +
-          hora12Reserva(Reserva.seleccion.hora) + '</strong> (' + Reserva.seleccion.duracion + ' min).';
+          hora12Reserva(Reserva.seleccion.hora) + '</strong> (' + duracionLegibleReserva(Reserva.seleccion.duracion) + ').';
         var servicios = resumenServiciosHTML();
         if (servicios) {
           html += '<br><br><strong>Servicios:</strong><br>' + servicios;
@@ -921,8 +946,11 @@
         var html = '<strong>' + escReserva(etiqueta) + '</strong> ' +
           (femeninaReserva(etiqueta) ? 'reservada' : 'reservado') + ' para el <strong>' +
           escReserva(fechaDMYReserva(resp.fecha)) + '</strong> a las <strong>' + hora12Reserva(resp.hora) +
-          '</strong> (' + resp.duracion + ' min) en ' +
+          '</strong> (' + duracionLegibleReserva(resp.duracion) + ') en ' +
           escReserva((Reserva.config && Reserva.config.nombreNegocio) || 'el negocio') + '.';
+        if (resp.advertenciaLimite) {
+          html += '<br><br><span style="color:#856404; font-weight:600;">⚠ ' + escReserva(resp.advertenciaLimite) + '</span>';
+        }
         if (resp.servicios && resp.servicios.length > 0) {
           html += '<br><br><strong>Servicios:</strong><br>' + resp.servicios.map(function(it) {
             return '&bull; ' + it.cantidad + ' × ' + escReserva(it.nombre) +

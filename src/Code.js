@@ -2689,7 +2689,7 @@ function agendarCita(token, datos) {
           'Título: ' + (datos.titulo || 'Cita') + '\n' +
           'Fecha: ' + (datos.fecha || '') + '\n' +
           'Hora: ' + _hora12_(datos.hora) + '\n' +
-          'Duración: ' + (datos.duracionMins || 60) + ' min\n' +
+          'Duración: ' + _duracionLegible_(datos.duracionMins || 60) + '\n' +
           (datos.descripcion ? 'Descripción: ' + datos.descripcion + '\n' : '') +
           '\nGracias por preferirnos.';
         MailApp.sendEmail(correoCliente, asunto, cuerpo);
@@ -2711,7 +2711,7 @@ function agendarCita(token, datos) {
           'Cliente: ' + (datos.nombreCliente || (datos.idCliente || '')) + '\n' +
           'Fecha: ' + (datos.fecha || '') + '\n' +
           'Hora: ' + _hora12_(datos.hora) + '\n' +
-          'Duración: ' + duracion + ' min\n' +
+          'Duración: ' + _duracionLegible_(duracion) + '\n' +
           'Agendada por: ' + agendadoPor + '\n' +
           (datos.descripcion ? 'Descripción: ' + datos.descripcion + '\n' : '') +
           'ID de cita: ' + id + '\n';
@@ -3151,6 +3151,21 @@ function _hora12_(h) {
 function _formatoMoneda_(n) {
   n = parseFloat(n) || 0;
   return '$ ' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
+ * Duración en minutos a texto legible ("10 h", "2 h", "1 h 30 min", "30 min").
+ * Solo formato de muestra; no altera valores ni cálculos.
+ * @param {number|string} mins  Minutos.
+ * @return {string}
+ */
+function _duracionLegible_(mins) {
+  mins = parseInt(mins, 10) || 0;
+  var h = Math.floor(mins / 60);
+  var m = mins % 60;
+  if (h && m) return h + ' h ' + m + ' min';
+  if (h) return h + ' h';
+  return m + ' min';
 }
 
 /**
@@ -3702,7 +3717,7 @@ function reservarCitaPublica(datos) {
           (telefono ? 'Teléfono: ' + telefono + '\n' : '') +
           'Fecha: ' + fecha + '\n' +
           'Hora: ' + _hora12_(hora) + '\n' +
-          'Duración: ' + duracion + ' min\n' +
+          'Duración: ' + _duracionLegible_(duracion) + '\n' +
           'ID de cita: ' + idCita + '\n';
         if (selServicios.items.length > 0) {
           cuerpoEquipo += '\nServicios:\n' + selServicios.items.map(function(it) {

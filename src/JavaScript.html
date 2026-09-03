@@ -872,7 +872,7 @@
     iniciarGestionReservas();
   }
 
-function duracionLegible(mins) { mins = parseInt(mins, 10) || 0; var h = Math.floor(mins / 60); var m = mins % 60; if (h && m) return h + 'h ' + m + 'min'; if (h) return h + 'h'; return m + 'min'; }
+function duracionLegible(mins) { mins = parseInt(mins, 10) || 0; var h = Math.floor(mins / 60); var m = mins % 60; if (h && m) return h + ' h ' + m + ' min'; if (h) return h + ' h'; return m + ' min'; }
 function parsearDuracion(texto) { texto = String(texto || '').toLowerCase().trim(); var mh = texto.match(/(\d+)\s*h/); var mm = texto.match(/(\d+)\s*m/); var horas = mh ? parseInt(mh[1], 10) : 0; var mins = mm ? parseInt(mm[1], 10) : 0; if (!mh && !mm) { var soloNum = texto.match(/(\d+)/); if (soloNum) mins = parseInt(soloNum[1], 10); } var total = horas * 60 + mins; return total > 0 ? total : 60; }
 function formatearCampoDuracion() { var campo = document.getElementById('ser_duracion'); if (campo) campo.value = duracionLegible(parsearDuracion(campo.value)); }
 function ajustarDuracion(delta) { var campo = document.getElementById('ser_duracion'); if (!campo) return; var mins = parsearDuracion(campo.value) + delta; if (mins < 5) mins = 5; campo.value = duracionLegible(mins); }
@@ -932,7 +932,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       return '<tr>' +
         '<td>' + esc(s.Nombre) + '</td>' +
         '<td>' + formatoMoneda(s.Precio) + '</td>' +
-        '<td>' + esc(s.Duracion_Mins) + ' min</td>' +
+        '<td>' + esc(duracionLegible(s.Duracion_Mins)) + '</td>' +
         '<td class="col-wrap">' + esc(s.Descripcion) + '</td>' +
         '<td><span class="etiqueta ' + claseEt + '">' + esc(estado) + '</span></td>' +
         '<td class="acciones-fila">' + acciones + '</td>' +
@@ -1124,7 +1124,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       return '<div class="fila-servicio-cita">' +
         '<label class="servicio-chk"><input type="checkbox" class="serv-cita" value="' + esc(s.ID_Servicio) +
         '" data-dur="' + esc(s.Duracion_Mins) + '"> ' + esc(s.Nombre) + ' (' + formatoMoneda(s.Precio) +
-        ' · ' + esc(s.Duracion_Mins) + ' min)</label>' +
+        ' · ' + esc(duracionLegible(s.Duracion_Mins)) + ')</label>' +
         '<input type="number" class="serv-cant-cita" min="1" step="1" value="1" style="width:64px;">' +
         '</div>';
     }).join('');
@@ -1196,7 +1196,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var base = (Estado.config && Estado.config.duracionCitaPredeterminada) || 60;
     if (input) input.value = dur > 0 ? dur : base;
     var mostrar = document.getElementById('cita_duracion_mostrar');
-    if (mostrar) mostrar.textContent = 'Duración: ' + (input ? input.value : base) + ' min';
+    if (mostrar) mostrar.textContent = 'Duración: ' + duracionLegible(input ? input.value : base);
     actualizarBotonServiciosCita();
   }
 
@@ -1434,7 +1434,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '<td>' + esc(c.Agendado_Por || (c.Descripcion && c.Descripcion.indexOf('Reservada') === 0 ? 'Cliente (en línea)' : '')) + '</td>' +
         '<td>' + esc(fechaDMY(fechaLegible(c.Fecha))) + '</td>' +
         '<td>' + esc(hora12(c.Hora)) + '</td>' +
-        '<td>' + esc(c.Duracion_Mins) + ' min</td>' +
+        '<td>' + esc(duracionLegible(c.Duracion_Mins)) + '</td>' +
         '<td>' + (c.Total_Precio ? formatoMoneda(c.Total_Precio) : '<span class="vacio-accion">&mdash;</span>') + '</td>' +
         (function() {
           var srvTxt = '';
@@ -1872,7 +1872,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       } catch (eServ) {}
     }
     var total = (cita && cita.Total_Precio) ? formatoMoneda(cita.Total_Precio) : '';
-    var dur = (cita && cita.Duracion_Mins != null && cita.Duracion_Mins !== '') ? (cita.Duracion_Mins + ' min') : '';
+    var dur = (cita && cita.Duracion_Mins != null && cita.Duracion_Mins !== '') ? duracionLegible(cita.Duracion_Mins) : '';
     var resultado = r.Resultado || '';
     return {
       cliente: cliente, por: por, fecha: fecha, descripcion: descripcion,
