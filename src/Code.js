@@ -3405,14 +3405,24 @@ function obtenerHorariosDisponibles(datos) {
       if (!choca) libres.push(s.hora);
     }
 
-    // Verificar límite de citas por día y adjuntar advertencia al resultado.
+    // Verificar límite de citas por día: si está lleno, bloquear el día
+    // (sin horarios, como un día cerrado). Si no, adjuntar el aviso.
     var infoLimite = _obtenerLimiteCitasDia_(fecha);
     var resultado = { exito: true, fecha: fecha, duracion: duracion, dia: dia, slots: libres };
     if (infoLimite.limite !== null) {
       resultado.limiteDiario = infoLimite.limite;
       resultado.citasRegistradas = infoLimite.cantidad;
       resultado.limiteSuperado = infoLimite.superado;
-      if (infoLimite.mensaje) resultado.mensajeLimite = infoLimite.mensaje;
+      if (infoLimite.superado) {
+        var partesF = String(fecha).split('-');
+        var fechaDMY = partesF.length === 3
+          ? (partesF[2] + '-' + partesF[1] + '-' + partesF[0]) : fecha;
+        resultado.slots = [];
+        resultado.mensajeLimite = 'El día ' + fechaDMY + ' está lleno (' +
+          infoLimite.cantidad + '/' + infoLimite.limite + '). Elija otra fecha.';
+      } else if (infoLimite.mensaje) {
+        resultado.mensajeLimite = infoLimite.mensaje;
+      }
     }
     return resultado;
   } catch (err) {
@@ -3611,6 +3621,17 @@ function reservarCitaPublica(datos) {
     }
     if (!email && !telefono) {
       return { exito: false, mensaje: 'Ingrese su correo electrónico o su teléfono.' };
+    }
+
+    // Día lleno: bloquear en la página pública (aunque manipulen la página
+    // o el día se haya llenado entre la consulta y la confirmación).
+    var infoLimiteReserva = _obtenerLimiteCitasDia_(fecha);
+    if (infoLimiteReserva.limite !== null && infoLimiteReserva.superado) {
+      var pF = String(fecha).split('-');
+      var fDMY = pF.length === 3 ? (pF[2] + '-' + pF[1] + '-' + pF[0]) : fecha;
+      return { exito: false, mensaje: 'El día ' + fDMY + ' ya alcanzó el límite de citas (' +
+        infoLimiteReserva.cantidad + '/' + infoLimiteReserva.limite + '). Elija otra fecha.',
+        limiteSuperado: true };
     }
 
     // Volver a validar el slot justo antes de escribir (evita dobles reservas).
