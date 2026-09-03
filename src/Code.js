@@ -3368,6 +3368,11 @@ function obtenerHorariosDisponibles(datos) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
       return { exito: false, mensaje: 'La fecha no es válida.' };
     }
+    // No se permite consultar ni reservar en fechas pasadas.
+    var hoy = Utilities.formatDate(new Date(), obtenerZonaHoraria_(), 'yyyy-MM-dd');
+    if (fecha < hoy) {
+      return { exito: false, mensaje: 'No se puede reservar en fechas pasadas. Elija otra fecha.' };
+    }
     var duracion = parseInt(datos.duracionMins, 10) ||
       parseInt(cfg.DURACION_CITA_PREDETERMINADA, 10) || 60;
     if (duracion < 5) duracion = 60;
@@ -3418,10 +3423,8 @@ function obtenerHorariosDisponibles(datos) {
         var fechaDMY = partesF.length === 3
           ? (partesF[2] + '-' + partesF[1] + '-' + partesF[0]) : fecha;
         resultado.slots = [];
-        resultado.mensajeLimite = 'El día ' + fechaDMY + ' está lleno (' +
-          infoLimite.cantidad + '/' + infoLimite.limite + '). Elija otra fecha.';
-      } else if (infoLimite.mensaje) {
-        resultado.mensajeLimite = infoLimite.mensaje;
+        // Al cliente solo se le muestra que llegó al límite (sin conteos).
+        resultado.mensajeLimite = 'El día ' + fechaDMY + ' llegó al límite de citas. Elija otra fecha.';
       }
     }
     return resultado;
@@ -3603,6 +3606,11 @@ function reservarCitaPublica(datos) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !_horaAMin_(hora)) {
       return { exito: false, mensaje: 'Los datos de la fecha u hora no son válidos.' };
     }
+    // No se permite reservar en fechas pasadas.
+    var hoyR = Utilities.formatDate(new Date(), obtenerZonaHoraria_(), 'yyyy-MM-dd');
+    if (fecha < hoyR) {
+      return { exito: false, mensaje: 'No se puede reservar en fechas pasadas. Elija otra fecha.' };
+    }
 
     // Datos del cliente.
     var cli = datos.cliente || {};
@@ -3629,8 +3637,7 @@ function reservarCitaPublica(datos) {
     if (infoLimiteReserva.limite !== null && infoLimiteReserva.superado) {
       var pF = String(fecha).split('-');
       var fDMY = pF.length === 3 ? (pF[2] + '-' + pF[1] + '-' + pF[0]) : fecha;
-      return { exito: false, mensaje: 'El día ' + fDMY + ' ya alcanzó el límite de citas (' +
-        infoLimiteReserva.cantidad + '/' + infoLimiteReserva.limite + '). Elija otra fecha.',
+      return { exito: false, mensaje: 'El día ' + fDMY + ' llegó al límite de citas. Elija otra fecha.',
         limiteSuperado: true };
     }
 
@@ -3642,14 +3649,8 @@ function reservarCitaPublica(datos) {
         fecha: fecha, duracion: duracion, sugerencias: dispon.slots };
     }
 
-    // Verificar límite de citas por día (solo advertencia, no bloquea).
-    var advertenciaLimite = null;
-    var infoLimite = _obtenerLimiteCitasDia_(fecha);
-    if (infoLimite.limite !== null && infoLimite.superado) {
-      advertenciaLimite = infoLimite.mensaje;
-    } else if (infoLimite.limite !== null && infoLimite.mensaje) {
-      advertenciaLimite = infoLimite.mensaje;
-    }
+    // Nota: al cliente no se le muestran conteos de cupos; si el día está
+    // lleno se bloqueó más arriba. El personal sí recibe avisos (agendarCita).
 
     var idCliente = _buscarOCrearClientePublico_(nombre, apellido, email, telefono);
     var titulo = cfg.ETIQUETA_CITA || CONFIGURACION_PREDETERMINADA.ETIQUETA_CITA || 'Cita';
@@ -3766,7 +3767,6 @@ function reservarCitaPublica(datos) {
         ? 'Reserva confirmada y añadida al calendario.'
         : 'Reserva confirmada, pero no se pudo añadir al calendario: ' + errorCalendario) + avisoCorreo + avisoEquipo
     };
-    if (advertenciaLimite) respuesta.advertenciaLimite = advertenciaLimite;
     return respuesta;
   } catch (err) {
     Logger.log('Error en reservarCitaPublica: ' + err);
