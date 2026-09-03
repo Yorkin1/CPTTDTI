@@ -78,13 +78,13 @@
 <!-- Listado de citas -->
 <div class="tarjeta">
   <div class="cabecera-lista">
-    <h2><span data-et="citas">Citas</span> registradas</h2>
+    <h2><span data-et="citas">Citas</span> registradas <span id="contadorHoy" class="etiqueta etiqueta-programada" title="De hoy">Hoy: 0</span></h2>
+    <button type="button" class="btn btn-secundario btn-pequeno" id="btnQuitarFiltrosCita" title="Quitar filtros">Quitar filtros</button>
     <button type="button" class="btn btn-secundario btn-pequeno btn-refrescar" title="Refrescar lista" onclick="refrescarLista('citas')">↻ Refrescar</button>
   </div>
   <div class="barra-busqueda">
     <input type="text" id="buscarCita" placeholder="Buscar por título o cliente…">
     <input type="date" id="filtroFechaCita" title="Filtrar por día">
-    <button type="button" class="btn btn-secundario btn-pequeno" id="btnHoyCita" title="Ver las de hoy">Hoy</button>
     <select id="filtroEstadoCita">
       <option value="">Todos los estados</option>
       <option value="Programada">Programada</option>
