@@ -610,6 +610,7 @@
   body { overflow-x: hidden; }
   @media (max-width: 720px) {
     .grid-form { grid-template-columns: 1fr; }
+    .servicios-cita { grid-template-columns: 1fr; }
     .titulo-app { font-size: 17px; }
     .logo-negocio { height: 26px; width: 26px; }
     .menu-toggle { display: block; }
@@ -760,7 +761,8 @@
   .toast.exito { background: var(--color-secundario); }
 
   /* Selector de servicios en el formulario de citas */
-  .servicios-cita { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+  .servicios-cita { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 4px; }
+  .servicios-cita.colapsado { display: none; }
   .fila-servicio-cita {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;
