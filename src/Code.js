@@ -78,7 +78,10 @@ var CONFIGURACION_PREDETERMINADA = {
   // Horario de atención: { getDay: {abre, cierra} }. getDay: 0=Domingo...6=Sábado.
   // Sin "abre"/"cierra" el día queda cerrado. Default Lun-Vie 09:00-17:00, Sáb 09:00-13:00.
   HORARIO_ATENCION:               '{"0":{"abre":"","cierra":""},"1":{"abre":"09:00","cierra":"17:00"},"2":{"abre":"09:00","cierra":"17:00"},"3":{"abre":"09:00","cierra":"17:00"},"4":{"abre":"09:00","cierra":"17:00"},"5":{"abre":"09:00","cierra":"17:00"},"6":{"abre":"09:00","cierra":"13:00"}}',
-  PASO_RESERVA_MIN:               '30'
+  PASO_RESERVA_MIN:               '30',
+  // Límite de citas por día: '' = sin límite global. Por día de la semana: JSON {"1":5,"2":8}.
+  CITAS_MAX_POR_DIA:              '',
+  CITAS_MAX_POR_DIA_POR_SEMANA:   '{}'
 };
 
 // Orden en el que se muestran/guardan las claves de configuración.
@@ -95,7 +98,9 @@ var CLAVES_CONFIGURACION = [
   'HABILITAR_RESERVAS',
   'HABILITAR_MONITOR',
   'HORARIO_ATENCION',
-  'PASO_RESERVA_MIN'
+  'PASO_RESERVA_MIN',
+  'CITAS_MAX_POR_DIA',
+  'CITAS_MAX_POR_DIA_POR_SEMANA'
 ];
 
 /**
@@ -810,7 +815,9 @@ function obtenerEstadoAplicacion() {
       habilitarReservas:            String(cfg.HABILITAR_RESERVAS || 'NO').toUpperCase() === 'SI',
       habilitarMonitor:             String(cfg.HABILITAR_MONITOR || 'NO').toUpperCase() === 'SI',
       horarioAtencion:              _parseHorarioAtencion_(cfg.HORARIO_ATENCION),
-      pasoReserva:                  parseInt(cfg.PASO_RESERVA_MIN, 10) || 30
+      pasoReserva:                  parseInt(cfg.PASO_RESERVA_MIN, 10) || 30,
+      citasMaxPorDia:               parseInt(cfg.CITAS_MAX_POR_DIA, 10) || 0,
+      citasMaxPorDiaPorSemana:      cfg.CITAS_MAX_POR_DIA_POR_SEMANA || '{}'
     };
   } catch (err) {
     // Sin hoja de cálculo vinculada (no se ejecutó "Iniciar configuración"):
@@ -1554,6 +1561,45 @@ function agregarServicio(token, datos) {
   } catch (err) {
     Logger.log('Error al crear servicio: ' + err);
     return { exito: false, mensaje: 'Error al crear el servicio: ' + err.message };
+  }
+}
+
+/**
+ * Importa varios servicios de una vez (solo administrador). Usado por la
+ * carga de un archivo .txt con el catálogo preestablecido de un negocio.
+ * Los servicios creados quedan editables/eliminables como cualquier otro.
+ * @param {string} token
+ * @param {Array<Object>} lista  [{ nombre, precio, duracionMins, descripcion }, ...]
+ * @return {Object} { exito, creados, omitidos, mensaje }
+ */
+function importarServiciosDesdeTexto(token, lista) {
+  try {
+    var usuario = _validarSesion_(token);
+    if (!usuario) return _respuestaSesionExpirada_();
+    if (!_esAdmin_(usuario)) return { exito: false, mensaje: 'Solo el administrador puede gestionar los servicios.' };
+    if (!Array.isArray(lista) || lista.length === 0) return { exito: false, mensaje: 'No se recibieron servicios para importar.' };
+
+    var hoja = obtenerHoja_(HOJA_SERVICIOS);
+    var creados = 0;
+    var omitidos = 0;
+    lista.forEach(function(datos) {
+      var s = _validarServicio_(datos);
+      if (!s) { omitidos++; return; }
+      var id = generarId('SER');
+      hoja.appendRow([id, s.nombre, s.precio, s.duracionMins, s.descripcion, s.activo]);
+      creados++;
+    });
+    Logger.log('Importación de servicios: ' + creados + ' creados, ' + omitidos + ' omitidos.');
+    _registrarActividad_(token, 'Servicios', 'Importó servicios desde archivo', creados + ' servicio(s)');
+    return {
+      exito: true,
+      creados: creados,
+      omitidos: omitidos,
+      mensaje: creados + ' servicio(s) importado(s)' + (omitidos ? ', ' + omitidos + ' omitido(s) por datos inválidos.' : '.')
+    };
+  } catch (err) {
+    Logger.log('Error al importar servicios: ' + err);
+    return { exito: false, mensaje: 'Error al importar servicios: ' + err.message };
   }
 }
 
@@ -2440,6 +2486,15 @@ function agendarCita(token, datos) {
       return { exito: false, mensaje: choque.mensaje };
     }
 
+    // Verificar límite de citas por día (solo advertencia, no bloquea).
+    var advertenciaLimite = null;
+    var infoLimite = _obtenerLimiteCitasDia_(datos.fecha);
+    if (infoLimite.limite !== null && infoLimite.superado) {
+      advertenciaLimite = infoLimite.mensaje;
+    } else if (infoLimite.limite !== null && infoLimite.mensaje) {
+      advertenciaLimite = infoLimite.mensaje;
+    }
+
     var hoja = obtenerHoja_(HOJA_CITAS);
     var id = generarId('CITA');
 
@@ -2577,13 +2632,15 @@ function agendarCita(token, datos) {
 
     Logger.log('Cita agendada: ' + id);
     _registrarActividad_(token, 'Citas', 'Agendó cita', (datos.titulo || 'Cita') + ' ' + (datos.fecha || '') + ' ' + (datos.hora || ''));
-    return {
+    var respuesta = {
       exito: true,
       mensaje: (idEvento
         ? 'Cita agendada y evento creado en Google Calendar.'
         : 'Cita agendada, pero NO se pudo crear el evento en el calendario: ' + errorCalendario) + avisoCorreo,
       id: id
     };
+    if (advertenciaLimite) respuesta.advertenciaLimite = advertenciaLimite;
+    return respuesta;
   } catch (err) {
     Logger.log('Error al agendar cita: ' + err);
     return { exito: false, mensaje: 'Error al agendar cita: ' + err.message };
@@ -2934,7 +2991,9 @@ function obtenerEstadoPublico() {
       duracionCitaPredeterminada: parseInt(cfg.DURACION_CITA_PREDETERMINADA, 10) || 60,
       habilitarReservas:          String(cfg.HABILITAR_RESERVAS || 'NO').toUpperCase() === 'SI',
       pasoReserva:                parseInt(cfg.PASO_RESERVA_MIN, 10) || 30,
-      horarioAtencion:            _parseHorarioAtencion_(cfg.HORARIO_ATENCION)
+      horarioAtencion:            _parseHorarioAtencion_(cfg.HORARIO_ATENCION),
+      citasMaxPorDia:             parseInt(cfg.CITAS_MAX_POR_DIA, 10) || 0,
+      citasMaxPorDiaPorSemana:    cfg.CITAS_MAX_POR_DIA_POR_SEMANA || '{}'
     };
   } catch (err) {
     Logger.log('Error en obtenerEstadoPublico: ' + err);
@@ -3110,6 +3169,83 @@ function _citaTieneChoque_(fecha, hora, duracion, exceptoId) {
 }
 
 /**
+ * Cuenta cuántas citas existen para una fecha dada (excluye Completada/Cancelada).
+ * @param {string} fecha  Fecha "yyyy-MM-dd".
+ * @return {number} Cantidad de citas para esa fecha.
+ */
+function _contarCitasPorDia_(fecha) {
+  var hoja = obtenerHoja_(HOJA_CITAS);
+  var datos = hoja.getDataRange().getValues();
+  if (datos.length < 2) return 0;
+  var enc = datos[0];
+  var colFecha = -1;
+  var colEstado = -1;
+  for (var i = 0; i < enc.length; i++) {
+    var h = String(enc[i] || '').trim();
+    if (h === 'Fecha') colFecha = i;
+    if (h === 'Estado') colEstado = i;
+  }
+  if (colFecha === -1) return 0;
+  var contador = 0;
+  for (var f = 1; f < datos.length; f++) {
+    var fila = datos[f];
+    var fechaCita = String(fila[colFecha] || '').trim();
+    if (fechaCita !== fecha) continue;
+    if (colEstado !== -1) {
+      var estado = String(fila[colEstado] || '').trim();
+      if (estado === 'Completada' || estado === 'Cancelada') continue;
+    }
+    contador++;
+  }
+  return contador;
+}
+
+/**
+ * Obtiene el límite de citas para una fecha específica.
+ * Prioriza el límite por día de la semana sobre el global.
+ * @param {string} fecha  Fecha "yyyy-MM-dd".
+ * @return {Object} { limite: number|null, cantidad: number,超ado: boolean, mensaje: string }
+ */
+function _obtenerLimiteCitasDia_(fecha) {
+  var cfg = obtenerConfiguracion();
+  var partes = fecha.split('-');
+  var jsDate = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
+  var diaSemana = jsDate.getDay(); // 0=Domingo...6=Sábado
+
+  // Límite por día de la semana (prioridad)
+  var porSemana = {};
+  try { porSemana = JSON.parse(cfg.CITAS_MAX_POR_DIA_POR_SEMANA || '{}'); } catch (e) {}
+  var limite = null;
+  if (porSemana[diaSemana] !== undefined && porSemana[diaSemana] !== '' && parseInt(porSemana[diaSemana], 10) > 0) {
+    limite = parseInt(porSemana[diaSemana], 10);
+  }
+
+  // Límite global (si no hay límite por día)
+  if (limite === null) {
+    var maxGlobal = parseInt(cfg.CITAS_MAX_POR_DIA, 10);
+    if (!isNaN(maxGlobal) && maxGlobal > 0) {
+      limite = maxGlobal;
+    }
+  }
+
+  var cantidad = _contarCitasPorDia_(fecha);
+  var superado = limite !== null && cantidad >= limite;
+  var mensaje = '';
+  if (limite !== null) {
+    if (superado) {
+      var etiqueta = cfg.ETIQUETA_CITA || CONFIGURACION_PREDETERMINADA.ETIQUETA_CITA;
+      var plural = _etiquetaFemenina_(etiqueta) ? (etiqueta + 's') : (etiqueta + 'es');
+      mensaje = 'Límite de ' + limite + ' ' + plural + ' por día alcanzado (' + cantidad + '/' + limite + ').';
+    } else if (limite - cantidad === 1) {
+      mensaje = 'Queda ' + (limite - cantidad) + ' cupo disponible para este día.';
+    } else if (limite - cantidad > 1) {
+      mensaje = 'Quedan ' + (limite - cantidad) + ' cupos disponibles para este día.';
+    }
+  }
+  return { limite: limite, cantidad: cantidad, superado: superado, mensaje: mensaje };
+}
+
+/**
  * Calcula los horarios disponibles para una fecha y duración dadas.
  * No requiere sesión. No incluye datos sensibles.
  * @param {Object} datos  { fecha: "yyyy-MM-dd", duracionMins }
@@ -3163,7 +3299,16 @@ function obtenerHorariosDisponibles(datos) {
       if (!choca) libres.push(s.hora);
     }
 
-    return { exito: true, fecha: fecha, duracion: duracion, dia: dia, slots: libres };
+    // Verificar límite de citas por día y adjuntar advertencia al resultado.
+    var infoLimite = _obtenerLimiteCitasDia_(fecha);
+    var resultado = { exito: true, fecha: fecha, duracion: duracion, dia: dia, slots: libres };
+    if (infoLimite.limite !== null) {
+      resultado.limiteDiario = infoLimite.limite;
+      resultado.citasRegistradas = infoLimite.cantidad;
+      resultado.limiteSuperado = infoLimite.superado;
+      if (infoLimite.mensaje) resultado.mensajeLimite = infoLimite.mensaje;
+    }
+    return resultado;
   } catch (err) {
     Logger.log('Error en obtenerHorariosDisponibles: ' + err);
     return { exito: false, mensaje: 'Error al calcular los horarios: ' + err.message };
@@ -3370,6 +3515,15 @@ function reservarCitaPublica(datos) {
         fecha: fecha, duracion: duracion, sugerencias: dispon.slots };
     }
 
+    // Verificar límite de citas por día (solo advertencia, no bloquea).
+    var advertenciaLimite = null;
+    var infoLimite = _obtenerLimiteCitasDia_(fecha);
+    if (infoLimite.limite !== null && infoLimite.superado) {
+      advertenciaLimite = infoLimite.mensaje;
+    } else if (infoLimite.limite !== null && infoLimite.mensaje) {
+      advertenciaLimite = infoLimite.mensaje;
+    }
+
     var idCliente = _buscarOCrearClientePublico_(nombre, apellido, email, telefono);
     var titulo = cfg.ETIQUETA_CITA || CONFIGURACION_PREDETERMINADA.ETIQUETA_CITA || 'Cita';
 
@@ -3472,7 +3626,7 @@ function reservarCitaPublica(datos) {
     }
 
     Logger.log('Reserva pública creada: ' + idCita);
-    return {
+    var respuesta = {
       exito: true,
       fecha: fecha,
       hora: hora,
@@ -3485,6 +3639,8 @@ function reservarCitaPublica(datos) {
         ? 'Reserva confirmada y añadida al calendario.'
         : 'Reserva confirmada, pero no se pudo añadir al calendario: ' + errorCalendario) + avisoCorreo + avisoEquipo
     };
+    if (advertenciaLimite) respuesta.advertenciaLimite = advertenciaLimite;
+    return respuesta;
   } catch (err) {
     Logger.log('Error en reservarCitaPublica: ' + err);
     return { exito: false, mensaje: 'Error al reservar: ' + err.message };

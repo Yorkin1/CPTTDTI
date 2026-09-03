@@ -92,7 +92,50 @@
     </div>
   </div>
 
-  <h3 style="margin:18px 0 8px; font-size:15px; color:var(--color-primario);">Horario de atención</h3>
+  <h3 style="margin:22px 0 8px; font-size:15px; color:var(--color-primario);">Límite de citas por día</h3>
+  <p class="ayuda">Establezca el número máximo de citas que puede haber por día. Si el límite se alcanza, se mostrará una advertencia pero la reserva seguirá permitida.</p>
+  <div class="grid-form">
+    <div class="campo ancho-completo">
+      <label for="cfg2_reservas_citas_max_dia" style="font-weight:500;">Límite general por día <span style="font-weight:400; color:var(--texto-secundario);">(0 = sin límite)</span></label>
+      <input type="number" id="cfg2_reservas_citas_max_dia" min="0" step="1" placeholder="Ej. 10" style="max-width:120px;">
+    </div>
+  </div>
+
+  <div style="margin-top:14px;">
+    <label style="font-weight:500; display:block; margin-bottom:8px;">Límite por día de la semana <span style="font-weight:400; color:var(--texto-secundario);">(dejar vacío = usar el general)</span></label>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;">
+      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
+        <span style="min-width:80px; font-size:13px;">Lunes</span>
+        <input type="number" id="cfg2_res_limite_d1" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
+        <span style="min-width:80px; font-size:13px;">Martes</span>
+        <input type="number" id="cfg2_res_limite_d2" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
+        <span style="min-width:80px; font-size:13px;">Miércoles</span>
+        <input type="number" id="cfg2_res_limite_d3" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
+        <span style="min-width:80px; font-size:13px;">Jueves</span>
+        <input type="number" id="cfg2_res_limite_d4" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
+        <span style="min-width:80px; font-size:13px;">Viernes</span>
+        <input type="number" id="cfg2_res_limite_d5" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
+        <span style="min-width:80px; font-size:13px;">Sábado</span>
+        <input type="number" id="cfg2_res_limite_d6" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
+        <span style="min-width:80px; font-size:13px;">Domingo</span>
+        <input type="number" id="cfg2_res_limite_d0" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin:22px 0 8px; font-size:15px; color:var(--color-primario);">Horario de atención</h3>
   <p class="ayuda">Los días sin hora quedan cerrados. Ej. Lunes a Viernes 09:00–17:00.</p>
   <div class="tabla-contenedor">
     <table>
