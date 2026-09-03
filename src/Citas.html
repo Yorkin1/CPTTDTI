@@ -48,37 +48,10 @@
   </form>
 </div>
 
-<!-- Trabajos/citas de hoy -->
-<div class="tarjeta" id="tarjetaHoy" style="display:none;">
-  <div class="cabecera-lista">
-    <h2 id="tituloHoy">Para hoy</h2>
-  </div>
-  <div class="tabla-contenedor">
-    <table>
-      <thead>
-        <tr>
-          <th class="col-check" title="Completada"></th>
-          <th>Título</th>
-          <th class="col-cliente">Cliente</th>
-          <th>Agendado por</th>
-          <th>Fecha</th>
-          <th>Hora</th>
-        <th>Duración</th>
-        <th>Total</th>
-          <th class="col-servicios">Servicios</th>
-        <th class="col-estado">Estado</th>
-        <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tablaHoy"></tbody>
-    </table>
-  </div>
-</div>
-
 <!-- Listado de citas -->
 <div class="tarjeta">
   <div class="cabecera-lista">
-    <h2><span data-et="citas">Citas</span> registradas <span id="contadorHoy" class="etiqueta etiqueta-programada" title="De hoy">Hoy: 0</span></h2>
+    <h2><span data-et="citas">Citas</span> registradas <button type="button" id="contadorHoy" class="etiqueta etiqueta-programada" title="Filtrar las de hoy" style="cursor:pointer; border:none; font:inherit;">Hoy: 0</button></h2>
     <button type="button" class="btn btn-secundario btn-pequeno btn-refrescar" title="Refrescar lista" onclick="refrescarLista('citas')">↻ Refrescar</button>
   </div>
   <div class="barra-busqueda">
