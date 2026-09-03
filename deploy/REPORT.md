@@ -1,7 +1,7 @@
 # Reporte de Clientes
 
-**Fecha:** 3/9/2026, 2:44:50 p. m.  
-**Commit:** 1fb8aca
+**Fecha:** 3/9/2026, 3:01:18 p. m.  
+**Commit:** 6d20ba3
 
 ## Resumen
 
