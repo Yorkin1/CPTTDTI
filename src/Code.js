@@ -1567,10 +1567,12 @@ function agregarServicio(token, datos) {
 /**
  * Importa varios servicios de una vez (solo administrador). Usado por la
  * carga de un archivo .txt con el catálogo preestablecido de un negocio.
- * Los servicios creados quedan editables/eliminables como cualquier otro.
+ * Si ya existe un servicio con el mismo nombre (sin distinguir mayúsculas),
+ * se actualiza en vez de duplicarse; el estado Activo/Inactivo existente se
+ * conserva. Los servicios quedan editables/eliminables como cualquier otro.
  * @param {string} token
  * @param {Array<Object>} lista  [{ nombre, precio, duracionMins, descripcion }, ...]
- * @return {Object} { exito, creados, omitidos, mensaje }
+ * @return {Object} { exito, creados, actualizados, omitidos, mensaje }
  */
 function importarServiciosDesdeTexto(token, lista) {
   try {
@@ -1580,23 +1582,38 @@ function importarServiciosDesdeTexto(token, lista) {
     if (!Array.isArray(lista) || lista.length === 0) return { exito: false, mensaje: 'No se recibieron servicios para importar.' };
 
     var hoja = obtenerHoja_(HOJA_SERVICIOS);
+    var mapaFilas = {};
+    filasAObjetos_(hoja).forEach(function(s) {
+      mapaFilas[String(s.Nombre || '').trim().toLowerCase()] = { fila: s._fila, activo: s.Activo };
+    });
+
     var creados = 0;
+    var actualizados = 0;
     var omitidos = 0;
     lista.forEach(function(datos) {
       var s = _validarServicio_(datos);
       if (!s) { omitidos++; return; }
-      var id = generarId('SER');
-      hoja.appendRow([id, s.nombre, s.precio, s.duracionMins, s.descripcion, s.activo]);
-      creados++;
+      var clave = s.nombre.toLowerCase();
+      var existente = mapaFilas[clave];
+      if (existente) {
+        hoja.getRange(existente.fila, 2, 1, 5).setValues([[
+          s.nombre, s.precio, s.duracionMins, s.descripcion, existente.activo || s.activo
+        ]]);
+        actualizados++;
+      } else {
+        var id = generarId('SER');
+        hoja.appendRow([id, s.nombre, s.precio, s.duracionMins, s.descripcion, s.activo]);
+        mapaFilas[clave] = { fila: hoja.getLastRow(), activo: s.activo };
+        creados++;
+      }
     });
-    Logger.log('Importación de servicios: ' + creados + ' creados, ' + omitidos + ' omitidos.');
-    _registrarActividad_(token, 'Servicios', 'Importó servicios desde archivo', creados + ' servicio(s)');
-    return {
-      exito: true,
-      creados: creados,
-      omitidos: omitidos,
-      mensaje: creados + ' servicio(s) importado(s)' + (omitidos ? ', ' + omitidos + ' omitido(s) por datos inválidos.' : '.')
-    };
+    Logger.log('Importación de servicios: ' + creados + ' creados, ' + actualizados + ' actualizados, ' + omitidos + ' omitidos.');
+    _registrarActividad_(token, 'Servicios', 'Importó servicios desde archivo', creados + ' nuevo(s), ' + actualizados + ' actualizado(s)');
+    var partes = [];
+    if (creados) partes.push(creados + ' nuevo(s)');
+    if (actualizados) partes.push(actualizados + ' actualizado(s)');
+    var mensaje = (partes.length ? partes.join(', ') : '0 servicios procesados') + (omitidos ? ', ' + omitidos + ' omitido(s) por datos inválidos' : '') + '.';
+    return { exito: true, creados: creados, actualizados: actualizados, omitidos: omitidos, mensaje: mensaje };
   } catch (err) {
     Logger.log('Error al importar servicios: ' + err);
     return { exito: false, mensaje: 'Error al importar servicios: ' + err.message };
