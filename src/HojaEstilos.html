@@ -277,7 +277,8 @@
 
   /* ---------- Tablas ---------- */
   .tabla-area { position: relative; }
-  .tabla-contenedor { overflow-x: auto; position: relative; }
+  .tabla-contenedor { overflow-x: auto; position: relative; max-height: 420px; overflow-y: auto; }
+  .tabla-contenedor thead th { position: sticky; top: 0; z-index: 2; }
   table {
     width: 100%;
     min-width: 950px;
