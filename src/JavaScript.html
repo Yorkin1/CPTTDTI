@@ -1753,7 +1753,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
     document.getElementById('hist_fecha_desde').addEventListener('change', _alCambiarFiltroHistorial);
     document.getElementById('hist_fecha_hasta').addEventListener('change', _alCambiarFiltroHistorial);
-    document.getElementById('hist_realizada_por').addEventListener('input', _alCambiarFiltroHistorial);
     var btnQFHist = document.getElementById('btnQuitarFiltrosHistorial');
     if (btnQFHist) btnQFHist.addEventListener('click', limpiarFiltrosHistorial);
     document.getElementById('btnExportarExcel').addEventListener('click', exportarExcel);
@@ -1989,12 +1988,11 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       .eliminarRegistroHistorial(tokenSesion(), id);
   }
 
-  // Limpia los filtros del historial (cliente, fechas y realizada por).
+  // Limpia los filtros del historial (cliente y fechas).
   function limpiarFiltrosHistorial() {
     document.getElementById('sel_cliente_historial').value = '';
     document.getElementById('hist_fecha_desde').value = '';
     document.getElementById('hist_fecha_hasta').value = '';
-    document.getElementById('hist_realizada_por').value = '';
     cargarHistorial('');
     actualizarEtiquetaAlcanceExportar();
   }
@@ -2002,19 +2000,12 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   function filtrarHistorial(registros) {
     var desde = (document.getElementById('hist_fecha_desde').value || '').trim();
     var hasta = (document.getElementById('hist_fecha_hasta').value || '').trim();
-    var rp = (document.getElementById('hist_realizada_por').value || '').trim().toLowerCase();
     if (!registros) return [];
-    if (!desde && !hasta && !rp) return registros;
-    var mapa = _mapaCitas_();
+    if (!desde && !hasta) return registros;
     return registros.filter(function(r) {
       var f = String(r.Fecha || '').slice(0, 10);
       if (desde && f < desde) return false;
       if (hasta && f > hasta) return false;
-      if (rp) {
-        var cita = r.ID_Cita ? mapa[String(r.ID_Cita)] : null;
-        var por = (cita && cita.Agendado_Por) ? String(cita.Agendado_Por).toLowerCase() : '';
-        if (por.indexOf(rp) === -1) return false;
-      }
       return true;
     });
   }
@@ -2075,7 +2066,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (desde || hasta) {
       partes.push('desde ' + (desde || '…') + ' hasta ' + (hasta || '…'));
     }
-    var rp = (document.getElementById('hist_realizada_por').value || '').trim();
+    var rpEl = document.getElementById('hist_realizada_por');
+    var rp = rpEl ? (rpEl.value || '').trim() : '';
     if (rp) partes.push('realizada por: ' + rp);
     return partes.join(' · ');
   }
@@ -2098,7 +2090,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   }
 
   // Prepara la exportación: confirma el alcance, obtiene el historial filtrado
-  // por el cliente seleccionado y aplica los filtros de fecha/realizada-por.
+  // por el cliente seleccionado y aplica los filtros de fecha.
   // Al tener los datos listos invoca alListo(filas, restaurar).
   function _prepararExportar_(boton, alListo) {
     var texto = boton ? boton.textContent : '';
