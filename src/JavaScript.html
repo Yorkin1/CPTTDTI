@@ -954,9 +954,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       mostrarToast('El nombre del servicio es obligatorio.', 'error');
       return;
     }
-    var precio = parseFloat(datos.precio);
+    var precio = String(datos.precio).trim() === '' ? 0 : parseFloat(datos.precio);
     if (isNaN(precio) || precio < 0) {
-      mostrarToast('Ingrese un precio válido (mayor o igual a 0).', 'error');
+      mostrarToast('Ingrese un precio válido (mayor o igual a 0, vacío = gratis).', 'error');
       return;
     }
 
