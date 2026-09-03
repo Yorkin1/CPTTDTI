@@ -1076,6 +1076,11 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   function initCitas() {
     document.getElementById('formCita').addEventListener('submit', guardarCita);
     document.getElementById('btnCancelarCita').addEventListener('click', cancelarEdicionCita);
+    // Lista de servicios plegable: arranca colapsada.
+    var btnTglSvc = document.getElementById('btnToggleServiciosCita');
+    if (btnTglSvc) btnTglSvc.addEventListener('click', alternarServiciosCita);
+    var contSvcInit = document.getElementById('cita_servicios');
+    if (contSvcInit) contSvcInit.classList.add('colapsado');
     var inputDur = document.getElementById('cita_duracion');
     if (inputDur) inputDur.value = Estado.config.duracionCitaPredeterminada || 60;
     document.getElementById('buscarCita').addEventListener('input', debounce(aplicarFiltrosCitas, 250));
@@ -1132,6 +1137,42 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       cants[j].addEventListener('input', calcularDuracionCita);
     }
     calcularDuracionCita();
+    actualizarBotonServiciosCita();
+  }
+
+  // Muestra/oculta la lista de servicios del formulario de citas.
+  function alternarServiciosCita() {
+    var cont = document.getElementById('cita_servicios');
+    if (!cont) return;
+    cont.classList.toggle('colapsado');
+    actualizarBotonServiciosCita();
+  }
+
+  // Actualiza el texto del botón plegable: total si está cerrado,
+  // seleccionados si hay, u "Ocultar" si está abierto.
+  function actualizarBotonServiciosCita() {
+    var btn = document.getElementById('btnToggleServiciosCita');
+    if (!btn) return;
+    var cont = document.getElementById('cita_servicios');
+    var colapsado = !cont || cont.classList.contains('colapsado');
+    var total = 0;
+    var sel = 0;
+    if (cont) {
+      var checks = cont.querySelectorAll('.serv-cita');
+      total = checks.length;
+      for (var i = 0; i < checks.length; i++) {
+        if (checks[i].checked) sel++;
+      }
+    }
+    if (!colapsado) {
+      btn.textContent = 'Ocultar servicios';
+    } else if (sel > 0) {
+      btn.textContent = 'Servicios (' + sel + ' seleccionados)';
+    } else if (total > 0) {
+      btn.textContent = 'Mostrar servicios (' + total + ')';
+    } else {
+      btn.textContent = 'Mostrar servicios';
+    }
   }
 
   // Suma las duraciones de los servicios marcados y actualiza el campo oculto
@@ -1156,6 +1197,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (input) input.value = dur > 0 ? dur : base;
     var mostrar = document.getElementById('cita_duracion_mostrar');
     if (mostrar) mostrar.textContent = 'Duración: ' + (input ? input.value : base) + ' min';
+    actualizarBotonServiciosCita();
   }
 
   // Devuelve los servicios seleccionados como [{ id, cantidad }].
@@ -1196,7 +1238,14 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         checks[i].checked = false;
       }
     }
+    // Al editar, expandir la lista solo si quedó algo marcado.
+    var marcados = 0;
+    for (var m = 0; m < checks.length; m++) {
+      if (checks[m].checked) marcados++;
+    }
+    if (marcados > 0) cont.classList.remove('colapsado');
     calcularDuracionCita();
+    actualizarBotonServiciosCita();
   }
 
   // Aplica el buscador y el filtro por estado sobre las citas cargadas.
@@ -1576,6 +1625,10 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       }
     }
     calcularDuracionCita();
+    // Al volver a agendar nuevo, colapsar la lista de servicios.
+    var contSvcCancel = document.getElementById('cita_servicios');
+    if (contSvcCancel) contSvcCancel.classList.add('colapsado');
+    actualizarBotonServiciosCita();
     var titulo = document.getElementById('tituloFormCita');
     if (titulo) titulo.textContent = 'Agendar ' + (etiquetaFemenina(etCita()) ? 'nueva' : 'nuevo') + ' ' + minuscInicial(etCita());
     var btn = document.getElementById('btnGuardarCita');
