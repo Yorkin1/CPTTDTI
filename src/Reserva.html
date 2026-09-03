@@ -679,6 +679,10 @@
           mostrarToastReserva('Elija una fecha.', 'error');
           return;
         }
+        if (fecha < hoyReserva()) {
+          mostrarToastReserva('No se puede reservar en fechas pasadas. Elija otra fecha.', 'error');
+          return;
+        }
         var duracion = duracionSegunServicios();
         if (duracion < 5) {
           duracion = parseInt((Reserva.config && Reserva.config.duracionCitaPredeterminada) || '60', 10) || 60;
