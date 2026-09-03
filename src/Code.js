@@ -1000,7 +1000,22 @@ function guardarConfiguracion(token, datos) {
     _limpiarCacheConfig_();
     Logger.log('Configuración guardada correctamente.');
     _registrarActividad_(token, 'Configuración', 'Actualizó configuración', '');
-    return { exito: true, mensaje: 'Configuración guardada correctamente.' };
+    var respuesta = { exito: true, mensaje: 'Configuración guardada correctamente.' };
+    // Primera configuración (asistente inicial): enviar automáticamente los
+    // enlaces de acceso al dueño. Si el envío falla, el guardado NO se revierte.
+    if (String(configActual.CONFIGURADA || 'NO').toUpperCase() !== 'SI') {
+      try {
+        var envioAuto = _enviarEnlacesAccesoAlDueno_();
+        if (envioAuto.exito) {
+          respuesta.correoEnviadoA = envioAuto.destino;
+        } else {
+          respuesta.avisoCorreo = envioAuto.mensaje;
+        }
+      } catch (errCorreo) {
+        respuesta.avisoCorreo = 'No se pudo enviar el correo con los enlaces: ' + errCorreo.message;
+      }
+    }
+    return respuesta;
   } catch (err) {
     Logger.log('Error al guardar configuración: ' + err);
     return { exito: false, mensaje: 'Error al guardar la configuración: ' + err.message };
@@ -1008,6 +1023,65 @@ function guardarConfiguracion(token, datos) {
     candado.releaseLock();
   }
 }
+/**
+ * Envía por correo al DUEÑO de la hoja los enlaces de acceso: la aplicación
+ * web y la página pública de reservas. Uso interno (no valida sesión).
+ * @return {Object} { exito, mensaje, destino, urlApp, urlReservas }
+ */
+function _enviarEnlacesAccesoAlDueno_() {
+  var destino = '';
+  try {
+    destino = _correoDueno_();
+  } catch (e) {
+    destino = '';
+  }
+  if (!destino) {
+    return { exito: false, mensaje: 'No se encontró el correo del dueño de la hoja.' };
+  }
+  var urlApp = obtenerUrlAplicacion();
+  if (!urlApp) {
+    return { exito: false, destino: destino,
+      mensaje: 'La aplicación web aún no está desplegada. Despliegue primero ' +
+               '(Implementar → Aplicación web) y vuelva a intentarlo.' };
+  }
+  var urlReservas = obtenerUrlReservas();
+  var nombre = 'su negocio';
+  try {
+    var cfg = obtenerConfiguracion();
+    if (cfg && cfg.NOMBRE_NEGOCIO) nombre = cfg.NOMBRE_NEGOCIO;
+  } catch (e) {}
+  var asunto = 'Enlaces de acceso — ' + nombre;
+  var cuerpo = 'Hola,\n\nSu sistema "' + nombre + '" quedó configurado.\n\n' +
+    'Enlace de la aplicación:\n' + urlApp + '\n\n' +
+    'Enlace de la página de reservas (para compartir con sus clientes):\n' + urlReservas + '\n\n' +
+    'Guarde estos enlaces en un lugar seguro.';
+  MailApp.sendEmail(destino, asunto, cuerpo);
+  Logger.log('Enlaces de acceso enviados al dueño: ' + destino);
+  return { exito: true, destino: destino, urlApp: urlApp, urlReservas: urlReservas,
+    mensaje: 'Enlaces enviados al correo del dueño (' + destino + ').' };
+}
+
+/**
+ * Envía los enlaces de acceso (app + reservas) al correo del dueño.
+ * Solo el dueño (primer administrador) puede ejecutarlo; los demás
+ * reciben un mensaje de permiso denegado aunque manipulen la página.
+ * @param {string} token  Token de sesión del dueño.
+ * @return {Object} { exito, mensaje, destino }
+ */
+function enviarEnlacesAlDueno(token) {
+  var emailSesion = _validarSesion_(token);
+  if (!emailSesion) return _respuestaSesionExpirada_();
+  if (!_esUsuarioPrincipal_(emailSesion)) {
+    return { exito: false, mensaje: 'Solo el dueño del sistema puede enviarse los enlaces de acceso.' };
+  }
+  try {
+    return _enviarEnlacesAccesoAlDueno_();
+  } catch (err) {
+    Logger.log('Error al enviar enlaces al dueño: ' + err);
+    return { exito: false, mensaje: 'No se pudo enviar el correo: ' + err.message };
+  }
+}
+
 /**
  * ============================================================
  *  VALIDACIÓN DE FORMATO (correo y teléfono)
