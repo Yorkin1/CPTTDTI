@@ -2945,6 +2945,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('cfg_nombre_negocio', c.nombreNegocio && c.nombreNegocio !== 'Mi Negocio' ? c.nombreNegocio : '');
     setVal('cfg_mensaje_bienvenida', c.mensajeBienvenida || '');
     setVal('cfg_etiqueta_cita', c.etiquetaCita || '');
+    setVal('cfg_paso_reserva', c.pasoReserva || 30);
     setVal('cfg_color_primario', c.colorPrimario || '#4285F4');
     setVal('cfg_color_secundario', c.colorSecundario || '#16a34a');
     setVal('cfg_tema', c.tema || 'claro');
@@ -3026,6 +3027,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       MENSAJE_BIENVENIDA: document.getElementById('cfg_mensaje_bienvenida').value.trim() ||
         'Bienvenido a nuestro sistema de gestión',
       ETIQUETA_CITA: document.getElementById('cfg_etiqueta_cita').value.trim() || 'Cita',
+      PASO_RESERVA_MIN: document.getElementById('cfg_paso_reserva').value || '30',
       COLOR_PRIMARIO: document.getElementById('cfg_color_primario').value || '#4285F4',
       COLOR_SECUNDARIO: document.getElementById('cfg_color_secundario').value || '#16a34a',
       TEMA: document.getElementById('cfg_tema').value || 'claro',
