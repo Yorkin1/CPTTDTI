@@ -102,37 +102,7 @@
   </div>
 
   <div style="margin-top:14px;">
-    <label style="font-weight:500; display:block; margin-bottom:8px;">Límite por día de la semana <span style="font-weight:400; color:var(--texto-secundario);">(dejar vacío = usar el general)</span></label>
-    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;">
-      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
-        <span style="min-width:80px; font-size:13px;">Lunes</span>
-        <input type="number" id="cfg2_res_limite_d1" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
-        <span style="min-width:80px; font-size:13px;">Martes</span>
-        <input type="number" id="cfg2_res_limite_d2" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
-        <span style="min-width:80px; font-size:13px;">Miércoles</span>
-        <input type="number" id="cfg2_res_limite_d3" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
-        <span style="min-width:80px; font-size:13px;">Jueves</span>
-        <input type="number" id="cfg2_res_limite_d4" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
-        <span style="min-width:80px; font-size:13px;">Viernes</span>
-        <input type="number" id="cfg2_res_limite_d5" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
-        <span style="min-width:80px; font-size:13px;">Sábado</span>
-        <input type="number" id="cfg2_res_limite_d6" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; background:var(--fondo-secundario); padding:8px 12px; border-radius:8px; border:1px solid var(--gris-borde);">
-        <span style="min-width:80px; font-size:13px;">Domingo</span>
-        <input type="number" id="cfg2_res_limite_d0" min="0" step="1" placeholder="—" style="width:60px; text-align:center; border:1px solid var(--gris-borde); border-radius:6px; padding:4px 6px; font-size:13px;">
-      </div>
-    </div>
+    <label style="font-weight:500; display:block; margin-bottom:8px;">Límite por día de la semana <span style="font-weight:400; color:var(--texto-secundario);">(se configura en la columna “Límite” de la tabla de abajo; vacío = usa el general)</span></label>
   </div>
 
   <h3 style="margin:22px 0 8px; font-size:15px; color:var(--color-primario);">Horario de atención</h3>
@@ -144,6 +114,7 @@
           <th>Día</th>
           <th>Apertura</th>
           <th>Cierre</th>
+          <th>Límite</th>
           <th>Cerrado</th>
         </tr>
       </thead>
@@ -151,30 +122,37 @@
         <tr><td>Domingo</td>
           <td><input type="time" id="cfg2_res_d0_abre" style="width:110px;"></td>
           <td><input type="time" id="cfg2_res_d0_cierra" style="width:110px;"></td>
+          <td><input type="number" id="cfg2_res_limite_d0" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
           <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d0_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
         <tr><td>Lunes</td>
           <td><input type="time" id="cfg2_res_d1_abre" style="width:110px;"></td>
           <td><input type="time" id="cfg2_res_d1_cierra" style="width:110px;"></td>
+          <td><input type="number" id="cfg2_res_limite_d1" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
           <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d1_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
         <tr><td>Martes</td>
           <td><input type="time" id="cfg2_res_d2_abre" style="width:110px;"></td>
           <td><input type="time" id="cfg2_res_d2_cierra" style="width:110px;"></td>
+          <td><input type="number" id="cfg2_res_limite_d2" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
           <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d2_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
         <tr><td>Miércoles</td>
           <td><input type="time" id="cfg2_res_d3_abre" style="width:110px;"></td>
           <td><input type="time" id="cfg2_res_d3_cierra" style="width:110px;"></td>
+          <td><input type="number" id="cfg2_res_limite_d3" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
           <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d3_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
         <tr><td>Jueves</td>
           <td><input type="time" id="cfg2_res_d4_abre" style="width:110px;"></td>
           <td><input type="time" id="cfg2_res_d4_cierra" style="width:110px;"></td>
+          <td><input type="number" id="cfg2_res_limite_d4" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
           <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d4_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
         <tr><td>Viernes</td>
           <td><input type="time" id="cfg2_res_d5_abre" style="width:110px;"></td>
           <td><input type="time" id="cfg2_res_d5_cierra" style="width:110px;"></td>
+          <td><input type="number" id="cfg2_res_limite_d5" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
           <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d5_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
         <tr><td>Sábado</td>
           <td><input type="time" id="cfg2_res_d6_abre" style="width:110px;"></td>
           <td><input type="time" id="cfg2_res_d6_cierra" style="width:110px;"></td>
+          <td><input type="number" id="cfg2_res_limite_d6" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
           <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d6_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
       </tbody>
     </table>
