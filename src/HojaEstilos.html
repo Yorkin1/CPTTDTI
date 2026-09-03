@@ -610,7 +610,6 @@
   body { overflow-x: hidden; }
   @media (max-width: 720px) {
     .grid-form { grid-template-columns: 1fr; }
-    .servicios-cita { grid-template-columns: 1fr; }
     .titulo-app { font-size: 17px; }
     .logo-negocio { height: 26px; width: 26px; }
     .menu-toggle { display: block; }
@@ -770,6 +769,16 @@
   body.tema-oscuro .fila-servicio-cita { background: #1e293b; border-color: #334155; }
   .servicio-chk { display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; }
   .servicio-chk input { width: auto; accent-color: var(--color-primario); }
+
+  /* Encabezado del bloque plegable de servicios (etiqueta + botón) */
+  .encabezado-plegable { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+  .encabezado-plegable label { margin: 0; }
+  #btnToggleServiciosCita { white-space: nowrap; }
+  @media (max-width: 720px) {
+    .servicios-cita { grid-template-columns: 1fr; }
+    .encabezado-plegable { flex-direction: column; align-items: stretch; }
+    #btnToggleServiciosCita { width: 100%; padding: 12px; font-size: 15px; }
+  }
 
   /* ============================================================
      TEMA OSCURO (configurable desde Configuración)
