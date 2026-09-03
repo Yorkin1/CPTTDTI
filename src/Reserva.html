@@ -663,7 +663,7 @@
         document.getElementById('cli_email').addEventListener('blur', buscarSiYaSoyCliente);
         document.getElementById('cli_telefono').addEventListener('blur', buscarSiYaSoyCliente);
         document.getElementById('btnOtraReserva').addEventListener('click', function() {
-          Reserva.seleccion = { fecha: '', duracion: 60, hora: '', slots: [], servicios: {} };
+          Reserva.seleccion = { fecha: '', duracion: 60, hora: '', slots: [], servicios: {}, limiteSuperado: false };
           Reserva._reserva = null;
           document.getElementById('res_fecha').value = '';
           iniciarReserva();
@@ -700,15 +700,30 @@
             Reserva.seleccion.duracion = resp.duracion;
             Reserva.seleccion.slots = resp.slots || [];
             Reserva.seleccion.hora = '';
-            // Mostrar/ocultar aviso de límite diario.
+            Reserva.seleccion.limiteSuperado = !!resp.limiteSuperado;
+            // Mostrar/ocultar aviso de límite diario (rojo si el día está lleno).
             var avisoLimite = document.getElementById('avisoLimiteDiario');
             var avisoTexto = document.getElementById('avisoLimiteTexto');
             if (resp.mensajeLimite && avisoLimite && avisoTexto) {
               avisoTexto.textContent = resp.mensajeLimite;
+              if (resp.limiteSuperado) {
+                avisoLimite.style.background = 'linear-gradient(135deg, #fde2e2 0%, #fecaca 100%)';
+                avisoLimite.style.borderLeft = '4px solid #dc2626';
+                avisoLimite.style.color = '#7f1d1d';
+              } else {
+                avisoLimite.style.background = 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)';
+                avisoLimite.style.borderLeft = '4px solid #f39c12';
+                avisoLimite.style.color = '#7d6608';
+              }
               avisoLimite.style.display = 'block';
             } else if (avisoLimite) {
               avisoLimite.style.display = 'none';
             }
+            // Día lleno: bloquear el avance hasta elegir otra fecha.
+            var btnCont = document.getElementById('btnContinuarHorario');
+            if (btnCont) btnCont.disabled = !!resp.limiteSuperado;
+            var btnMejor = document.getElementById('btnElegirMejor');
+            if (btnMejor) btnMejor.disabled = !!resp.limiteSuperado;
             renderParrilla();
             pasarAPaso('pasoHorarios');
           })
@@ -772,6 +787,10 @@
       }
 
       function irADatos() {
+        if (Reserva.seleccion.limiteSuperado) {
+          mostrarToastReserva('Este día está lleno. Elija otra fecha.', 'error');
+          return;
+        }
         if (!Reserva.seleccion.hora) {
           mostrarToastReserva('Primero elija un horario libre.', 'error');
           return;
@@ -921,6 +940,12 @@
             if (!resp || !resp.exito) {
               var mensaje = (resp && resp.mensaje) || 'No se pudo completar la reserva.';
               mostrarToastReserva(mensaje, 'error');
+              // Si el día se llenó entre la consulta y la confirmación,
+              // refrescar para mostrar el bloqueo.
+              if (resp && resp.limiteSuperado) {
+                verHorariosDisponibles();
+                return;
+              }
               // Si el horario ya no existe, refrescar los horarios vigentes.
               if (resp && resp.sugerencias) {
                 Reserva.seleccion.slots = resp.sugerencias || [];
