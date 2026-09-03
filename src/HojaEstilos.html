@@ -458,6 +458,13 @@
     width: auto;
     min-width: 165px;
   }
+  /* Desde/Hasta lado a lado en móvil (en PC no cambia nada). */
+  .rango-fechas { display: contents; }
+  @media (max-width: 720px) {
+    .rango-fechas { display: flex; gap: 10px; }
+    .rango-fechas label { flex: 1; min-width: 0; }
+    .rango-fechas input { width: 100%; min-width: 0; }
+  }
   .barra-busqueda input {
     padding: 10px 14px;
     border: 1px solid var(--gris-borde);
