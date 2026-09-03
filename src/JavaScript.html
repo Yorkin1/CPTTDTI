@@ -1086,11 +1086,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('buscarCita').addEventListener('input', debounce(aplicarFiltrosCitas, 250));
     document.getElementById('filtroEstadoCita').addEventListener('change', aplicarFiltrosCitas);
     document.getElementById('filtroFechaCita').addEventListener('change', aplicarFiltrosCitas);
-    var btnHoy = document.getElementById('btnHoyCita');
-    if (btnHoy) btnHoy.addEventListener('click', function() {
-      document.getElementById('filtroFechaCita').value = hoyCitas();
-      aplicarFiltrosCitas();
-    });
+    var btnQF = document.getElementById('btnQuitarFiltrosCita');
+    if (btnQF) btnQF.addEventListener('click', limpiarFiltrosCita);
     // Se cargan los clientes primero y, al terminar, se llenan el selector y se
     // cargan las citas. Así la columna "Cliente" siempre tiene los nombres al
     // dibujarse (evita mostrar "—" por cargar citas antes que clientes).
@@ -1274,6 +1271,14 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     renderTrabajosHoy();
   }
 
+  // Limpia los filtros de la tabla de citas (buscador, día y estado).
+  function limpiarFiltrosCita() {
+    document.getElementById('buscarCita').value = '';
+    document.getElementById('filtroFechaCita').value = '';
+    document.getElementById('filtroEstadoCita').value = '';
+    aplicarFiltrosCitas();
+  }
+
   // Fecha de hoy (yyyy-MM-dd) según el reloj del equipo.
   function hoyCitas() {
     var d = new Date();
@@ -1292,6 +1297,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var lista = (Estado.citas || []).filter(function(c) {
       return fechaLegible(c.Fecha) === hoy;
     });
+    var contador = document.getElementById('contadorHoy');
+    if (contador) contador.textContent = 'Hoy: ' + lista.length;
     if (lista.length === 0) {
       tarjeta.style.display = 'none';
       return;
@@ -1747,6 +1754,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('hist_fecha_desde').addEventListener('change', _alCambiarFiltroHistorial);
     document.getElementById('hist_fecha_hasta').addEventListener('change', _alCambiarFiltroHistorial);
     document.getElementById('hist_realizada_por').addEventListener('input', _alCambiarFiltroHistorial);
+    var btnQFHist = document.getElementById('btnQuitarFiltrosHistorial');
+    if (btnQFHist) btnQFHist.addEventListener('click', limpiarFiltrosHistorial);
     document.getElementById('btnExportarExcel').addEventListener('click', exportarExcel);
     document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
 
@@ -1978,6 +1987,16 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       })
       .withFailureHandler(function(err) { ocultarCargaZona('tablaHistorial'); mostrarToast('Error: ' + err.message, 'error'); })
       .eliminarRegistroHistorial(tokenSesion(), id);
+  }
+
+  // Limpia los filtros del historial (cliente, fechas y realizada por).
+  function limpiarFiltrosHistorial() {
+    document.getElementById('sel_cliente_historial').value = '';
+    document.getElementById('hist_fecha_desde').value = '';
+    document.getElementById('hist_fecha_hasta').value = '';
+    document.getElementById('hist_realizada_por').value = '';
+    cargarHistorial('');
+    actualizarEtiquetaAlcanceExportar();
   }
 
   function filtrarHistorial(registros) {
