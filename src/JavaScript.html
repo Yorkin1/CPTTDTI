@@ -1085,6 +1085,12 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (inputDur) inputDur.value = Estado.config.duracionCitaPredeterminada || 60;
     document.getElementById('buscarCita').addEventListener('input', debounce(aplicarFiltrosCitas, 250));
     document.getElementById('filtroEstadoCita').addEventListener('change', aplicarFiltrosCitas);
+    document.getElementById('filtroFechaCita').addEventListener('change', aplicarFiltrosCitas);
+    var btnHoy = document.getElementById('btnHoyCita');
+    if (btnHoy) btnHoy.addEventListener('click', function() {
+      document.getElementById('filtroFechaCita').value = hoyCitas();
+      aplicarFiltrosCitas();
+    });
     // Se cargan los clientes primero y, al terminar, se llenan el selector y se
     // cargan las citas. Así la columna "Cliente" siempre tiene los nombres al
     // dibujarse (evita mostrar "—" por cargar citas antes que clientes).
@@ -1254,8 +1260,10 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (!tbody) return;
     var term = (document.getElementById('buscarCita').value || '').toLowerCase();
     var est = document.getElementById('filtroEstadoCita').value;
+    var fDia = document.getElementById('filtroFechaCita').value;
     var lista = (Estado.citas || []).filter(function(c) {
       if (est && estadoVigenteCita(c).estado !== est) return false;
+      if (fDia && fechaLegible(c.Fecha) !== fDia) return false;
       if (term) {
         var texto = (c.Titulo + ' ' + nombreCliente(c.ID_Cliente)).toLowerCase();
         if (texto.indexOf(term) === -1) return false;
@@ -1263,6 +1271,38 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       return true;
     });
     dibujarCitas(tbody, lista);
+    renderTrabajosHoy();
+  }
+
+  // Fecha de hoy (yyyy-MM-dd) según el reloj del equipo.
+  function hoyCitas() {
+    var d = new Date();
+    var m = ('0' + (d.getMonth() + 1)).slice(-2);
+    var dia = ('0' + d.getDate()).slice(-2);
+    return d.getFullYear() + '-' + m + '-' + dia;
+  }
+
+  // Tarjeta con las citas de hoy. El título usa la etiqueta configurada
+  // ("Trabajos para hoy", "Citas para hoy", ...). Se oculta si no hay.
+  function renderTrabajosHoy() {
+    var tarjeta = document.getElementById('tarjetaHoy');
+    var tbody = document.getElementById('tablaHoy');
+    if (!tarjeta || !tbody) return;
+    var hoy = hoyCitas();
+    var lista = (Estado.citas || []).filter(function(c) {
+      return fechaLegible(c.Fecha) === hoy;
+    });
+    if (lista.length === 0) {
+      tarjeta.style.display = 'none';
+      return;
+    }
+    tarjeta.style.display = '';
+    var titulo = document.getElementById('tituloHoy');
+    if (titulo) titulo.textContent = etCitas() + ' para hoy (' + lista.length + ')';
+    dibujarCitas(tbody, lista);
+    // dibujarCitas deja en _citasActuales solo lo dibujado: restaurar la
+    // lista completa para no romper la edición desde la tabla general.
+    window._citasActuales = Estado.citas || [];
   }
 
   // Estado "vigente" de una cita: si está Programada y su hora de fin ya pasó,

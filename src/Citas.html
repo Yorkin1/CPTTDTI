@@ -48,6 +48,33 @@
   </form>
 </div>
 
+<!-- Trabajos/citas de hoy -->
+<div class="tarjeta" id="tarjetaHoy" style="display:none;">
+  <div class="cabecera-lista">
+    <h2 id="tituloHoy">Para hoy</h2>
+  </div>
+  <div class="tabla-contenedor">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-check" title="Completada"></th>
+          <th>Título</th>
+          <th class="col-cliente">Cliente</th>
+          <th>Agendado por</th>
+          <th>Fecha</th>
+          <th>Hora</th>
+        <th>Duración</th>
+        <th>Total</th>
+          <th class="col-servicios">Servicios</th>
+        <th class="col-estado">Estado</th>
+        <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaHoy"></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- Listado de citas -->
 <div class="tarjeta">
   <div class="cabecera-lista">
@@ -56,6 +83,8 @@
   </div>
   <div class="barra-busqueda">
     <input type="text" id="buscarCita" placeholder="Buscar por título o cliente…">
+    <input type="date" id="filtroFechaCita" title="Filtrar por día">
+    <button type="button" class="btn btn-secundario btn-pequeno" id="btnHoyCita" title="Ver las de hoy">Hoy</button>
     <select id="filtroEstadoCita">
       <option value="">Todos los estados</option>
       <option value="Programada">Programada</option>
