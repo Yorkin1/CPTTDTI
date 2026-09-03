@@ -33,7 +33,9 @@
       duracionCitaPredeterminada: '60',
       habilitarReservas: false,
       pasoReserva: 30,
-      horarioAtencion: _horarioAtencionDefault()
+      horarioAtencion: _horarioAtencionDefault(),
+      citasMaxPorDia: 0,
+      citasMaxPorDiaPorSemana: {}
     }
   };
 
@@ -382,7 +384,9 @@
     var c = Estado.config;
     chk.checked = !!c.habilitarReservas;
     setVal('cfg2_reservas_paso', c.pasoReserva || 30);
+    setVal('cfg2_reservas_citas_max_dia', c.citasMaxPorDia || 0);
     rellenarHorarioAtencion(c.horarioAtencion || _horarioAtencionDefault());
+    rellenarLimitesPorDia(c.citasMaxPorDiaPorSemana || {});
     iniciarDiasCerrados();
 
     document.getElementById('btnGuardarReservas').addEventListener('click', guardarReservas);
@@ -427,7 +431,9 @@
     var datos = {
       HABILITAR_RESERVAS: document.getElementById('cfg2_reservas_habilitar').checked ? 'SI' : 'NO',
       PASO_RESERVA_MIN: document.getElementById('cfg2_reservas_paso').value || '30',
-      HORARIO_ATENCION: JSON.stringify(leerHorarioAtencionFormulario())
+      HORARIO_ATENCION: JSON.stringify(leerHorarioAtencionFormulario()),
+      CITAS_MAX_POR_DIA: document.getElementById('cfg2_reservas_citas_max_dia').value || '0',
+      CITAS_MAX_POR_DIA_POR_SEMANA: JSON.stringify(leerLimitesPorDiaFormulario())
     };
 
     var btn = document.getElementById('btnGuardarReservas');
@@ -1446,6 +1452,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       if (sesionInvalida(respuesta)) return;
       if (respuesta.exito) {
         mostrarToast(respuesta.mensaje, 'exito');
+        if (respuesta.advertenciaLimite) {
+          mostrarToast(respuesta.advertenciaLimite, 'aviso');
+        }
         cancelarEdicionCita();
         if (id) {
           actualizarCitaLocal(id, datos);
@@ -2078,6 +2087,67 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('btnCerrarModalLogo').addEventListener('click', cerrarModalLogo);
     document.getElementById('btnCancelarModalLogo').addEventListener('click', cerrarModalLogo);
     document.getElementById('btnUsarLogo').addEventListener('click', usarLogoSeleccionado);
+
+    var btnImportarServicios = document.getElementById('btnImportarServicios');
+    var archivoServicios = document.getElementById('cfg_servicios_archivo');
+    if (btnImportarServicios && archivoServicios) {
+      btnImportarServicios.addEventListener('click', function() { archivoServicios.click(); });
+      archivoServicios.addEventListener('change', importarServiciosDesdeArchivo);
+    }
+  }
+
+  // Lee un .txt con servicios preestablecidos (formato: Nombre|Precio|Duración|Descripción,
+  // una línea por servicio; líneas vacías o que empiecen con # se ignoran) y los crea en
+  // el catálogo. Quedan editables como cualquier otro servicio desde la pestaña Servicios.
+  function importarServiciosDesdeArchivo() {
+    var input = document.getElementById('cfg_servicios_archivo');
+    var archivo = input.files[0];
+    if (!archivo) return;
+    var btn = document.getElementById('btnImportarServicios');
+    var lector = new FileReader();
+    lector.onload = function() {
+      var lineas = String(lector.result || '').split(/\r?\n/);
+      var servicios = [];
+      lineas.forEach(function(linea) {
+        linea = linea.trim();
+        if (!linea || linea.charAt(0) === '#') return;
+        var partes = linea.split('|').map(function(p) { return p.trim(); });
+        if (!partes[0]) return;
+        servicios.push({
+          nombre: partes[0],
+          precio: partes[1] || '0',
+          duracionMins: parsearDuracion(partes[2] || '60'),
+          descripcion: partes[3] || ''
+        });
+      });
+      input.value = '';
+      if (servicios.length === 0) {
+        mostrarToast('El archivo no tiene servicios válidos. Use el formato: Nombre|Precio|Duración|Descripción', 'error');
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Importando…';
+      google.script.run
+        .withSuccessHandler(function(respuesta) {
+          btn.disabled = false;
+          btn.textContent = 'Cargar servicios desde archivo (.txt)';
+          if (sesionInvalida(respuesta)) return;
+          if (respuesta.exito) {
+            mostrarToast(respuesta.mensaje, 'exito');
+            cargarServicios(true);
+          } else {
+            mostrarToast(respuesta.mensaje, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Cargar servicios desde archivo (.txt)';
+          mostrarToast('Error: ' + err.message, 'error');
+        })
+        .importarServiciosDesdeTexto(tokenSesion(), servicios);
+    };
+    lector.onerror = function() { mostrarToast('No se pudo leer el archivo.', 'error'); };
+    lector.readAsText(archivo);
   }
 
   function abrirModalLogo() {
@@ -2208,6 +2278,30 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       horario[d] = { abre: abre || '', cierra: cierra || '' };
     }
     return horario;
+  }
+
+  // Rellena los campos de límite de citas por día de la semana.
+  function rellenarLimitesPorDia(porSemana) {
+    for (var d = 0; d <= 6; d++) {
+      var el = document.getElementById('cfg2_res_limite_d' + d);
+      if (!el) continue;
+      el.value = (porSemana[d] !== undefined && porSemana[d] !== '' && parseInt(porSemana[d], 10) > 0)
+        ? parseInt(porSemana[d], 10) : '';
+    }
+  }
+
+  // Lee los límites de citas por día del formulario.
+  function leerLimitesPorDiaFormulario() {
+    var porSemana = {};
+    for (var d = 0; d <= 6; d++) {
+      var el = document.getElementById('cfg2_res_limite_d' + d);
+      if (!el) continue;
+      var val = parseInt(el.value, 10);
+      if (!isNaN(val) && val > 0) {
+        porSemana[d] = val;
+      }
+    }
+    return porSemana;
   }
 
   // Copia el enlace público de reservas al portapapeles.
@@ -3087,6 +3181,15 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var favicon = document.getElementById('faviconApp');
     if (favicon && c.logoUrl) favicon.href = c.logoUrl;
 
+    // Instalable a pantalla completa (PWA): icono de iOS, título y manifest dinámico.
+    var appleIcon = document.getElementById('appleTouchIcon');
+    if (appleIcon && c.logoUrl) appleIcon.href = c.logoUrl;
+    var metaTitulo = document.getElementById('metaAppleTitle');
+    if (metaTitulo) metaTitulo.setAttribute('content', c.nombreNegocio || 'Gestor de Clientes y Citas');
+    var metaColor = document.getElementById('metaThemeColor');
+    if (metaColor) metaColor.setAttribute('content', c.colorPrimario || '#4285F4');
+    actualizarManifestPWA(c);
+
     // Mensaje de bienvenida (máximo 5 veces por usuario; se oculta al cambiar de vista).
     var banner = document.getElementById('bannerBienvenida');
     var msg = document.getElementById('mensajeBienvenida');
@@ -3105,6 +3208,29 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     // Etiquetas de la barra de navegación.
     var navCitas = document.getElementById('navCitas');
     if (navCitas) navCitas.textContent = etCitas();
+  }
+
+  // Arma un manifest de PWA en memoria (nombre, colores e ícono del negocio)
+  // para que "Agregar a pantalla de inicio" abra la app en pantalla completa.
+  function actualizarManifestPWA(c) {
+    var link = document.getElementById('manifestApp');
+    if (!link) return;
+    var nombre = c.nombreNegocio || 'Gestor de Clientes y Citas';
+    var manifest = {
+      name: nombre,
+      short_name: nombre.slice(0, 20),
+      start_url: location.href,
+      scope: location.href,
+      display: 'standalone',
+      background_color: '#ffffff',
+      theme_color: c.colorPrimario || '#4285F4',
+      icons: c.logoUrl ? [
+        { src: c.logoUrl, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: c.logoUrl, sizes: '512x512', type: 'image/png', purpose: 'any' }
+      ] : []
+    };
+    var blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    link.href = URL.createObjectURL(blob);
   }
 
   // Devuelve true si el banner de bienvenida debe mostrarse (máx. 5 veces

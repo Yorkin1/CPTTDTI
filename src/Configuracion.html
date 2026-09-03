@@ -82,3 +82,13 @@
 <div class="acciones-form" style="margin-bottom:22px;">
   <button type="button" class="btn btn-primario" id="btnGuardarConfiguracionGeneral">Guardar configuración</button>
 </div>
+
+<div class="tarjeta">
+  <h2>Catálogo de servicios</h2>
+  <p class="ayuda">Cargue un archivo de texto (.txt) con servicios preestablecidos para llenar su catálogo de una vez. Quedan editables o se pueden eliminar después desde la pestaña Servicios.</p>
+  <p class="asistente-nota">Formato por línea: <code>Nombre|Precio|Duración|Descripción</code> (ej. <code>Cambio de aceite|1500|45min|Incluye filtro</code>). Las líneas vacías o que empiecen con # se ignoran.</p>
+  <div class="acciones-form">
+    <button type="button" class="btn btn-secundario" id="btnImportarServicios">Cargar servicios desde archivo (.txt)</button>
+  </div>
+  <input type="file" id="cfg_servicios_archivo" accept=".txt,text/plain" style="display:none;">
+</div>
