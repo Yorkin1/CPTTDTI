@@ -68,20 +68,22 @@
               <input type="number" id="cfg_paso_reserva" min="5" step="5" value="30" placeholder="Ej. 30">
             </div>
 
-            <div class="campo">
-              <label for="cfg_color_primario">Color primario</label>
-              <input type="color" id="cfg_color_primario" value="#4285F4">
-            </div>
-            <div class="campo">
-              <label for="cfg_color_secundario">Color secundario</label>
-              <input type="color" id="cfg_color_secundario" value="#16a34a">
-            </div>
-            <div class="campo">
-              <label for="cfg_tema">Tema</label>
-              <select id="cfg_tema">
-                <option value="claro">Claro</option>
-                <option value="oscuro">Oscuro</option>
-              </select>
+            <div style="display:flex; gap:16px; align-items:flex-end;">
+              <div class="campo">
+                <label for="cfg_tema">Tema</label>
+                <select id="cfg_tema">
+                  <option value="claro">Claro</option>
+                  <option value="oscuro">Oscuro</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label for="cfg_color_primario">Color primario</label>
+                <input type="color" id="cfg_color_primario" value="#4285F4">
+              </div>
+              <div class="campo">
+                <label for="cfg_color_secundario">Color secundario</label>
+                <input type="color" id="cfg_color_secundario" value="#16a34a">
+              </div>
             </div>
             <div class="campo ancho-completo">
               <label for="cfg_logo_archivo">Logo del negocio (opcional)</label>
