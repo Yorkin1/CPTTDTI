@@ -392,17 +392,6 @@
     document.getElementById('btnGuardarReservas').addEventListener('click', guardarReservas);
     document.getElementById('btnCopiarEnlaceReservas').addEventListener('click', copiarEnlaceReservas);
 
-    // Botón de correo con los enlaces: visible SOLO para el dueño.
-    var btnCorreo = document.getElementById('btnEnviarEnlacesDueno');
-    if (btnCorreo) {
-      if (esDuenoSesion()) {
-        btnCorreo.style.display = '';
-        btnCorreo.addEventListener('click', enviarEnlacesAlDueno);
-      } else {
-        btnCorreo.style.display = 'none';
-      }
-    }
-
     if (Estado.reservaUrl) {
       aplicarEnlaceReservas(Estado.reservaUrl);
     } else {
@@ -2208,6 +2197,17 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (btnImportarServicios && archivoServicios) {
       btnImportarServicios.addEventListener('click', function() { archivoServicios.click(); });
       archivoServicios.addEventListener('change', importarServiciosDesdeArchivo);
+    }
+
+    // Botón de correo con los enlaces: visible SOLO para el dueño.
+    var btnCorreo = document.getElementById('btnEnviarEnlacesDueno');
+    if (btnCorreo) {
+      if (esDuenoSesion()) {
+        btnCorreo.style.display = '';
+        btnCorreo.addEventListener('click', enviarEnlacesAlDueno);
+      } else {
+        btnCorreo.style.display = 'none';
+      }
     }
   }
 

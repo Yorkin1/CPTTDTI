@@ -53,20 +53,22 @@
         <input type="text" id="cfg2_etiqueta_cita" placeholder="Ej. Cita, Consulta, Visita">
       </div>
 
-      <div class="campo">
-        <label for="cfg2_color_primario">Color primario</label>
-        <input type="color" id="cfg2_color_primario">
-      </div>
-      <div class="campo">
-        <label for="cfg2_color_secundario">Color secundario</label>
-        <input type="color" id="cfg2_color_secundario">
-      </div>
-      <div class="campo">
-        <label for="cfg2_tema">Tema</label>
-        <select id="cfg2_tema">
-          <option value="claro">Claro</option>
-          <option value="oscuro">Oscuro</option>
-        </select>
+      <div style="display:flex; gap:16px; align-items:flex-end;">
+        <div class="campo">
+          <label for="cfg2_tema">Tema</label>
+          <select id="cfg2_tema">
+            <option value="claro">Claro</option>
+            <option value="oscuro">Oscuro</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="cfg2_color_primario">Color primario</label>
+          <input type="color" id="cfg2_color_primario">
+        </div>
+        <div class="campo">
+          <label for="cfg2_color_secundario">Color secundario</label>
+          <input type="color" id="cfg2_color_secundario">
+        </div>
       </div>
       <div id="seccionMonitorConfig" class="campo ancho-completo" style="display:none;">
         <label style="font-weight:600; cursor:pointer;">
@@ -81,6 +83,7 @@
 
 <div class="acciones-form" style="margin-bottom:22px;">
   <button type="button" class="btn btn-primario" id="btnGuardarConfiguracionGeneral">Guardar configuración</button>
+  <button type="button" class="btn btn-secundario btn-pequeno" id="btnEnviarEnlacesDueno" style="display:none;" title="Solo el dueño">📧 Enviar enlaces a mi correo</button>
 </div>
 
 <div class="tarjeta">
