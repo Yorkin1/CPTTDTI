@@ -668,16 +668,56 @@
     .barra-busqueda { flex-direction: column; align-items: stretch; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; }
     .tabla-contenedor { -webkit-overflow-scrolling: touch; }
-    /* Tablas más compactas y primera columna fija al desplazar en horizontal. */
-    table { min-width: 700px; font-size: 13px; }
-    .tabla-contenedor thead th:first-child { position: sticky; left: 0; z-index: 4; }
-    .tabla-contenedor tbody td:first-child {
-      position: sticky; left: 0; z-index: 3;
-      background: #fff;
-      box-shadow: 1px 0 0 var(--gris-borde);
+    /* Tablas al ancho de la pantalla, sin scroll lateral. */
+    table { font-size: 13px; }
+    .tabla-citas, .tabla-clientes, .tabla-servicios,
+    .tabla-historial, .tabla-usuarios, .tabla-actividad {
+      min-width: 0;
+      width: 100%;
+      table-layout: fixed;
     }
-    .tabla-contenedor tbody tr:nth-child(even) td:first-child { background: #f8fafc; }
-    .tabla-contenedor tbody tr:hover td:first-child { background: #eef2ff; }
+    .tabla-citas th, .tabla-citas td,
+    .tabla-clientes th, .tabla-clientes td,
+    .tabla-servicios th, .tabla-servicios td,
+    .tabla-historial th, .tabla-historial td,
+    .tabla-usuarios th, .tabla-usuarios td,
+    .tabla-actividad th, .tabla-actividad td {
+      white-space: normal;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+    .col-wrap, .col-cliente, .col-servicios { min-width: 0; max-width: none; }
+    .tabla-citas th:first-child, .tabla-citas td:first-child { width: 34px; }
+    /* Columnas clave por tabla (lo oculto vive en la tarjeta de un clic). */
+    .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3),
+    .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4),
+    .tabla-citas th:nth-child(7), .tabla-citas td:nth-child(7),
+    .tabla-citas th:nth-child(8), .tabla-citas td:nth-child(8),
+    .tabla-citas th:nth-child(9), .tabla-citas td:nth-child(9),
+    .tabla-citas th:nth-child(11), .tabla-citas td:nth-child(11),
+    .tabla-clientes th:nth-child(4), .tabla-clientes td:nth-child(4),
+    .tabla-clientes th:nth-child(5), .tabla-clientes td:nth-child(5),
+    .tabla-clientes th:nth-child(6), .tabla-clientes td:nth-child(6),
+    .tabla-clientes th:nth-child(7), .tabla-clientes td:nth-child(7),
+    .tabla-servicios th:nth-child(3), .tabla-servicios td:nth-child(3),
+    .tabla-servicios th:nth-child(4), .tabla-servicios td:nth-child(4),
+    .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6),
+    .tabla-historial th:nth-child(2), .tabla-historial td:nth-child(2),
+    .tabla-historial th:nth-child(4), .tabla-historial td:nth-child(4),
+    .tabla-historial th:nth-child(5), .tabla-historial td:nth-child(5),
+    .tabla-historial th:nth-child(6), .tabla-historial td:nth-child(6),
+    .tabla-historial th:nth-child(7), .tabla-historial td:nth-child(7),
+    .tabla-historial th:nth-child(9), .tabla-historial td:nth-child(9),
+    .tabla-usuarios th:nth-child(4), .tabla-usuarios td:nth-child(4),
+    .tabla-usuarios th:nth-child(5), .tabla-usuarios td:nth-child(5),
+    .tabla-actividad th:nth-child(3), .tabla-actividad td:nth-child(3),
+    .tabla-actividad th:nth-child(4), .tabla-actividad td:nth-child(4),
+    .tabla-actividad th:nth-child(6), .tabla-actividad td:nth-child(6) { display: none; }
+    /* Horario de atención compacto (conserva su scroll solo en pantallas muy angostas). */
+    .tabla-horario { min-width: 0; }
+    .tabla-horario th, .tabla-horario td { padding: 6px 4px; font-size: 12px; }
+    .tabla-horario input[type="time"] { width: 78px !important; }
+    .tabla-horario input[type="number"] { width: 44px !important; }
     /* Tarjetas desplegables (un clic en la fila, solo móvil, todas las tablas). */
     tr[data-cita-id], tr[data-cliente-id], tr[data-servicio-id],
     tr[data-historial-id], tr[data-usuario-id], tr[data-actividad-idx] { cursor: pointer; }
