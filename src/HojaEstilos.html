@@ -668,6 +668,16 @@
     .barra-busqueda { flex-direction: column; align-items: stretch; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; }
     .tabla-contenedor { -webkit-overflow-scrolling: touch; }
+    /* Tablas más compactas y primera columna fija al desplazar en horizontal. */
+    table { min-width: 700px; font-size: 13px; }
+    .tabla-contenedor thead th:first-child { position: sticky; left: 0; z-index: 4; }
+    .tabla-contenedor tbody td:first-child {
+      position: sticky; left: 0; z-index: 3;
+      background: #fff;
+      box-shadow: 1px 0 0 var(--gris-borde);
+    }
+    .tabla-contenedor tbody tr:nth-child(even) td:first-child { background: #f8fafc; }
+    .tabla-contenedor tbody tr:hover td:first-child { background: #eef2ff; }
     thead th, tbody td { padding: 8px 10px; }
     .tabla-contenedor input[type="time"] { width: 100px !important; }
   }
