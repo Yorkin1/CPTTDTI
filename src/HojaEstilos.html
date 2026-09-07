@@ -720,6 +720,13 @@
     .tabla-servicios tbody tr:nth-child(even) td:first-child { background: #f8fafc; }
     .tabla-servicios tbody tr:hover td:first-child { background: #eef2ff; }
     .tabla-servicios tbody tr.fila-detalle:nth-child(even) td:first-child { background: var(--azul-muy-claro); box-shadow: none; }
+    /* Reparto fijo: Nombre compacto y Descripción con el espacio sobrante. */
+    .tabla-servicios { table-layout: fixed; }
+    .tabla-servicios th:nth-child(1), .tabla-servicios td:nth-child(1) { width: 120px; }
+    .tabla-servicios th:nth-child(2), .tabla-servicios td:nth-child(2) { width: 85px; }
+    .tabla-servicios th:nth-child(3), .tabla-servicios td:nth-child(3) { width: 75px; }
+    .tabla-servicios th:nth-child(5), .tabla-servicios td:nth-child(5) { width: 85px; }
+    .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6) { width: 150px; }
     /* Horario de atención compacto (conserva su scroll solo en pantallas muy angostas). */
     .tabla-horario { min-width: 0; }
     .tabla-horario th, .tabla-horario td { padding: 6px 4px; font-size: 12px; }
