@@ -251,6 +251,8 @@
         seleccion: { fecha: '', duracion: 60, hora: '', slots: [], servicios: {} },
         paso: '',
         _reserva: null,
+        _idCita: null,
+        _editando: false,
         _toastTimer: null
       };
 
@@ -660,7 +662,20 @@
         }
         document.getElementById('res_servicio').addEventListener('change', agregarServicioSeleccion);
         document.getElementById('btnEditarReserva').addEventListener('click', function() {
-          pasarAPaso('pasoHorarios');
+          if (!Reserva._idCita) {
+            mostrarToastReserva('No hay reserva que modificar en esta sesión.', 'error');
+            return;
+          }
+          // Modo edición: se actualiza la misma cita (no se duplica).
+          Reserva._editando = true;
+          var r = Reserva._reserva || {};
+          Reserva._horaRestaurar = r.hora || Reserva.seleccion.hora || '';
+          var campoFecha = document.getElementById('res_fecha');
+          if (campoFecha && r.fecha) campoFecha.value = r.fecha;
+          var btnConf = document.getElementById('btnConfirmarReserva');
+          if (btnConf) btnConf.textContent = 'Guardar cambios';
+          mostrarToastReserva('Modificando tu reserva: elige nuevo horario o datos y pulsa Guardar cambios.', 'exito');
+          verHorariosDisponibles();
         });
         var campoTelefono = document.getElementById('cli_telefono');
         if (campoTelefono) {
@@ -677,9 +692,14 @@
         document.getElementById('btnOtraReserva').addEventListener('click', function() {
           Reserva.seleccion = { fecha: '', duracion: 60, hora: '', slots: [], servicios: {}, limiteSuperado: false };
           Reserva._reserva = null;
+          Reserva._idCita = null;
+          Reserva._editando = false;
+          Reserva._horaRestaurar = null;
           document.getElementById('res_fecha').value = '';
           var campoNotaReset = document.getElementById('cli_nota');
           if (campoNotaReset) campoNotaReset.value = '';
+          var btnConfReset = document.getElementById('btnConfirmarReserva');
+          if (btnConfReset) btnConfReset.textContent = 'Confirmar reserva';
           iniciarReserva();
         });
         document.getElementById('btnImprimirConstancia').addEventListener('click', function() {
@@ -743,6 +763,12 @@
             var btnMejor = document.getElementById('btnElegirMejor');
             if (btnMejor) btnMejor.disabled = !!resp.limiteSuperado;
             renderParrilla();
+            // En modo edición, reseleccionar su horario actual (quedó libre al excluirse).
+            if (Reserva._editando && Reserva._horaRestaurar &&
+                (Reserva.seleccion.slots || []).indexOf(Reserva._horaRestaurar) !== -1) {
+              seleccionarHora(Reserva._horaRestaurar);
+            }
+            Reserva._horaRestaurar = null;
             pasarAPaso('pasoHorarios');
           })
           .withFailureHandler(function(err) {
@@ -750,7 +776,8 @@
             btn.textContent = 'Ver horarios disponibles';
             mostrarToastReserva('Error: ' + err.message, 'error');
           })
-          .obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion });
+          .obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion,
+            excluirIdCita: (Reserva._editando && Reserva._idCita) ? Reserva._idCita : '' });
       }
 
       function renderParrilla() {
@@ -915,6 +942,7 @@
           duracionMins: Reserva.seleccion.duracion,
           servicios: serviciosEnviar,
           descripcion: (document.getElementById('cli_nota') ? document.getElementById('cli_nota').value.trim().slice(0, 500) : ''),
+          idCita: (Reserva._editando && Reserva._idCita) ? Reserva._idCita : '',
           cliente: { nombre: nombre, email: email, telefono: telefono }
         };
         abrirModalConfirmar();
@@ -925,7 +953,12 @@
         var modal = document.getElementById('modalConfirmar');
         var cont = document.getElementById('resumenConfirmarModal');
         var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
-        var html = '<strong>' + escReserva(etiqueta) + '</strong> el <strong>' +
+        var esEdicion = !!(Reserva._editando && Reserva._idCita);
+        var tituloModal = modal ? modal.querySelector('.modal-cabecera h2') : null;
+        if (tituloModal) tituloModal.textContent = esEdicion ? 'Guardar cambios' : 'Confirmar reserva';
+        var btnSi = document.getElementById('btnConfirmarSi');
+        if (btnSi) btnSi.textContent = esEdicion ? 'Sí, guardar cambios' : 'Sí, confirmar reserva';
+        var html = (esEdicion ? 'Modificando su <strong>' : '<strong>') + escReserva(etiqueta) + '</strong> el <strong>' +
           escReserva(fechaDMYReserva(Reserva.seleccion.fecha)) + '</strong> a las <strong>' +
           hora12Reserva(Reserva.seleccion.hora) + '</strong> (' + duracionLegibleReserva(Reserva.seleccion.duracion) + ').';
         var servicios = resumenServiciosHTML();
@@ -951,18 +984,27 @@
       function procesarReserva() {
         var datos = Reserva._reserva;
         if (!datos) return;
+        var esEdicion = !!(Reserva._editando && Reserva._idCita);
+        if (esEdicion) datos.idCita = Reserva._idCita;
         var btn = document.getElementById('btnConfirmarSi');
         btn.disabled = true;
-        btn.textContent = 'Reservando…';
+        btn.textContent = esEdicion ? 'Guardando…' : 'Reservando…';
 
-        google.script.run
+        var runner = google.script.run
           .withSuccessHandler(function(resp) {
             btn.disabled = false;
-            btn.textContent = 'Sí, confirmar reserva';
+            btn.textContent = esEdicion ? 'Sí, guardar cambios' : 'Sí, confirmar reserva';
             cerrarModalConfirmar();
             if (!resp || !resp.exito) {
-              var mensaje = (resp && resp.mensaje) || 'No se pudo completar la reserva.';
+              var mensaje = (resp && resp.mensaje) || (esEdicion ? 'No se pudo modificar la reserva.' : 'No se pudo completar la reserva.');
               mostrarToastReserva(mensaje, 'error');
+              if (resp && resp.noExiste) {
+                Reserva._editando = false;
+                Reserva._idCita = null;
+                var btnConf = document.getElementById('btnConfirmarReserva');
+                if (btnConf) btnConf.textContent = 'Confirmar reserva';
+                return;
+              }
               // Si el día se llenó entre la consulta y la confirmación,
               // refrescar para mostrar el bloqueo.
               if (resp && resp.limiteSuperado) {
@@ -985,14 +1027,25 @@
             btn.textContent = 'Sí, confirmar reserva';
             cerrarModalConfirmar();
             mostrarToastReserva('Error: ' + err.message, 'error');
-          })
-          .reservarCitaPublica(datos);
+          });
+        if (esEdicion) {
+          runner.editarReservaPublica(datos);
+        } else {
+          runner.reservarCitaPublica(datos);
+        }
       }
 
       function mostrarConfirmacion(resp) {
         var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
+        var fueEdicion = !!(resp.editada || (Reserva._editando && Reserva._idCita));
+        if (resp.idCita) Reserva._idCita = resp.idCita;
+        Reserva._editando = false;
+        var btnConf = document.getElementById('btnConfirmarReserva');
+        if (btnConf) btnConf.textContent = 'Confirmar reserva';
+        var tituloConst = document.querySelector('#pasoConfirmacion .cabecera-vista h1');
+        if (tituloConst) tituloConst.textContent = fueEdicion ? '¡Reserva modificada!' : '¡Reserva confirmada!';
         var html = '<strong>' + escReserva(etiqueta) + '</strong> ' +
-          (femeninaReserva(etiqueta) ? 'reservada' : 'reservado') + ' para el <strong>' +
+          (fueEdicion ? 'modificada' : (femeninaReserva(etiqueta) ? 'reservada' : 'reservado')) + ' para el <strong>' +
           escReserva(fechaDMYReserva(resp.fecha)) + '</strong> a las <strong>' + hora12Reserva(resp.hora) +
           '</strong> (' + duracionLegibleReserva(resp.duracion) + ') en ' +
           escReserva((Reserva.config && Reserva.config.nombreNegocio) || 'el negocio') + '.';
