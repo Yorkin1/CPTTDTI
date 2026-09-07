@@ -670,7 +670,7 @@
     .tabla-contenedor { -webkit-overflow-scrolling: touch; }
     /* Tablas al ancho de la pantalla, sin scroll lateral. */
     table { font-size: 13px; }
-    .tabla-citas, .tabla-clientes, .tabla-servicios,
+    .tabla-citas, .tabla-clientes,
     .tabla-historial, .tabla-usuarios, .tabla-actividad {
       min-width: 0;
       width: 100%;
@@ -678,7 +678,6 @@
     }
     .tabla-citas th, .tabla-citas td,
     .tabla-clientes th, .tabla-clientes td,
-    .tabla-servicios th, .tabla-servicios td,
     .tabla-historial th, .tabla-historial td,
     .tabla-usuarios th, .tabla-usuarios td,
     .tabla-actividad th, .tabla-actividad td {
@@ -699,9 +698,6 @@
     .tabla-clientes th:nth-child(5), .tabla-clientes td:nth-child(5),
     .tabla-clientes th:nth-child(6), .tabla-clientes td:nth-child(6),
     .tabla-clientes th:nth-child(7), .tabla-clientes td:nth-child(7),
-    .tabla-servicios th:nth-child(3), .tabla-servicios td:nth-child(3),
-    .tabla-servicios th:nth-child(4), .tabla-servicios td:nth-child(4),
-    .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6),
     .tabla-historial th:nth-child(2), .tabla-historial td:nth-child(2),
     .tabla-historial th:nth-child(4), .tabla-historial td:nth-child(4),
     .tabla-historial th:nth-child(5), .tabla-historial td:nth-child(5),
@@ -713,6 +709,17 @@
     .tabla-actividad th:nth-child(3), .tabla-actividad td:nth-child(3),
     .tabla-actividad th:nth-child(4), .tabla-actividad td:nth-child(4),
     .tabla-actividad th:nth-child(6), .tabla-actividad td:nth-child(6) { display: none; }
+    /* Servicios conserva su scroll lateral y todas sus columnas, como antes. */
+    .tabla-servicios { min-width: 700px; }
+    .tabla-servicios thead th:first-child { position: sticky; left: 0; z-index: 4; }
+    .tabla-servicios tbody td:first-child {
+      position: sticky; left: 0; z-index: 3;
+      background: #fff;
+      box-shadow: 1px 0 0 var(--gris-borde);
+    }
+    .tabla-servicios tbody tr:nth-child(even) td:first-child { background: #f8fafc; }
+    .tabla-servicios tbody tr:hover td:first-child { background: #eef2ff; }
+    .tabla-servicios tbody tr.fila-detalle:nth-child(even) td:first-child { background: var(--azul-muy-claro); box-shadow: none; }
     /* Horario de atención compacto (conserva su scroll solo en pantallas muy angostas). */
     .tabla-horario { min-width: 0; }
     .tabla-horario th, .tabla-horario td { padding: 6px 4px; font-size: 12px; }
