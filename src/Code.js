@@ -3463,7 +3463,8 @@ function obtenerHorariosDisponibles(datos) {
 
     var paso = parseInt(cfg.PASO_RESERVA_MIN, 10) || 30;
     var slots = _generarSlots_(hDia.abre, hDia.cierra, duracion, paso);
-    var ocupados = _intervalosOcupados_(fecha);
+    // Al editar, la propia cita no bloquea su horario (misma sesión).
+    var ocupados = _intervalosOcupados_(fecha, datos.excluirIdCita || '');
 
     var hoy = Utilities.formatDate(new Date(), obtenerZonaHoraria_(), 'yyyy-MM-dd');
     var ahoraMin = null;
@@ -3855,6 +3856,270 @@ function reservarCitaPublica(datos) {
   } catch (err) {
     Logger.log('Error en reservarCitaPublica: ' + err);
     return { exito: false, mensaje: 'Error al reservar: ' + err.message };
+  } finally {
+    candado.releaseLock();
+  }
+}
+
+/**
+ * Edita una reserva pública en la MISMA sesión (sin login).
+ * Actualiza la misma fila (no duplica), mueve el evento de Calendar y
+ * avisa al cliente y al equipo. Verifica que el email/teléfono enviados
+ * coincidan con la ficha del cliente de la cita (evita tocar citas ajenas).
+ * @param {Object} datos { idCita, fecha, hora, duracionMins, servicios,
+ *                         descripcion, cliente: { nombre, email, telefono } }
+ * @return {Object}
+ */
+function editarReservaPublica(datos) {
+  var candado = LockService.getScriptLock();
+  try {
+    candado.waitLock(30000);
+  } catch (errLock) {
+    return { exito: false, mensaje: 'Hay otra reserva en curso. Intente de nuevo en unos segundos.' };
+  }
+
+  try {
+    var cfg = obtenerConfiguracion();
+    if (String(cfg.HABILITAR_RESERVAS || 'NO').toUpperCase() !== 'SI') {
+      return { exito: false, mensaje: 'La reserva en línea está deshabilitada en este momento.' };
+    }
+    datos = datos || {};
+    var idCita = String(datos.idCita || '').trim();
+    var fecha = String(datos.fecha || '');
+    var hora = String(datos.hora || '');
+    if (!idCita) {
+      return { exito: false, mensaje: 'No se indicó qué reserva modificar.' };
+    }
+
+    var selServicios = _serviciosDesdeCatalogo_(datos.servicios);
+    var duracion;
+    if (selServicios.items.length > 0) {
+      duracion = selServicios.duracion;
+    } else {
+      duracion = parseInt(datos.duracionMins, 10) ||
+        parseInt(cfg.DURACION_CITA_PREDETERMINADA, 10) || 60;
+    }
+    if (duracion < 5) duracion = 60;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !_horaAMin_(hora)) {
+      return { exito: false, mensaje: 'Los datos de la fecha u hora no son válidos.' };
+    }
+    var hoyE = Utilities.formatDate(new Date(), obtenerZonaHoraria_(), 'yyyy-MM-dd');
+    if (fecha < hoyE) {
+      return { exito: false, mensaje: 'No se puede mover a fechas pasadas. Elija otra fecha.' };
+    }
+
+    var cli = datos.cliente || {};
+    var nombre = String(cli.nombre || '').trim();
+    var email = String(cli.email || '').trim().toLowerCase();
+    var telefono = String(cli.telefono || '').trim();
+    if (!nombre) {
+      return { exito: false, mensaje: 'Ingrese su nombre.' };
+    }
+    if (email && !esEmailValido_(email)) {
+      return { exito: false, mensaje: 'El correo electrónico no tiene un formato válido.' };
+    }
+    if (telefono && !esTelefonoValido_(telefono)) {
+      return { exito: false, mensaje: 'El teléfono no tiene un formato válido.' };
+    }
+    if (!email && !telefono) {
+      return { exito: false, mensaje: 'Ingrese su correo electrónico o su teléfono.' };
+    }
+
+    // Buscar la cita y verificar que sigue editable.
+    var hoja = obtenerHoja_(HOJA_CITAS);
+    var fila = buscarFilaPorId_(hoja, 'ID_Cita', idCita);
+    if (!fila) {
+      return { exito: false, mensaje: 'No se encontró la reserva indicada. Haga una nueva reserva.', noExiste: true };
+    }
+    var vals = hoja.getRange(fila, 1, 1, ENCABEZADOS.Citas.length).getValues()[0];
+    var idClienteFila = String(vals[1] || '');
+    var titulo = String(vals[2] || '') || cfg.ETIQUETA_CITA || CONFIGURACION_PREDETERMINADA.ETIQUETA_CITA || 'Cita';
+    var zonaE = obtenerZonaHoraria_();
+    function _txtF_(v) {
+      if (v instanceof Date) { try { return Utilities.formatDate(v, zonaE, 'yyyy-MM-dd'); } catch (e1) { return ''; } }
+      return String(v || '').trim();
+    }
+    function _txtH_(v) {
+      if (v instanceof Date) { try { return Utilities.formatDate(v, zonaE, 'HH:mm'); } catch (e2) { return ''; } }
+      var s = String(v || '').trim();
+      var m = s.match(/(\d{2}:\d{2})\s*$/);
+      return m ? m[1] : s;
+    }
+    var viejaFecha = _txtF_(vals[3]);
+    var viejaHora = _txtH_(vals[4]);
+    var viejaDur = parseInt(vals[5], 10) || 60;
+    var idEventoViejo = String(vals[7] || '');
+    var estadoViejo = String(vals[8] || '').trim();
+    if (estadoViejo && estadoViejo !== 'Programada') {
+      return { exito: false, mensaje: 'Esta reserva ya no se puede modificar (' + estadoViejo + '). Contacte al negocio.', noExiste: true };
+    }
+
+    // Propiedad: el email o teléfono debe coincidir con la ficha del cliente.
+    var ficha = null;
+    if (idClienteFila) {
+      var clientesE = filasAObjetos_(obtenerHoja_(HOJA_CLIENTES));
+      for (var kc = 0; kc < clientesE.length; kc++) {
+        if (String(clientesE[kc].ID_Cliente) === idClienteFila) { ficha = clientesE[kc]; break; }
+      }
+    }
+    var coincide = false;
+    if (ficha) {
+      var fEmail = String(ficha.Email || '').trim().toLowerCase();
+      var fTel = String(ficha.Telefono || '').trim();
+      if (email && fEmail && email === fEmail) coincide = true;
+      if (telefono && fTel && telefono === fTel) coincide = true;
+    }
+    if (!coincide) {
+      return { exito: false, mensaje: 'No se pudo verificar su reserva. Haga una nueva reserva.', noExiste: true };
+    }
+
+    // Choque ignorando la propia cita.
+    var choque = _citaTieneChoque_(fecha, hora, duracion, idCita);
+    if (choque && choque.choca) {
+      return { exito: false, mensaje: choque.mensaje };
+    }
+
+    // Límite del día destino (la propia cita no cuenta si es el mismo día).
+    if (fecha !== viejaFecha) {
+      var infoLim = _obtenerLimiteCitasDia_(fecha);
+      if (infoLim.limite !== null && infoLim.superado) {
+        var pF = String(fecha).split('-');
+        var fDMY = pF.length === 3 ? (pF[2] + '-' + pF[1] + '-' + pF[0]) : fecha;
+        return { exito: false, mensaje: 'El día ' + fDMY + ' llegó al límite de citas. Elija otra fecha.',
+          limiteSuperado: true };
+      }
+    }
+
+    // Validar slot excluyendo la propia cita.
+    var dispon = obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion, excluirIdCita: idCita });
+    if (!dispon.exito) return dispon;
+    if (dispon.slots.indexOf(hora) === -1) {
+      return { exito: false, mensaje: 'Ese horario ya no está disponible. Elija otro.',
+        fecha: fecha, duracion: duracion, sugerencias: dispon.slots };
+    }
+
+    // Nueva descripción: nota + servicios (mismo formato que al crear).
+    var notaEdit = String(datos.descripcion || '').trim().slice(0, 500);
+    var descripcion = notaEdit ? 'Nota del cliente: ' + notaEdit : '';
+    if (selServicios.items.length > 0) {
+      var desg = 'Servicios:\n' +
+        selServicios.items.map(function(it) {
+          return '- ' + it.cantidad + ' × ' + it.nombre +
+            ' (' + _formatoMoneda_(it.precio) + ' c/u = ' + _formatoMoneda_(it.subtotal) + ')';
+        }).join('\n') + '\nTOTAL: ' + _formatoMoneda_(selServicios.total);
+      descripcion = descripcion ? descripcion + '\n' + desg : desg;
+    }
+
+    // Actualizar la fila (misma cita, sin duplicar).
+    var colFechaE = ENCABEZADOS.Citas.indexOf('Fecha') + 1;
+    var colHoraE = ENCABEZADOS.Citas.indexOf('Hora') + 1;
+    var colDurE = ENCABEZADOS.Citas.indexOf('Duracion_Mins') + 1;
+    var colDescE = ENCABEZADOS.Citas.indexOf('Descripcion') + 1;
+    var colServE = ENCABEZADOS.Citas.indexOf('Servicios') + 1;
+    var colTotE = ENCABEZADOS.Citas.indexOf('Total_Precio') + 1;
+    hoja.getRange(fila, colFechaE).setNumberFormat('@').setValue(fecha);
+    hoja.getRange(fila, colHoraE).setNumberFormat('@').setValue(hora);
+    hoja.getRange(fila, colDurE).setValue(duracion);
+    hoja.getRange(fila, colDescE).setValue(descripcion);
+    hoja.getRange(fila, colServE).setValue(selServicios.items.length > 0 ? JSON.stringify(selServicios.items) : '');
+    hoja.getRange(fila, colTotE).setValue(selServicios.items.length > 0 ? selServicios.total : '');
+
+    // Mover el evento de Calendar (o crearlo si se perdió).
+    var errorCalE = '';
+    try {
+      var pFec = fecha.split('-');
+      var pHor = hora.split(':');
+      var ini = new Date(parseInt(pFec[0], 10), parseInt(pFec[1], 10) - 1, parseInt(pFec[2], 10),
+        parseInt(pHor[0], 10), parseInt(pHor[1], 10), 0);
+      var finE = new Date(ini.getTime() + duracion * 60000);
+      var ev = idEventoViejo ? CalendarApp.getDefaultCalendar().getEventById(String(idEventoViejo)) : null;
+      if (ev) {
+        ev.setTitle(titulo);
+        ev.setTime(ini, finE);
+        ev.setDescription(descripcion);
+      } else {
+        var op = { description: descripcion };
+        if (email && esEmailValido_(email)) op.guests = email;
+        var nuevoEv = CalendarApp.getDefaultCalendar().createEvent(titulo, ini, finE, op);
+        var colEvE = ENCABEZADOS.Citas.indexOf('ID_Evento_Calendar') + 1;
+        hoja.getRange(fila, colEvE).setValue(nuevoEv.getId());
+      }
+    } catch (errCalE) {
+      errorCalE = errCalE.message || String(errCalE);
+      Logger.log('Advertencia: no se pudo mover el evento de reserva: ' + errorCalE);
+    }
+
+    // Aviso al cliente.
+    var avisoCorreoE = '';
+    try {
+      if (email) {
+        var cuerpoCli = 'Estimado/a ' + (nombre || 'cliente') + ':\n\n' +
+          'Su ' + String(titulo).toLowerCase() + ' ha sido ' +
+          (_etiquetaFemenina_(titulo) ? 'modificada' : 'modificado') + ' con los siguientes datos:\n' +
+          (cfg.NOMBRE_NEGOCIO ? 'Empresa: ' + cfg.NOMBRE_NEGOCIO + '\n' : '') +
+          'Fecha: ' + fecha + '\n' +
+          'Hora: ' + _hora12_(hora) + '\n' +
+          'Duración: ' + duracion + ' min\n';
+        if (selServicios.items.length > 0) {
+          cuerpoCli += '\nServicios:\n' + selServicios.items.map(function(it) {
+            return '- ' + it.cantidad + ' × ' + it.nombre + ': ' + _formatoMoneda_(it.subtotal);
+          }).join('\n') + '\nTOTAL: ' + _formatoMoneda_(selServicios.total) + '\n';
+        }
+        if (notaEdit) cuerpoCli += '\nNota: ' + notaEdit + '\n';
+        cuerpoCli += '\nLe esperamos. Gracias por preferirnos.';
+        MailApp.sendEmail(email, titulo + ' ' + (_etiquetaFemenina_(titulo) ? 'modificada' : 'modificado'), cuerpoCli);
+        avisoCorreoE = ' Confirmación enviada a su correo.';
+      }
+    } catch (errCE) {
+      avisoCorreoE = ' No se pudo enviar la confirmación por correo.';
+      Logger.log('Error al enviar correo de edición pública: ' + errCE);
+    }
+
+    // Aviso al equipo (ANTES -> AHORA).
+    var avisoEquipoE = '';
+    try {
+      var destEquipo = _correosAvisoCita_(null);
+      if (destEquipo.length > 0) {
+        var cuerpoEq =
+          (cfg.NOMBRE_NEGOCIO ? 'Empresa: ' + cfg.NOMBRE_NEGOCIO + '\n' : '') +
+          'Una reserva en línea fue MODIFICADA por el cliente.\n\n' +
+          'Cliente: ' + (nombre || '') + '\n' +
+          (email ? 'Correo: ' + email + '\n' : '') +
+          (telefono ? 'Teléfono: ' + telefono + '\n' : '') +
+          'ANTES: ' + viejaFecha + ' ' + (viejaHora ? _hora12_(viejaHora) : '') + ' (' + viejaDur + ' min)\n' +
+          'AHORA: ' + fecha + ' ' + _hora12_(hora) + ' (' + duracion + ' min)\n' +
+          'ID de cita: ' + idCita + '\n';
+        if (selServicios.items.length > 0) {
+          cuerpoEq += '\nServicios:\n' + selServicios.items.map(function(it) {
+            return '- ' + it.cantidad + ' × ' + it.nombre + ': ' + _formatoMoneda_(it.subtotal);
+          }).join('\n') + '\nTOTAL: ' + _formatoMoneda_(selServicios.total) + '\n';
+        }
+        if (notaEdit) cuerpoEq += '\nNota del cliente: ' + notaEdit + '\n';
+        MailApp.sendEmail(destEquipo.join(','), 'Reserva en línea MODIFICADA — ' + fecha + ' ' + _hora12_(hora), cuerpoEq);
+        avisoEquipoE = ' Aviso enviado al equipo.';
+      }
+    } catch (errEE) {
+      Logger.log('Error al enviar aviso de edición al equipo: ' + errEE);
+    }
+
+    Logger.log('Reserva pública editada: ' + idCita);
+    return {
+      exito: true,
+      fecha: fecha,
+      hora: hora,
+      duracion: duracion,
+      titulo: titulo,
+      idCita: idCita,
+      editada: true,
+      servicios: selServicios.items,
+      totalPrecio: selServicios.total,
+      mensaje: (errorCalE
+        ? 'Reserva modificada, pero no se pudo mover el evento del calendario: ' + errorCalE
+        : 'Reserva modificada y actualizada en el calendario.') + avisoCorreoE + avisoEquipoE
+    };
+  } catch (err) {
+    Logger.log('Error en editarReservaPublica: ' + err);
+    return { exito: false, mensaje: 'Error al modificar: ' + err.message };
   } finally {
     candado.releaseLock();
   }
