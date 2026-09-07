@@ -1260,6 +1260,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     });
     dibujarCitas(tbody, lista);
     actualizarContadorHoy();
+    // El botón "Quitar filtros" solo aparece con algún filtro activado.
+    var btnQF = document.getElementById('btnQuitarFiltrosCita');
+    if (btnQF) btnQF.style.display = (term || est || fDia) ? '' : 'none';
   }
 
   // Limpia los filtros de la tabla de citas (buscador, día y estado).
