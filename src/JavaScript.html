@@ -364,6 +364,11 @@
     document.getElementById('btnCerrarModalFoto').addEventListener('click', cerrarModalFoto);
     document.getElementById('btnCancelarModalFoto').addEventListener('click', cerrarModalFoto);
     document.getElementById('btnUsarFoto').addEventListener('click', usarFotoSeleccionada);
+    // En móvil, un clic sobre la fila del cliente despliega su tarjeta.
+    var tbodyCli = document.getElementById('tablaClientes');
+    if (tbodyCli) tbodyCli.addEventListener('click', function(e) {
+      _clicTarjetaMovil(e, 'data-cliente-id', function(id) { alternarTarjetaCliente(id); });
+    });
     cargarClientes();
   }
 
@@ -622,7 +627,7 @@
     }
 
     tbody.innerHTML = lista.map(function(c) {
-      return '<tr>' +
+      return '<tr data-cliente-id="' + esc(c.ID_Cliente) + '">' +
         '<td>' + (c.Foto ? '<img class="foto-mini" src="' + esc(c.Foto) + '" alt="Foto">' : '<span class="vacio-accion">&mdash;</span>') + '</td>' +
         '<td>' + esc((c.Nombre + ' ' + (c.Apellido || '')).trim()) + '</td>' +
         '<td>' + esc(c.Telefono) + '</td>' +
@@ -635,6 +640,37 @@
         '</td>' +
       '</tr>';
     }).join('');
+  }
+
+  // Tarjeta desplegable de cliente (móvil, un clic sobre la fila).
+  function alternarTarjetaCliente(id) {
+    var tbody = document.getElementById('tablaClientes');
+    if (!tbody || !id) return;
+    var c = null;
+    var lista = Estado.clientes || [];
+    for (var k = 0; k < lista.length; k++) {
+      if (String(lista[k].ID_Cliente) === String(id)) { c = lista[k]; break; }
+    }
+    if (!c) return;
+    var filaOrigen = tbody.querySelector('tr[data-cliente-id="' + id + '"]');
+    if (!filaOrigen) return;
+    var esAdmin = esAdminSesion();
+    var fotoHtml = c.Foto ? '<img class="foto-mini" src="' + esc(c.Foto) + '" alt="Foto">' : '';
+    var html =
+      '<div class="tarjeta-cita">' +
+        '<div class="tarjeta-cita-cab">' + fotoHtml +
+          '<strong>' + esc(((c.Nombre || '') + ' ' + (c.Apellido || '')).trim()) + '</strong></div>' +
+        _filaTarjeta('Teléfono', esc(c.Telefono)) +
+        _filaTarjeta('Email', esc(c.Email)) +
+        _filaTarjeta('Dirección', esc(c.Direccion)) +
+        _filaTarjeta('Notas', esc(c.Notas)) +
+        _filaTarjeta('Registro', esc(fechaDMY(c.Fecha_Registro))) +
+        '<div class="tarjeta-cita-acciones">' +
+          '<button class="btn btn-secundario btn-pequeno" onclick="editarCliente(\'' + esc(c.ID_Cliente) + '\')">Editar</button>' +
+          (esAdmin ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarCliente(\'' + esc(c.ID_Cliente) + '\')">Eliminar</button>' : '') +
+        '</div>' +
+      '</div>';
+    _insertarTarjeta(tbody, filaOrigen, id, html, 7);
   }
 
   function guardarCliente(e) {
@@ -859,6 +895,11 @@
 
     cargarServicios(true);
     iniciarGestionReservas();
+    // En móvil, un clic sobre la fila del servicio despliega su tarjeta.
+    var tbodyServ = document.getElementById('tablaServicios');
+    if (tbodyServ) tbodyServ.addEventListener('click', function(e) {
+      _clicTarjetaMovil(e, 'data-servicio-id', function(id) { alternarTarjetaServicio(id); });
+    });
   }
 
 function duracionLegible(mins) { mins = parseInt(mins, 10) || 0; var h = Math.floor(mins / 60); var m = mins % 60; if (h && m) return h + ' h ' + m + ' min'; if (h) return h + ' h'; return m + ' min'; }
@@ -918,7 +959,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         ? '<button class="btn btn-secundario btn-pequeno" onclick="editarServicio(\'' + esc(s.ID_Servicio) + '\')">Editar</button>' +
           '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarServicio(\'' + esc(s.ID_Servicio) + '\')">Eliminar</button>'
         : '<span class="vacio-accion">—</span>';
-      return '<tr>' +
+      return '<tr data-servicio-id="' + esc(s.ID_Servicio) + '">' +
         '<td>' + esc(s.Nombre) + '</td>' +
         '<td>' + formatoMoneda(s.Precio) + '</td>' +
         '<td>' + esc(duracionLegible(s.Duracion_Mins)) + '</td>' +
@@ -927,6 +968,38 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '<td class="acciones-fila">' + acciones + '</td>' +
       '</tr>';
     }).join('');
+  }
+
+  // Tarjeta desplegable de servicio (móvil, un clic sobre la fila).
+  function alternarTarjetaServicio(id) {
+    var tbody = document.getElementById('tablaServicios');
+    if (!tbody || !id) return;
+    var s = null;
+    var lista = Estado.servicios || [];
+    for (var k = 0; k < lista.length; k++) {
+      if (String(lista[k].ID_Servicio) === String(id)) { s = lista[k]; break; }
+    }
+    if (!s) return;
+    var filaOrigen = tbody.querySelector('tr[data-servicio-id="' + id + '"]');
+    if (!filaOrigen) return;
+    var esAdmin = esAdminSesion();
+    var estado = String(s.Activo || 'SI').toUpperCase() === 'NO' ? 'Inactivo' : 'Activo';
+    var claseEt = estado === 'Activo' ? 'etiqueta-programada' : 'etiqueta-expirada';
+    var html =
+      '<div class="tarjeta-cita">' +
+        '<div class="tarjeta-cita-cab"><strong>' + esc(s.Nombre) + '</strong>' +
+          '<span class="etiqueta ' + claseEt + '">' + esc(estado) + '</span></div>' +
+        _filaTarjeta('Precio', formatoMoneda(s.Precio)) +
+        _filaTarjeta('Duración', esc(duracionLegible(s.Duracion_Mins))) +
+        _filaTarjeta('Descripción', esc(s.Descripcion)) +
+        (esAdmin
+          ? '<div class="tarjeta-cita-acciones">' +
+            '<button class="btn btn-secundario btn-pequeno" onclick="editarServicio(\'' + esc(s.ID_Servicio) + '\')">Editar</button>' +
+            '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarServicio(\'' + esc(s.ID_Servicio) + '\')">Eliminar</button>' +
+            '</div>'
+          : '') +
+      '</div>';
+    _insertarTarjeta(tbody, filaOrigen, id, html, 6);
   }
 
   function guardarServicio(e) {
@@ -1586,6 +1659,40 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     filaOrigen.parentNode.insertBefore(trDet, filaOrigen.nextSibling);
   }
 
+  // ---- Núcleo compartido de tarjetas desplegables (móvil, todas las tablas) ----
+  function _clicTarjetaMovil(e, attr, alElegir) {
+    if (!_esMovilTarjeta()) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('button') || t.closest('input') || t.closest('a') || t.closest('.fila-detalle')) return;
+    var tr = t.closest('tr[' + attr + ']');
+    if (!tr) return;
+    alElegir(tr.getAttribute(attr), tr);
+  }
+
+  function _insertarTarjeta(tbody, filaOrigen, id, html, colspan) {
+    var ya = tbody.querySelector('tr.fila-detalle[data-detalle-de="' + id + '"]');
+    var previos = tbody.querySelectorAll('tr.fila-detalle');
+    for (var i = 0; i < previos.length; i++) previos[i].parentNode.removeChild(previos[i]);
+    var marcadas = tbody.querySelectorAll('tr.expandida');
+    for (var m = 0; m < marcadas.length; m++) marcadas[m].classList.remove('expandida');
+    if (ya) return; // toggle: estaba abierta, se cierra
+    var trDet = document.createElement('tr');
+    trDet.className = 'fila-detalle';
+    trDet.setAttribute('data-detalle-de', id);
+    var td = document.createElement('td');
+    td.setAttribute('colspan', String(colspan || 7));
+    td.innerHTML = html;
+    trDet.appendChild(td);
+    filaOrigen.classList.add('expandida');
+    filaOrigen.parentNode.insertBefore(trDet, filaOrigen.nextSibling);
+  }
+
+  function _filaTarjeta(lab, val) {
+    return '<div class="tarjeta-cita-fila"><span>' + lab + '</span><span>' +
+      (val || '<span class="vacio-accion">&mdash;</span>') + '</span></div>';
+  }
+
   function guardarCita(e) {
     e.preventDefault();
     var id = document.getElementById('citaId').value;
@@ -1834,6 +1941,11 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('hist_fecha_hasta').addEventListener('change', _alCambiarFiltroHistorial);
     var btnQFHist = document.getElementById('btnQuitarFiltrosHistorial');
     if (btnQFHist) btnQFHist.addEventListener('click', limpiarFiltrosHistorial);
+    // En móvil, un clic sobre la fila del historial despliega su tarjeta.
+    var tbodyHist = document.getElementById('tablaHistorial');
+    if (tbodyHist) tbodyHist.addEventListener('click', function(e) {
+      _clicTarjetaMovil(e, 'data-historial-id', function(id) { alternarTarjetaHistorial(id); });
+    });
     document.getElementById('btnExportarExcel').addEventListener('click', exportarExcel);
     document.getElementById('btnExportarPDF').addEventListener('click', exportarPDF);
 
@@ -1896,8 +2008,37 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('filtro_modulo_monitor').addEventListener('change', _alCambiarFiltroMonitor);
     document.getElementById('filtro_desde_monitor').addEventListener('change', _alCambiarFiltroMonitor);
     document.getElementById('filtro_hasta_monitor').addEventListener('change', _alCambiarFiltroMonitor);
+    // En móvil, un clic sobre la fila de actividad despliega su tarjeta.
+    var tbodyAct = document.getElementById('tablaActividad');
+    if (tbodyAct) tbodyAct.addEventListener('click', function(e) {
+      _clicTarjetaMovil(e, 'data-actividad-idx', function(idx) { alternarTarjetaActividad(idx); });
+    });
 
     cargarActividad(false);
+  }
+
+  // Tarjeta desplegable de actividad (móvil, un clic sobre la fila, sin acciones).
+  function alternarTarjetaActividad(idx) {
+    var tbody = document.getElementById('tablaActividad');
+    if (!tbody || idx === null || idx === undefined || idx === '') return;
+    var lista = window._actividadActual || [];
+    var a = lista[parseInt(idx, 10)];
+    if (!a) return;
+    var filaOrigen = tbody.querySelector('tr[data-actividad-idx="' + idx + '"]');
+    if (!filaOrigen) return;
+    function celdaT(v) { return v ? esc(String(v)) : ''; }
+    var usuarioTxt = celdaT(a.Usuario) +
+      ((a.Email && a.Email !== a.Usuario) ? ' (' + esc(a.Email) + ')' : '');
+    var html =
+      '<div class="tarjeta-cita">' +
+        '<div class="tarjeta-cita-cab"><strong>' + (celdaT(a.Accion) || 'Actividad') + '</strong>' +
+          '<span class="etiqueta etiqueta-programada">' + (celdaT(a.Modulo) || '') + '</span></div>' +
+        _filaTarjeta('Fecha', celdaT(a.Fecha)) +
+        _filaTarjeta('Usuario', usuarioTxt) +
+        _filaTarjeta('Rol', celdaT(a.Rol)) +
+        _filaTarjeta('Detalle', celdaT(a.Detalle)) +
+      '</div>';
+    _insertarTarjeta(tbody, filaOrigen, idx, html, 6);
   }
 
   function cargarActividad(forzar, callback) {
@@ -1933,8 +2074,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
           return;
         }
         function celda(v) { return v ? esc(String(v)) : '<span class="vacio-accion">&mdash;</span>'; }
-        tbody.innerHTML = act.map(function(a) {
-          return '<tr>' +
+        window._actividadActual = act;
+        tbody.innerHTML = act.map(function(a, idx) {
+          return '<tr data-actividad-idx="' + idx + '">' +
             '<td>' + celda(a.Fecha) + '</td>' +
             '<td>' + celda(a.Usuario) +
               (a.Email && a.Email !== a.Usuario ? '<br><small>' + esc(a.Email) + '</small>' : '') + '</td>' +
@@ -2016,6 +2158,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
 
   function dibujarHistorial(tbody, registros) {
     var esAdmin = esAdminSesion();
+    window._historialActual = registros || [];
     if (!registros || registros.length === 0) {
       tbody.innerHTML = '<tr><td colspan="' + (esAdmin ? 9 : 8) + '" class="vacio">No hay historial registrado.</td></tr>';
       return;
@@ -2031,7 +2174,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       var accionesHtml = esAdmin
         ? '<button class="btn btn-peligro btn-pequeno" title="Eliminar registro" onclick="confirmarEliminarRegistroHistorial(\'' + esc(r.ID_Registro) + '\')">✕</button>'
         : '';
-      return '<tr>' +
+      return '<tr data-historial-id="' + esc(r.ID_Registro) + '">' +
         '<td>' + celda(d.cliente) + '</td>' +
         '<td>' + celda(d.por) + '</td>' +
         '<td>' + celda(d.fecha) + '</td>' +
@@ -2043,6 +2186,39 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         (esAdmin ? '<td class="acciones-fila">' + accionesHtml + '</td>' : '') +
       '</tr>';
     }).join('');
+  }
+
+  // Tarjeta desplegable de historial (móvil, un clic sobre la fila).
+  function alternarTarjetaHistorial(id) {
+    var tbody = document.getElementById('tablaHistorial');
+    if (!tbody || !id) return;
+    var r = null;
+    var lista = window._historialActual || [];
+    for (var k = 0; k < lista.length; k++) {
+      if (String(lista[k].ID_Registro) === String(id)) { r = lista[k]; break; }
+    }
+    if (!r) return;
+    var filaOrigen = tbody.querySelector('tr[data-historial-id="' + id + '"]');
+    if (!filaOrigen) return;
+    var d = _datosFilaHistorial_(r, _mapaCitas_());
+    var html =
+      '<div class="tarjeta-cita">' +
+        '<div class="tarjeta-cita-cab"><strong>' + esc(d.cliente || 'Historial') + '</strong>' +
+          '<span class="etiqueta etiqueta-programada">' + esc(d.resultado || d.fecha || '') + '</span></div>' +
+        _filaTarjeta('Realizada por', esc(d.por)) +
+        _filaTarjeta('Fecha', esc(d.fecha)) +
+        _filaTarjeta('Descripción', esc(d.descripcion)) +
+        _filaTarjeta('Servicios', d.servicios.length ? esc(d.servicios.join(', ')) : '') +
+        _filaTarjeta('Total', esc(d.total)) +
+        _filaTarjeta('Duración', esc(d.dur)) +
+        _filaTarjeta('Resultado', esc(d.resultado)) +
+        (esAdminSesion()
+          ? '<div class="tarjeta-cita-acciones">' +
+            '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarRegistroHistorial(\'' + esc(r.ID_Registro) + '\')">Eliminar</button>' +
+            '</div>'
+          : '') +
+      '</div>';
+    _insertarTarjeta(tbody, filaOrigen, id, html, 9);
   }
 
   function confirmarEliminarRegistroHistorial(id) {
@@ -3517,9 +3693,49 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
      VISTA: USUARIOS (solo administrador)
      ========================================================== */
 
+  // Tarjeta desplegable de usuario (móvil, un clic sobre la fila).
+  function alternarTarjetaUsuario(id) {
+    var tbody = document.getElementById('tablaUsuarios');
+    if (!tbody || !id) return;
+    var u = null;
+    var lista = Estado.usuariosLista || [];
+    for (var k = 0; k < lista.length; k++) {
+      if (String(lista[k].usuario) === String(id)) { u = lista[k]; break; }
+    }
+    if (!u) return;
+    var filaOrigen = tbody.querySelector('tr[data-usuario-id="' + id + '"]');
+    if (!filaOrigen) return;
+    var sesion = obtenerSesion();
+    var nivelSesion = sesion.principal ? 3 : (sesion.rol === 'administrador' ? 2 : 1);
+    var nivelU = u.principal ? 3 : (u.rol === 'administrador' ? 2 : 1);
+    var esYo = String(u.usuario).toLowerCase() === String(sesion.usuario).toLowerCase();
+    var puedeEditar = esYo || (nivelSesion > nivelU);
+    var puedeEliminar = !esYo && !u.principal && (nivelSesion > nivelU);
+    var rolTxt = u.rol === 'administrador' ? 'Administrador' : 'Editor';
+    var html =
+      '<div class="tarjeta-cita">' +
+        '<div class="tarjeta-cita-cab"><strong>' + esc(u.usuario) + '</strong>' +
+          '<span class="etiqueta etiqueta-programada">' + esc(rolTxt) + '</span></div>' +
+        _filaTarjeta('Nombre', esc(u.nombre)) +
+        _filaTarjeta('Estado', u.activo ? 'Activo' : 'Inactivo') +
+        ((puedeEditar || puedeEliminar)
+          ? '<div class="tarjeta-cita-acciones">' +
+            (puedeEditar ? '<button class="btn btn-secundario btn-pequeno" onclick="editarUsuario(\'' + esc(u.usuario) + '\')">Editar</button>' : '') +
+            (puedeEliminar ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarUsuario(\'' + esc(u.usuario) + '\')">Eliminar</button>' : '') +
+            '</div>'
+          : '') +
+      '</div>';
+    _insertarTarjeta(tbody, filaOrigen, id, html, 5);
+  }
+
   function initUsuarios() {
     document.getElementById('formUsuario').addEventListener('submit', guardarUsuario);
     document.getElementById('btnCancelarUsuario').addEventListener('click', cancelarEdicionUsuario);
+    // En móvil, un clic sobre la fila del usuario despliega su tarjeta.
+    var tbodyUsu = document.getElementById('tablaUsuarios');
+    if (tbodyUsu) tbodyUsu.addEventListener('click', function(e) {
+      _clicTarjetaMovil(e, 'data-usuario-id', function(id) { alternarTarjetaUsuario(id); });
+    });
     cargarUsuarios();
   }
 
@@ -3563,7 +3779,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       var nivelU = u.principal ? 3 : (u.rol === 'administrador' ? 2 : 1);
       var puedeEditar = esYo || (nivelSesion > nivelU);
       var puedeEliminar = !esYo && !u.principal && (nivelSesion > nivelU);
-      return '<tr>' +
+      return '<tr data-usuario-id="' + esc(u.usuario) + '">' +
         '<td>' + esc(u.usuario) + (esYo ? ' <span class="etiqueta etiqueta-programada">usted</span>' : '') + (u.principal ? ' <span class="etiqueta etiqueta-programada">Propietario</span>' : '') + '</td>' +
         '<td>' + esc(u.nombre) + '</td>' +
         '<td>' + (u.rol === 'administrador' ? 'Administrador' : 'Editor') + '</td>' +
