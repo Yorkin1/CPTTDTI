@@ -2955,6 +2955,28 @@ function actualizarCita(token, id, datos) {
     if (!fila) {
       return { exito: false, mensaje: 'No se encontró la cita indicada.' };
     }
+    // Valores anteriores para decidir si se notifica al cliente.
+    // Solo fecha / hora / título (o cambio de cliente) disparan el correo.
+    var valoresViejos = hoja.getRange(fila, 1, 1, ENCABEZADOS.Citas.length).getValues()[0];
+    var zonaEdit = obtenerZonaHoraria_();
+    function _textoFechaEdit_(v) {
+      if (v instanceof Date) {
+        try { return Utilities.formatDate(v, zonaEdit, 'yyyy-MM-dd'); } catch (eEdit) { return ''; }
+      }
+      return String(v || '').trim();
+    }
+    function _textoHoraEdit_(v) {
+      if (v instanceof Date) {
+        try { return Utilities.formatDate(v, zonaEdit, 'HH:mm'); } catch (eEditH) { return ''; }
+      }
+      var sEdit = String(v || '').trim();
+      var mEdit = sEdit.match(/(\d{2}:\d{2})\s*$/);
+      return mEdit ? mEdit[1] : sEdit;
+    }
+    var viejoTitulo = String(valoresViejos[2] || '').trim();
+    var viejoFecha = _textoFechaEdit_(valoresViejos[3]);
+    var viejoHora = _textoHoraEdit_(valoresViejos[4]);
+    var viejoIdCliente = String(valoresViejos[1] || '').trim();
     var selServiciosUpd = _serviciosDesdeCatalogo_(datos.servicios);
     var duracion;
     if (selServiciosUpd.items.length > 0) {
@@ -3012,7 +3034,65 @@ function actualizarCita(token, id, datos) {
 
     Logger.log('Cita actualizada: ' + id);
     _registrarActividad_(token, 'Citas', 'Editó cita', 'ID ' + id);
-    return { exito: true, mensaje: 'Cita actualizada correctamente.' };
+
+    // Avisar al cliente por correo solo si cambió fecha, hora, título o cliente.
+    var nuevoTitulo = String(datos.titulo || '').trim();
+    var nuevaFecha = String(datos.fecha || '').trim();
+    var nuevaHora = String(datos.hora || '').trim();
+    var nuevoIdCliente = String(datos.idCliente || '').trim();
+    var cambioRelevante = (viejoTitulo !== nuevoTitulo) ||
+      (viejoFecha !== nuevaFecha) ||
+      (viejoHora !== nuevaHora) ||
+      (viejoIdCliente !== nuevoIdCliente);
+
+    var avisoCorreoEdit = '';
+    if (cambioRelevante) {
+      try {
+        var correoClienteEdit = '';
+        var nombreClienteEdit = '';
+        if (nuevoIdCliente) {
+          var clientesEdit = filasAObjetos_(obtenerHoja_(HOJA_CLIENTES));
+          for (var ke = 0; ke < clientesEdit.length; ke++) {
+            if (String(clientesEdit[ke].ID_Cliente) === nuevoIdCliente) {
+              correoClienteEdit = String(clientesEdit[ke].Email || '').trim();
+              nombreClienteEdit = String(clientesEdit[ke].Nombre || '').trim() +
+                (clientesEdit[ke].Apellido ? ' ' + String(clientesEdit[ke].Apellido).trim() : '');
+              nombreClienteEdit = nombreClienteEdit.trim();
+              break;
+            }
+          }
+        }
+        if (correoClienteEdit && esEmailValido_(correoClienteEdit)) {
+          var cfgEdit = obtenerConfiguracion();
+          var nombreNegocioEdit = cfgEdit.NOMBRE_NEGOCIO || '';
+          var asuntoEdit = 'Su cita fue actualizada' +
+            (nuevaFecha ? ' — ' + nuevaFecha : '');
+          var cuerpoEdit = 'Estimado/a ' + (nombreClienteEdit || 'cliente') + ':\n\n' +
+            'Su cita ha sido actualizada con los siguientes datos:\n\n' +
+            'ANTES:\n' +
+            'Título: ' + (viejoTitulo || 'Cita') + '\n' +
+            'Fecha: ' + (viejoFecha || '') + '\n' +
+            'Hora: ' + (viejoHora ? _hora12_(viejoHora) : '') + '\n\n' +
+            'AHORA:\n' +
+            'Título: ' + (nuevoTitulo || 'Cita') + '\n' +
+            'Fecha: ' + (nuevaFecha || '') + '\n' +
+            'Hora: ' + (nuevaHora ? _hora12_(nuevaHora) : '') + '\n' +
+            'Duración: ' + _duracionLegible_(duracion) + '\n' +
+            (datos.descripcion ? 'Descripción: ' + datos.descripcion + '\n' : '') +
+            (nombreNegocioEdit ? '\n' + nombreNegocioEdit + '\n' : '') +
+            '\nSi no reconoce este cambio, por favor contáctenos. Gracias por preferirnos.';
+          MailApp.sendEmail(correoClienteEdit, asuntoEdit, cuerpoEdit);
+          avisoCorreoEdit = ' Aviso enviado a ' + correoClienteEdit + '.';
+        } else {
+          avisoCorreoEdit = ' Sin correo válido del cliente, no se envió aviso.';
+        }
+      } catch (errCorreoEdit) {
+        avisoCorreoEdit = ' No se pudo enviar el aviso por correo.';
+        Logger.log('Error al enviar aviso de edición de cita: ' + errCorreoEdit);
+      }
+    }
+
+    return { exito: true, mensaje: 'Cita actualizada correctamente.' + avisoCorreoEdit };
   } catch (err) {
     Logger.log('Error al actualizar cita: ' + err);
     return { exito: false, mensaje: 'Error al actualizar la cita: ' + err.message };
@@ -3571,7 +3651,7 @@ function _serviciosDesdeCatalogo_(solicitados) {
  * en la hoja, crea el evento de Calendar y envía la confirmación por correo.
  * Sin token. Usa LockService y vuelve a validar el slot en el servidor para
  * evitar que dos personas reserven la misma hora a la vez.
- * @param {Object} datos { fecha, hora, duracionMins, servicios,
+ * @param {Object} datos { fecha, hora, duracionMins, servicios, descripcion,
  *                         cliente: { nombre, apellido, email, telefono } }
  * @return {Object}
  */
@@ -3655,10 +3735,14 @@ function reservarCitaPublica(datos) {
     var idCliente = _buscarOCrearClientePublico_(nombre, apellido, email, telefono);
     var titulo = cfg.ETIQUETA_CITA || CONFIGURACION_PREDETERMINADA.ETIQUETA_CITA || 'Cita';
 
-    // Descripción con el desglose de servicios (si los hay).
-    var descripcion = 'Reservada en línea por el cliente.';
+    // Descripción con el desglose de servicios (si los hay) + nota del cliente.
+    // La nota aparece en el apartado Descripción de la cita (visible al Editar).
+    var notaCliente = String(datos.descripcion || '').trim().slice(0, 500);
+    var descripcion = 'Reservada en línea por el cliente.' +
+      (notaCliente ? '\nNota del cliente: ' + notaCliente : '');
     if (selServicios.items.length > 0) {
-      descripcion = 'Reservada en línea por el cliente. Servicios:\n' +
+      descripcion = 'Reservada en línea por el cliente.' +
+        (notaCliente ? '\nNota del cliente: ' + notaCliente + '\n' : ' ') + 'Servicios:\n' +
         selServicios.items.map(function(it) {
           return '- ' + it.cantidad + ' × ' + it.nombre +
             ' (' + _formatoMoneda_(it.precio) + ' c/u = ' + _formatoMoneda_(it.subtotal) + ')';
@@ -3718,6 +3802,9 @@ function reservarCitaPublica(datos) {
             return '- ' + it.cantidad + ' × ' + it.nombre + ': ' + _formatoMoneda_(it.subtotal);
           }).join('\n') + '\nTOTAL: ' + _formatoMoneda_(selServicios.total) + '\n';
         }
+        if (notaCliente) {
+          cuerpo += '\nNota: ' + notaCliente + '\n';
+        }
         cuerpo += '\nLe esperamos. Gracias por preferirnos.';
         MailApp.sendEmail(email, titulo + ' ' + (_etiquetaFemenina_(titulo) ? 'reservada' : 'reservado'), cuerpo);
         avisoCorreo = ' Confirmación enviada a su correo.';
@@ -3745,6 +3832,9 @@ function reservarCitaPublica(datos) {
           cuerpoEquipo += '\nServicios:\n' + selServicios.items.map(function(it) {
             return '- ' + it.cantidad + ' × ' + it.nombre + ': ' + _formatoMoneda_(it.subtotal);
           }).join('\n') + '\nTOTAL: ' + _formatoMoneda_(selServicios.total) + '\n';
+        }
+        if (notaCliente) {
+          cuerpoEquipo += '\nNota del cliente: ' + notaCliente + '\n';
         }
         MailApp.sendEmail(destinatariosEquipo.join(','), 'Nueva reserva en línea — ' + fecha + ' ' + _hora12_(hora), cuerpoEquipo);
         avisoEquipo = ' Aviso enviado al equipo.';
