@@ -743,17 +743,22 @@
     tr[data-servicio-id].expandida td:first-child, tr[data-historial-id].expandida td:first-child,
     tr[data-usuario-id].expandida td:first-child, tr[data-actividad-idx].expandida td:first-child { background: #eef2ff; }
     .fila-detalle td { white-space: normal; background: var(--azul-muy-claro); padding: 10px; }
-    /* La tarjeta ocupa solo el ancho visible (sale del layout de la tabla). */
+    /* La tarjeta ocupa el ancho de su contenedor (nunca más). */
     .fila-detalle { display: block; }
     .fila-detalle td:first-child {
       display: block;
       position: sticky;
       left: 0;
-      width: calc(100vw - 52px);
-      max-width: calc(100vw - 52px);
+      width: 100%;
+      max-width: 100%;
       box-sizing: border-box;
       background: var(--azul-muy-claro);
       box-shadow: none;
+    }
+    /* Servicios sí tiene scroll: ahí la tarjeta usa el ancho visible. */
+    .tabla-servicios .fila-detalle td:first-child {
+      width: calc(100vw - 52px);
+      max-width: calc(100vw - 52px);
     }
     .tarjeta-cita {
       background: #fff;
