@@ -678,6 +678,41 @@
     }
     .tabla-contenedor tbody tr:nth-child(even) td:first-child { background: #f8fafc; }
     .tabla-contenedor tbody tr:hover td:first-child { background: #eef2ff; }
+    /* Tarjeta desplegable de cita (un clic en la fila, solo móvil). */
+    tr[data-cita-id] { cursor: pointer; }
+    tr[data-cita-id].expandida { background: #eef2ff; }
+    tr[data-cita-id].expandida td:first-child { background: #eef2ff; }
+    .fila-detalle td { white-space: normal; background: var(--azul-muy-claro); padding: 10px; }
+    .fila-detalle td:first-child {
+      position: static;
+      background: var(--azul-muy-claro);
+      box-shadow: none;
+    }
+    .tarjeta-cita {
+      background: #fff;
+      border: 1px solid var(--gris-borde);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .tarjeta-cita-cab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--gris-borde);
+    }
+    .tarjeta-cita-cab strong { flex: 1; font-size: 15px; }
+    .tarjeta-cita-fila {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 4px 0;
+      font-size: 14px;
+    }
+    .tarjeta-cita-fila > span:first-child { color: var(--gris-texto); font-weight: 600; flex-shrink: 0; }
+    .tarjeta-cita-fila > span:last-child { text-align: right; word-break: break-word; }
+    .tarjeta-cita-acciones { display: flex; gap: 8px; margin-top: 10px; }
     thead th, tbody td { padding: 8px 10px; }
     .tabla-contenedor input[type="time"] { width: 100px !important; }
   }

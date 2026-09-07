@@ -1077,6 +1077,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('filtroFechaCita').addEventListener('change', aplicarFiltrosCitas);
     var btnQF = document.getElementById('btnQuitarFiltrosCita');
     if (btnQF) btnQF.addEventListener('click', limpiarFiltrosCita);
+    // En móvil, un clic sobre la fila de una cita despliega su tarjeta.
+    var tbodyCitas = document.getElementById('tablaCitas');
+    if (tbodyCitas) tbodyCitas.addEventListener('click', _clicFilaCitaMovil);
     var btnContHoy = document.getElementById('contadorHoy');
     if (btnContHoy) btnContHoy.addEventListener('click', alternarFiltroHoy);
     // Se cargan los clientes primero y, al terminar, se llenan el selector y se
@@ -1463,7 +1466,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         (info.completada ? 'checked ' : '') +
         (info.completada || info.bloqueada ? 'disabled ' : '') +
         'onchange="cambiarEstadoCita(\'' + esc(c.ID_Cita) + '\', this.checked ? \'Completada\' : \'Programada\')">';
-      return '<tr' + filaClase + '>' +
+      return '<tr data-cita-id="' + esc(c.ID_Cita) + '"' + filaClase + '>' +
         '<td class="col-check">' + chk + '</td>' +
         '<td>' + esc(c.Titulo) + '</td>' +
         (function() {
@@ -1499,6 +1502,88 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '</td>' +
       '</tr>';
     }).join('');
+  }
+
+  // En móvil, un clic sobre la fila despliega su tarjeta con el detalle.
+  function _esMovilTarjeta() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+  }
+
+  function _clicFilaCitaMovil(e) {
+    if (!_esMovilTarjeta()) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    // Los botones, el check y la propia tarjeta no despliegan.
+    if (t.closest('button') || t.closest('input') || t.closest('a') || t.closest('.fila-detalle')) return;
+    var tr = t.closest('tr[data-cita-id]');
+    if (!tr) return;
+    alternarTarjetaCita(tr.getAttribute('data-cita-id'));
+  }
+
+  function alternarTarjetaCita(id) {
+    var tbody = document.getElementById('tablaCitas');
+    if (!tbody || !id) return;
+    var yaAbierta = !!tbody.querySelector('tr.fila-detalle[data-detalle-de="' + id + '"]');
+    var previos = tbody.querySelectorAll('tr.fila-detalle');
+    for (var i = 0; i < previos.length; i++) previos[i].parentNode.removeChild(previos[i]);
+    var marcadas = tbody.querySelectorAll('tr.expandida');
+    for (var m = 0; m < marcadas.length; m++) marcadas[m].classList.remove('expandida');
+    if (yaAbierta) return; // toggle: estaba abierta, se cierra
+    var c = null;
+    var lista = window._citasActuales || [];
+    for (var k = 0; k < lista.length; k++) {
+      if (String(lista[k].ID_Cita) === String(id)) { c = lista[k]; break; }
+    }
+    if (!c) return;
+    var info = estadoVigenteCita(c);
+    var claseEt = info.estado === 'Completada' ? 'etiqueta-completada' :
+                  (info.estado === 'Expirada' ? 'etiqueta-expirada' : 'etiqueta-programada');
+    var nomCli = nombreCliente(c.ID_Cliente);
+    var srvTxt = '';
+    try {
+      var srv = JSON.parse(c.Servicios || '[]') || [];
+      if (srv.length) {
+        srvTxt = srv.map(function(s) {
+          return esc(s.nombre || 'Servicio') + (s.cantidad > 1 ? ' ×' + s.cantidad : '');
+        }).join(', ');
+      }
+    } catch (eSrv) {}
+    if (!srvTxt) srvTxt = '<span class="vacio-accion">&mdash;</span>';
+    var agendado = c.Agendado_Por ||
+      ((c.Descripcion && c.Descripcion.indexOf('Reservada') === 0) ? 'Cliente (en línea)' : '');
+    var chkTarjeta = '<input type="checkbox" class="check-completar" title="Marcar como completada" ' +
+      (info.completada ? 'checked ' : '') +
+      (info.completada || info.bloqueada ? 'disabled ' : '') +
+      'onchange="cambiarEstadoCita(\'' + esc(c.ID_Cita) + '\', this.checked ? \'Completada\' : \'Programada\')">';
+    var html =
+      '<div class="tarjeta-cita">' +
+        '<div class="tarjeta-cita-cab">' + chkTarjeta +
+          '<strong>' + esc(c.Titulo) + '</strong>' +
+          '<span class="etiqueta ' + claseEt + '">' + esc(info.estado) + '</span></div>' +
+        '<div class="tarjeta-cita-fila"><span>Cliente</span><span>' + esc(nomCli) + '</span></div>' +
+        '<div class="tarjeta-cita-fila"><span>Fecha</span><span>' +
+          esc(fechaDMY(fechaLegible(c.Fecha))) + ' · ' + esc(hora12(c.Hora)) + '</span></div>' +
+        '<div class="tarjeta-cita-fila"><span>Duración</span><span>' + esc(duracionLegible(c.Duracion_Mins)) + '</span></div>' +
+        '<div class="tarjeta-cita-fila"><span>Total</span><span>' +
+          (c.Total_Precio ? formatoMoneda(c.Total_Precio) : '<span class="vacio-accion">&mdash;</span>') + '</span></div>' +
+        '<div class="tarjeta-cita-fila"><span>Servicios</span><span>' + srvTxt + '</span></div>' +
+        '<div class="tarjeta-cita-fila"><span>Agendado por</span><span>' + (esc(agendado) || '<span class="vacio-accion">&mdash;</span>') + '</span></div>' +
+        '<div class="tarjeta-cita-acciones">' +
+          '<button class="btn btn-secundario btn-pequeno" onclick="editarCita(\'' + esc(c.ID_Cita) + '\')">Editar</button>' +
+          (esAdminSesion() ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarCita(\'' + esc(c.ID_Cita) + '\')">Eliminar</button>' : '') +
+        '</div>' +
+      '</div>';
+    var filaOrigen = tbody.querySelector('tr[data-cita-id="' + id + '"]');
+    if (!filaOrigen) return;
+    var trDet = document.createElement('tr');
+    trDet.className = 'fila-detalle';
+    trDet.setAttribute('data-detalle-de', id);
+    var td = document.createElement('td');
+    td.setAttribute('colspan', '11');
+    td.innerHTML = html;
+    trDet.appendChild(td);
+    filaOrigen.classList.add('expandida');
+    filaOrigen.parentNode.insertBefore(trDet, filaOrigen.nextSibling);
   }
 
   function guardarCita(e) {
