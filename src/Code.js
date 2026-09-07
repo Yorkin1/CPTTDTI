@@ -3068,12 +3068,7 @@ function actualizarCita(token, id, datos) {
           var asuntoEdit = 'Su cita fue actualizada' +
             (nuevaFecha ? ' — ' + nuevaFecha : '');
           var cuerpoEdit = 'Estimado/a ' + (nombreClienteEdit || 'cliente') + ':\n\n' +
-            'Su cita ha sido actualizada con los siguientes datos:\n\n' +
-            'ANTES:\n' +
-            'Título: ' + (viejoTitulo || 'Cita') + '\n' +
-            'Fecha: ' + (viejoFecha || '') + '\n' +
-            'Hora: ' + (viejoHora ? _hora12_(viejoHora) : '') + '\n\n' +
-            'AHORA:\n' +
+            'Su cita ha sido actualizada con los siguientes datos:\n' +
             'Título: ' + (nuevoTitulo || 'Cita') + '\n' +
             'Fecha: ' + (nuevaFecha || '') + '\n' +
             'Hora: ' + (nuevaHora ? _hora12_(nuevaHora) : '') + '\n' +
