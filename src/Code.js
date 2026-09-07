@@ -3730,18 +3730,17 @@ function reservarCitaPublica(datos) {
     var idCliente = _buscarOCrearClientePublico_(nombre, apellido, email, telefono);
     var titulo = cfg.ETIQUETA_CITA || CONFIGURACION_PREDETERMINADA.ETIQUETA_CITA || 'Cita';
 
-    // Descripción con el desglose de servicios (si los hay) + nota del cliente.
-    // La nota aparece en el apartado Descripción de la cita (visible al Editar).
+    // Descripción: solo nota del cliente + desglose de servicios (si los hay).
+    // El origen ya queda en la columna Agendado_Por ("Cliente (en línea)").
     var notaCliente = String(datos.descripcion || '').trim().slice(0, 500);
-    var descripcion = 'Reservada en línea por el cliente.' +
-      (notaCliente ? '\nNota del cliente: ' + notaCliente : '');
+    var descripcion = notaCliente ? 'Nota del cliente: ' + notaCliente : '';
     if (selServicios.items.length > 0) {
-      descripcion = 'Reservada en línea por el cliente.' +
-        (notaCliente ? '\nNota del cliente: ' + notaCliente + '\n' : ' ') + 'Servicios:\n' +
+      var desgloseServicios = 'Servicios:\n' +
         selServicios.items.map(function(it) {
           return '- ' + it.cantidad + ' × ' + it.nombre +
             ' (' + _formatoMoneda_(it.precio) + ' c/u = ' + _formatoMoneda_(it.subtotal) + ')';
         }).join('\n') + '\nTOTAL: ' + _formatoMoneda_(selServicios.total);
+      descripcion = descripcion ? descripcion + '\n' + desgloseServicios : desgloseServicios;
     }
 
     // Evento de Calendar.
