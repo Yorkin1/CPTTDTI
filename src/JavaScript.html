@@ -1640,6 +1640,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '<div class="tarjeta-cita-fila"><span>Total</span><span>' +
           (c.Total_Precio ? formatoMoneda(c.Total_Precio) : '<span class="vacio-accion">&mdash;</span>') + '</span></div>' +
         '<div class="tarjeta-cita-fila"><span>Servicios</span><span>' + srvTxt + '</span></div>' +
+        '<div class="tarjeta-cita-fila"><span>Descripción</span><span>' + (esc(c.Descripcion) || '<span class="vacio-accion">&mdash;</span>') + '</span></div>' +
         '<div class="tarjeta-cita-fila"><span>Agendado por</span><span>' + (esc(agendado) || '<span class="vacio-accion">&mdash;</span>') + '</span></div>' +
         '<div class="tarjeta-cita-acciones">' +
           '<button class="btn btn-secundario btn-pequeno" onclick="editarCita(\'' + esc(c.ID_Cita) + '\')">Editar</button>' +
