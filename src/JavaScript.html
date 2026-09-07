@@ -1738,10 +1738,12 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     sel.addEventListener('change', function() {
       cargarHistorial(sel.value || '');
       actualizarEtiquetaAlcanceExportar();
+      actualizarVisibilidadQFHistorial();
     });
     function _alCambiarFiltroHistorial() {
       refrescarVistaHistorial();
       actualizarEtiquetaAlcanceExportar();
+      actualizarVisibilidadQFHistorial();
     }
     document.getElementById('hist_fecha_desde').addEventListener('change', _alCambiarFiltroHistorial);
     document.getElementById('hist_fecha_hasta').addEventListener('change', _alCambiarFiltroHistorial);
@@ -1776,6 +1778,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       llenarSelectClientes('sel_cliente_historial');
       cargarHistorial('');
       actualizarEtiquetaAlcanceExportar();
+      actualizarVisibilidadQFHistorial();
     });
   }
 
@@ -1987,6 +1990,17 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('hist_fecha_hasta').value = '';
     cargarHistorial('');
     actualizarEtiquetaAlcanceExportar();
+    actualizarVisibilidadQFHistorial();
+  }
+
+  // El botón "Quitar filtros" de Historial solo aparece con algún filtro activado.
+  function actualizarVisibilidadQFHistorial() {
+    var btn = document.getElementById('btnQuitarFiltrosHistorial');
+    if (!btn) return;
+    var cli = (document.getElementById('sel_cliente_historial') || {}).value || '';
+    var desde = (document.getElementById('hist_fecha_desde') || {}).value || '';
+    var hasta = (document.getElementById('hist_fecha_hasta') || {}).value || '';
+    btn.style.display = (cli || desde || hasta) ? '' : 'none';
   }
 
   function filtrarHistorial(registros) {
