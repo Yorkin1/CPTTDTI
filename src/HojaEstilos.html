@@ -667,7 +667,9 @@
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; }
-    .tabla-contenedor { -webkit-overflow-scrolling: touch; }
+    .tabla-contenedor { -webkit-overflow-scrolling: touch; max-height: none; overflow-y: visible; }
+    /* Sin scroll interno, el encabezado fijo pierde sentido en móvil. */
+    .tabla-contenedor thead th { position: static; }
     /* Tablas al ancho de la pantalla, sin scroll lateral. */
     table { font-size: 13px; }
     .tabla-citas, .tabla-clientes,
