@@ -666,7 +666,11 @@
     .contenedor { padding: 18px 12px; }
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; }
-    .cabecera-lista { flex-wrap: wrap; gap: 8px; }
+    /* En móvil la cabecera se apila: título arriba, acciones abajo alineadas a la izquierda. */
+    .cabecera-lista { flex-direction: column; align-items: stretch; gap: 10px; }
+    .cabecera-lista h2 { width: 100%; }
+    .acciones-lista { width: 100%; justify-content: flex-start; }
+    .cabecera-lista > .btn-refrescar { align-self: flex-start; }
     .tabla-contenedor { -webkit-overflow-scrolling: touch; }
     thead th, tbody td { padding: 8px 10px; }
     .tabla-contenedor input[type="time"] { width: 100px !important; }
