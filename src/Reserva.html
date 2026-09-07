@@ -185,6 +185,10 @@
               <label for="cli_telefono">Teléfono</label>
               <input type="tel" id="cli_telefono" placeholder="Ej. 809-555-1234" maxlength="12" pattern="[0-9 ()-]{7,12}" title="Formato de teléfono inválido (10 dígitos, use espacios o guiones).">
             </div>
+            <div class="campo ancho-completo">
+              <label for="cli_nota">Nota</label>
+              <textarea id="cli_nota" rows="3" maxlength="500" placeholder="Ej. Motivo de la visita, preferencias, etc."></textarea>
+            </div>
             <p class="asistente-nota ancho-completo">Debe ingresar al menos su correo o su teléfono.</p>
             <p class="asistente-nota ancho-completo" id="notaClienteExistente" style="display:none;"></p>
           </div>
@@ -674,6 +678,8 @@
           Reserva.seleccion = { fecha: '', duracion: 60, hora: '', slots: [], servicios: {}, limiteSuperado: false };
           Reserva._reserva = null;
           document.getElementById('res_fecha').value = '';
+          var campoNotaReset = document.getElementById('cli_nota');
+          if (campoNotaReset) campoNotaReset.value = '';
           iniciarReserva();
         });
         document.getElementById('btnImprimirConstancia').addEventListener('click', function() {
@@ -908,6 +914,7 @@
           hora: Reserva.seleccion.hora,
           duracionMins: Reserva.seleccion.duracion,
           servicios: serviciosEnviar,
+          descripcion: (document.getElementById('cli_nota') ? document.getElementById('cli_nota').value.trim().slice(0, 500) : ''),
           cliente: { nombre: nombre, email: email, telefono: telefono }
         };
         abrirModalConfirmar();
@@ -924,6 +931,10 @@
         var servicios = resumenServiciosHTML();
         if (servicios) {
           html += '<br><br><strong>Servicios:</strong><br>' + servicios;
+        }
+        var notaPrevia = (Reserva._reserva && Reserva._reserva.descripcion) || '';
+        if (notaPrevia) {
+          html += '<br><br><strong>Nota:</strong> ' + escReserva(notaPrevia);
         }
         cont.innerHTML = html;
         modal.style.display = 'flex';
@@ -993,6 +1004,10 @@
             return '&bull; ' + it.cantidad + ' × ' + escReserva(it.nombre) +
               ' = <strong>' + formatoMonedaReserva(it.subtotal) + '</strong>';
           }).join('<br>') + '<br>Total a pagar: <strong>' + formatoMonedaReserva(resp.totalPrecio) + '</strong>';
+        }
+        var notaFinal = (Reserva._reserva && Reserva._reserva.descripcion) || '';
+        if (notaFinal) {
+          html += '<br><br><strong>Nota:</strong> ' + escReserva(notaFinal);
         }
         document.getElementById('resumenConfirmacion').innerHTML = html;
         document.getElementById('notaConfirmacion').textContent =

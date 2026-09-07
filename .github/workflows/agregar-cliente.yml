@@ -108,16 +108,38 @@ jobs:
               const deployRes = await script.projects.deployments.list({ scriptId });
               const deployments = deployRes.data.deployments || [];
 
-              const headDeployment = deployments.find(d => d.deploymentConfig && d.deploymentConfig.versionNumber === "0");
+              const versionedDeployments = deployments.filter(d =>
+                d.deploymentConfig && d.deploymentConfig.versionNumber &&
+                parseInt(d.deploymentConfig.versionNumber) > 0
+              );
               let deploymentId;
 
-              if (headDeployment) {
-                deploymentId = headDeployment.deploymentId;
-              } else if (deployments.length > 0) {
-                deploymentId = deployments[0].deploymentId;
+              if (versionedDeployments.length > 0) {
+                deploymentId = versionedDeployments[0].deploymentId;
+                console.log("Usando implementación versionada: " + deploymentId);
               } else {
-                console.error("No hay implementaciones. Crea una implementacion en el editor de Apps Script primero.");
-                process.exit(1);
+                console.log("No hay implementaciones versionadas. Creando una nueva...");
+                const claspJson = {
+                  scriptId: scriptId,
+                  rootDir: "./src",
+                  scriptExtensions: [".js", ".gs"],
+                  htmlExtensions: [".html"],
+                  jsonExtensions: [".json"],
+                  filePushOrder: [],
+                  skipSubdirectories: false
+                };
+                fs.writeFileSync(".clasp.json", JSON.stringify(claspJson, null, 2));
+                const { execSync } = require("child_process");
+                const output = execSync("clasp deploy -d \"deploy inicial\"", { encoding: "utf8", stdio: "pipe" });
+                console.log(output);
+                const match = output.match(/https:\/\/script\.google\.com\/macros\/s\/([a-zA-Z0-9_-]+)\/exec/);
+                if (match && match[1]) {
+                  deploymentId = match[1];
+                  console.log("Nueva implementación creada: " + deploymentId);
+                } else {
+                  console.error("No se pudo extraer el deploymentId");
+                  process.exit(1);
+                }
               }
 
               console.log("Deployment ID: " + deploymentId);
