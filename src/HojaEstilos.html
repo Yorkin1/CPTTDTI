@@ -681,10 +681,11 @@
       table-layout: auto;
       display: none;
     }
-    /* Mostrar tarjetas en móvil */
+    /* Mostrar tarjetas en móvil (más especificidad que .card global). */
     .card-container { display: grid; }
-    .card-cliente, .card-cita, .card-usuario, 
-    .card-historial, .card-servicio, .card-actividad { display: block; }
+    .card-container .card-cliente, .card-container .card-cita,
+    .card-container .card-usuario, .card-container .card-historial,
+    .card-container .card-servicio, .card-container .card-actividad { display: block; }
     /* En auto las ocultas no roban ancho; las fechas y etiquetas van en una línea. */
     .tabla-citas td:nth-child(5), .tabla-citas td:nth-child(6),
     .tabla-historial td:nth-child(3), .tabla-actividad td:nth-child(1),
@@ -857,7 +858,7 @@
     border: 1px solid var(--gris-borde);
     border-radius: 10px;
     padding: 12px;
-    background: #fff;
+    background: var(--blanco);
     box-shadow: var(--sombra);
     overflow: hidden;
   }
