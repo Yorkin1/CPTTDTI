@@ -209,8 +209,8 @@ jobs:
       - name: Commit reportes y deploymentIds
         if: success()
         run: |
-          git config user.name "Yorkin de la Rosa Brito"
-          git config user.email "yorkindelarosa1@gmail.com"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
           git add deploy/clientes.json deploy/REPORT.md
           git diff --cached --quiet || git commit -m "reporte: actualizar clientes"
           git push
