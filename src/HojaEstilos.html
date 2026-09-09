@@ -663,7 +663,9 @@
     .nav-enlace { padding: 12px 14px; }
     .navbar { gap: 12px; padding: 0 12px; }
     .menu-usuario-boton .nombre-sesion { display: none; }
-    .contenedor { padding: 18px 12px; }
+    .contenedor { padding: 18px 12px; min-width: 0; }
+    /* body es flex-column: sin min-width:0 el contenedor no baja de su
+       min-content y la página se ensancha (~492px) al abrir la tarjeta. */
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; }
@@ -743,28 +745,39 @@
     tr[data-servicio-id].expandida td:first-child, tr[data-historial-id].expandida td:first-child,
     tr[data-usuario-id].expandida td:first-child, tr[data-actividad-idx].expandida td:first-child { background: #eef2ff; }
     .fila-detalle td { white-space: normal; background: var(--azul-muy-claro); padding: 10px; }
-    /* La tarjeta ocupa el ancho de su contenedor (nunca más). */
-    .fila-detalle { display: block; }
-    .fila-detalle td:first-child {
-      display: block;
-      position: sticky;
-      left: 0;
-      width: 100%;
-      max-width: 100%;
+    /* La tarjeta es una fila normal: el td con colspan ocupa todo el ancho.
+       (Con display:block Chromium angostaba la fila a ~34px y la tarjeta
+       quedaba como tira vertical estirada hacia abajo.) */
+    table:not(.tabla-servicios) tr.fila-detalle { display: table-row; }
+    table:not(.tabla-servicios) tr.fila-detalle > td:first-child {
+      display: table-cell;
+      position: static;
+      width: auto;
+      max-width: none;
       box-sizing: border-box;
       background: var(--azul-muy-claro);
       box-shadow: none;
     }
-    /* Servicios sí tiene scroll: ahí la tarjeta usa el ancho visible. */
+    /* Servicios conserva su scroll lateral: ahí la tarjeta usa el ancho visible. */
+    .tabla-servicios tr.fila-detalle { display: block; }
     .tabla-servicios .fila-detalle td:first-child {
+      display: block;
+      position: sticky;
+      left: 0;
       width: calc(100vw - 52px);
       max-width: calc(100vw - 52px);
+      box-sizing: border-box;
+      background: var(--azul-muy-claro);
+      box-shadow: none;
     }
     .tarjeta-cita {
       background: #fff;
       border: 1px solid var(--gris-borde);
       border-radius: 10px;
       padding: 12px 14px;
+      max-width: 100%;
+      overflow: hidden;
+      min-width: 0;
     }
     .tarjeta-cita-cab {
       display: flex;
@@ -774,7 +787,9 @@
       margin-bottom: 8px;
       border-bottom: 1px solid var(--gris-borde);
     }
-    .tarjeta-cita-cab strong { flex: 1; font-size: 15px; min-width: 0; overflow-wrap: break-word; }
+    .tarjeta-cita-cab strong { flex: 1 1 0; font-size: 15px; min-width: 0; overflow-wrap: break-word; }
+    /* flex-basis en 0 (no 0%): con 0% Chromium usa el max-content del texto
+       para el min-content de la tarjeta y la tabla se ensancha (~438px). */
     .tarjeta-cita-fila {
       display: flex;
       justify-content: space-between;
