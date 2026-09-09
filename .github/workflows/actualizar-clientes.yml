@@ -94,9 +94,11 @@ jobs:
       - name: Empujar a cada cliente activo
         run: |
           node --input-type=commonjs -e '
+            (async () => {
             const clientes = require("./deploy/clientes.json");
             const { execSync } = require("child_process");
             const fs = require("fs");
+            const { google } = require("googleapis");
             const sha = (process.env.GITHUB_SHA || "").slice(0, 7);
             const commitMsg = execSync("git log -1 --format=%s " + (process.env.GITHUB_SHA || "HEAD"), { encoding: "utf8" }).trim();
             const fecha = new Date().toISOString().slice(0, 10);
@@ -104,6 +106,19 @@ jobs:
             let fallos = [];
             let exitosos = [];
             let clientesModificados = false;
+
+            const clasprc = JSON.parse(fs.readFileSync(process.env.HOME + "/.clasprc.json", "utf8"));
+            const tokenObj = (clasprc.tokens && clasprc.tokens.default) || clasprc.token || clasprc;
+            const oauth2 = new google.auth.OAuth2(
+              tokenObj.client_id,
+              tokenObj.client_secret,
+              "https://developers.google.com/oauthplayground"
+            );
+            oauth2.setCredentials({
+              access_token: tokenObj.access_token,
+              refresh_token: tokenObj.refresh_token
+            });
+            const scriptApi = google.script({ version: "v1", auth: oauth2 });
 
             for (const c of clientes) {
               if (!c.activo) {
@@ -126,34 +141,64 @@ jobs:
                 let deployOk = false;
 
                 try {
-                  const output = execSync("clasp deploy -i " + c.deploymentId + " -d \"" + desc + "\"", { encoding: "utf8", stdio: "pipe" });
-                  console.log(output);
-                  console.log("✓ " + c.slug + " actualizado");
-                  exitosos.push(c.slug);
-                  deployOk = true;
-                } catch (updateErr) {
-                  console.log("  " + c.slug + ": no se pudo actualizar implementación existente, creando nueva...");
-                }
+                  const versionRes = await scriptApi.projects.versions.create({
+                    scriptId: c.scriptId,
+                    requestBody: { description: desc }
+                  });
+                  const versionNumber = versionRes.data.versionNumber;
+                  console.log("  Versión " + versionNumber + " creada");
 
-                if (!deployOk) {
-                  try {
-                    const output = execSync("clasp deploy -d \"" + desc + "\"", { encoding: "utf8", stdio: "pipe" });
-                    console.log(output);
-                    const match = output.match(/Deployed\s+([a-zA-Z0-9_-]+)\s+@/);
-                    if (match && match[1]) {
-                      c.deploymentId = match[1];
-                      clientesModificados = true;
-                      console.log("✓ " + c.slug + " nueva implementación: " + match[1]);
-                      exitosos.push(c.slug);
-                    } else {
-                      console.error("✗ " + c.slug + ": no se pudo extraer el nuevo deploymentId");
-                      console.error("Salida:", output);
-                      fallos.push(c.slug);
+                  const deployRes = await scriptApi.projects.deployments.list({ scriptId: c.scriptId });
+                  const existing = (deployRes.data.deployments || []).find(function(d) {
+                    return d.deploymentId === c.deploymentId;
+                  });
+
+                  if (existing) {
+                    try {
+                      await scriptApi.projects.deployments.update({
+                        scriptId: c.scriptId,
+                        deploymentId: c.deploymentId,
+                        requestBody: {
+                          deploymentConfig: {
+                            scriptId: c.scriptId,
+                            versionNumber: versionNumber,
+                            manifestFileName: "appsscript",
+                            description: desc
+                          }
+                        }
+                      });
+                      console.log("  Implementación existente activada con versión " + versionNumber);
+                      deployOk = true;
+                    } catch (updateErr) {
+                      console.log("  Implementación existente archivada/no editable; creando una nueva activa...");
                     }
-                  } catch (newDeployErr) {
-                    console.error("✗ " + c.slug + ": falló al crear nueva implementación");
-                    console.error(newDeployErr.message);
-                    fallos.push(c.slug);
+                  }
+
+                  if (!deployOk) {
+                    const newDeploy = await scriptApi.projects.deployments.create({
+                      scriptId: c.scriptId,
+                      requestBody: {
+                        versionNumber: versionNumber,
+                        manifestFileName: "appsscript",
+                        description: desc
+                      }
+                    });
+                    const newId = newDeploy.data.deploymentId;
+                    const webApp = (newDeploy.data.entryPoints || []).some(function(entry) {
+                      return !!entry.webApp;
+                    });
+                    if (!newId || !webApp) {
+                      throw new Error("La nueva implementación no quedó activa como aplicación web");
+                    }
+                    c.deploymentId = newId;
+                    clientesModificados = true;
+                    console.log("  Nueva implementación web activa: " + newId);
+                    deployOk = true;
+                  }
+
+                  if (deployOk) {
+                    console.log("✓ " + c.slug + " actualizado");
+                    exitosos.push(c.slug);
                   }
                 }
               } catch (e) {
@@ -204,6 +249,10 @@ jobs:
                 console.error("Fallaron: " + fallos.join(", "));
                 process.exit(1);
               }
+            })().catch(function(err) {
+              console.error("Error fatal del actualizador: " + err.message);
+              process.exit(1);
+            });
           '
 
       - name: Commit reportes y deploymentIds
