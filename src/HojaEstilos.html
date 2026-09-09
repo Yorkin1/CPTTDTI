@@ -681,6 +681,13 @@
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; }
+    .cabecera-lista h2 { flex: 1; min-width: 0; }
+    .cabecera-lista .btn-refrescar { margin-left: auto; flex-shrink: 0; }
+    /* Historial: alcance y exportar bajan; refrescar queda arriba a la derecha. */
+    .cabecera-lista .acciones-lista { display: contents; }
+    .cabecera-lista .btn-refrescar { order: 1; }
+    .cabecera-lista .etiqueta-alcance { order: 2; flex: 1 1 100%; }
+    .cabecera-lista .menu-exportar { order: 3; margin-left: auto; }
     .tabla-contenedor { -webkit-overflow-scrolling: touch; max-height: none; overflow-y: visible; }
     /* Sin scroll interno, el encabezado fijo pierde sentido en móvil. */
     .tabla-contenedor thead th { position: static; }
@@ -713,8 +720,9 @@
     .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5) { width: 86px; }
     .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 64px; }
     .tabla-clientes th:nth-child(3), .tabla-clientes td:nth-child(3) { width: 112px; }
-    .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) { width: 86px; }
-    .tabla-historial th:nth-child(8), .tabla-historial td:nth-child(8) { width: 98px; }
+    .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) { width: 82px; }
+    .tabla-historial th:nth-child(8), .tabla-historial td:nth-child(8) { width: 88px; }
+    .tabla-historial th, .tabla-historial td { padding: 8px 6px; }
     .tabla-actividad th:nth-child(1), .tabla-actividad td:nth-child(1) { width: 86px; }
     .tabla-actividad th:nth-child(5), .tabla-actividad td:nth-child(5) { width: 112px; }
     .tabla-usuarios th:nth-child(3), .tabla-usuarios td:nth-child(3) { width: 76px; }
