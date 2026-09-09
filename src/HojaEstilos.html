@@ -679,13 +679,7 @@
       min-width: 0;
       width: 100%;
       table-layout: auto;
-      display: none;
     }
-    /* Mostrar tarjetas en móvil (más especificidad que .card global). */
-    .card-container { display: grid; }
-    .card-container .card-cliente, .card-container .card-cita,
-    .card-container .card-usuario, .card-container .card-historial,
-    .card-container .card-servicio, .card-container .card-actividad { display: block; }
     /* En auto las ocultas no roban ancho; las fechas y etiquetas van en una línea. */
     .tabla-citas td:nth-child(5), .tabla-citas td:nth-child(6),
     .tabla-historial td:nth-child(3), .tabla-actividad td:nth-child(1),
@@ -842,105 +836,6 @@
     .asistente { padding: 20px 10px; }
     .asistente-tarjeta { padding: 20px 16px; }
     .modal { padding: 18px; }
-  }
-
-  /* ============================================================
-     Tarjetas (Cards) para modo móvil
-     ============================================================ */
-  .card-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .card {
-    display: none;
-    border: 1px solid var(--gris-borde);
-    border-radius: 10px;
-    padding: 12px;
-    background: var(--blanco);
-    box-shadow: var(--sombra);
-    overflow: hidden;
-  }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--gris-borde);
-  }
-
-  .card-header strong {
-    font-size: 15px;
-    color: var(--texto);
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: break-word;
-  }
-
-  .card-menu-btn {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 20px;
-    color: var(--gris-texto);
-    padding: 4px 8px;
-    flex-shrink: 0;
-  }
-
-  .card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
-  }
-
-  .card-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 4px 0;
-    font-size: 14px;
-  }
-
-  .card-row .label {
-    color: var(--gris-texto);
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  .card-row .value {
-    text-align: right;
-    word-break: break-word;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .card-row .value-highlight {
-    color: var(--color-primario);
-    font-weight: 600;
-  }
-
-  .card-acciones {
-    display: flex;
-    gap: 6px;
-    padding-top: 10px;
-    border-top: 1px solid var(--gris-borde);
-    flex-wrap: wrap;
-  }
-
-  .card-acciones .btn {
-    flex: 1;
-    min-width: 80px;
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-
-  .card-cliente, .card-cita, .card-usuario, 
-  .card-historial, .card-servicio, .card-actividad {
-    display: none;
   }
 
   /* ============================================================

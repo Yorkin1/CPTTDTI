@@ -621,9 +621,6 @@
       return texto.indexOf(filtro) !== -1;
     });
 
-    // En móvil se muestran tarjetas (la tabla se oculta sin destruirse).
-    if (!renderizarTablaOTarjetas('Clientes', lista)) return;
-
     if (lista.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" class="vacio">No hay clientes registrados.</td></tr>';
       return;
@@ -1532,9 +1529,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     window._citasActuales = citas;
     window._firmaCitas = firmaCitasVigentes();
 
-    // En móvil se muestran tarjetas (la tabla se oculta sin destruirse).
-    if (!renderizarTablaOTarjetas('Citas', citas)) return;
-
     tbody.innerHTML = citas.map(function(c) {
       var info = estadoVigenteCita(c);
       var estado = info.estado;
@@ -2174,9 +2168,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
 
     var mapa = _mapaCitas_();
     registros.sort(function(a, b) { return String(b.Fecha).localeCompare(String(a.Fecha)); });
-
-    // En móvil se muestran tarjetas (la tabla se oculta sin destruirse).
-    if (!renderizarTablaOTarjetas('Historial', registros)) return;
 
     tbody.innerHTML = registros.map(function(r) {
       var d = _datosFilaHistorial_(r, mapa);
@@ -3702,155 +3693,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
   }
 
-  /* ============================================================
-     RENDERIZADO DE TARJETAS (Cards) PARA MÓVIL
-     ============================================================ */
-
-  /**
-   * Renderiza clientes como tarjetas en móvil.
-   */
-  function renderClientesComoTarjetas(clientes) {
-    var html = '';
-    for (var i = 0; i < clientes.length; i++) {
-      var c = clientes[i];
-      var foto = c.Foto ? '<img class="foto-mini" src="' + esc(c.Foto) + '" alt="Foto">' : '';
-      html += '<div class="card card-cliente" data-cliente-id="' + esc(c.ID_Cliente) + '">';
-      html += '  <div class="card-header">' + foto;
-      html += '    <strong>' + esc(((c.Nombre || '') + ' ' + (c.Apellido || '')).trim()) + '</strong>';
-      html += '  </div>';
-      html += '  <div class="card-body">';
-      if (c.Telefono) {
-        html += '    <div class="card-row"><span class="label">Teléfono:</span><span class="value">' + esc(c.Telefono) + '</span></div>';
-      }
-      if (c.Email) {
-        html += '    <div class="card-row"><span class="label">Email:</span><span class="value">' + esc(c.Email) + '</span></div>';
-      }
-      if (c.Direccion) {
-        html += '    <div class="card-row"><span class="label">Dirección:</span><span class="value">' + esc(c.Direccion) + '</span></div>';
-      }
-      if (c.Fecha_Registro) {
-        html += '    <div class="card-row"><span class="label">Registro:</span><span class="value">' + formatearFecha(c.Fecha_Registro) + '</span></div>';
-      }
-      html += '  </div>';
-      html += '  <div class="card-acciones">';
-      html += '    <button class="btn btn-secundario btn-pequeno" onclick="editarCliente(\'' + esc(c.ID_Cliente) + '\')">Editar</button>';
-      html += '    <button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarCliente(\'' + esc(c.ID_Cliente) + '\')">Eliminar</button>';
-      html += '  </div>';
-      html += '</div>';
-    }
-    return html;
-  }
-
-  /**
-   * Renderiza citas como tarjetas en móvil.
-   */
-  function renderCitasComoTarjetas(citas) {
-    var html = '';
-    for (var i = 0; i < citas.length; i++) {
-      var ct = citas[i];
-      var info = estadoVigenteCita(ct);
-      var claseEt = info.estado === 'Completada' ? 'etiqueta-completada' :
-                    (info.estado === 'Expirada' ? 'etiqueta-expirada' : 'etiqueta-programada');
-      var cliente = buscarClientePorId(ct.ID_Cliente);
-      var nombreCliente = cliente ? ((cliente.Nombre + ' ' + (cliente.Apellido || '')).trim()) : 'Cliente desconocido';
-      var chk = '<input type="checkbox" class="check-completar" title="Marcar como completada" ' +
-        (info.completada ? 'checked ' : '') +
-        (info.completada || info.bloqueada ? 'disabled ' : '') +
-        ' onchange="cambiarEstadoCita(\'' + esc(ct.ID_Cita) + '\', this.checked ? \'Completada\' : \'Programada\')">';
-      html += '<div class="card card-cita" data-cita-id="' + esc(ct.ID_Cita) + '">';
-      html += '  <div class="card-header">' + chk;
-      html += '    <strong>' + esc(ct.Titulo || '') + '</strong>';
-      html += '    <span class="etiqueta ' + claseEt + '">' + esc(info.estado) + '</span>';
-      html += '  </div>';
-      html += '  <div class="card-body">';
-      html += '    <div class="card-row"><span class="label">Cliente:</span><span class="value">' + esc(nombreCliente) + '</span></div>';
-      html += '    <div class="card-row"><span class="label">Fecha:</span><span class="value">' + formatearFecha(ct.Fecha) + '</span></div>';
-      html += '    <div class="card-row"><span class="label">Hora:</span><span class="value">' + esc(ct.Hora || '') + '</span></div>';
-      html += '    <div class="card-row"><span class="label">Duración:</span><span class="value">' + esc(duracionLegible(ct.Duracion_Mins)) + '</span></div>';
-      if (ct.Total_Precio) {
-        html += '    <div class="card-row"><span class="label">Total:</span><span class="value value-highlight">' + formatoMoneda(ct.Total_Precio) + '</span></div>';
-      }
-      html += '    <div class="card-row"><span class="label">Estado:</span><span class="value">' + esc(info.estado) + '</span></div>';
-      html += '  </div>';
-      html += '  <div class="card-acciones">';
-      html += '    <button class="btn btn-secundario btn-pequeno" onclick="editarCita(\'' + esc(ct.ID_Cita) + '\')">Editar</button>';
-      html += '    <button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarCita(\'' + esc(ct.ID_Cita) + '\')">Eliminar</button>';
-      html += '  </div>';
-      html += '</div>';
-    }
-    return html;
-  }
-
-  /**
-   * Renderiza usuarios como tarjetas en móvil.
-   */
-  function renderUsuariosComoTarjetas(usuarios) {
-    var sesion = obtenerSesion();
-    var nivelSesion = sesion.principal ? 3 : (sesion.rol === 'administrador' ? 2 : 1);
-    var html = '';
-    for (var i = 0; i < usuarios.length; i++) {
-      var u = usuarios[i];
-      var esYo = String(u.usuario).toLowerCase() === String(sesion.usuario).toLowerCase();
-      var nivelU = u.principal ? 3 : (u.rol === 'administrador' ? 2 : 1);
-      var puedeEditar = esYo || (nivelSesion > nivelU);
-      var puedeEliminar = !esYo && !u.principal && (nivelSesion > nivelU);
-      html += '<div class="card card-usuario" data-usuario-id="' + esc(u.usuario) + '">';
-      html += '  <div class="card-header">';
-      html += '    <strong>' + esc(u.usuario) +
-        (esYo ? ' <span class="etiqueta etiqueta-programada">usted</span>' : '') +
-        (u.principal ? ' <span class="etiqueta etiqueta-programada">Propietario</span>' : '') +
-        '</strong>';
-      html += '  </div>';
-      html += '  <div class="card-body">';
-      html += '    <div class="card-row"><span class="label">Nombre:</span><span class="value">' + esc(u.nombre || '') + '</span></div>';
-      html += '    <div class="card-row"><span class="label">Rol:</span><span class="value value-highlight">' + esc(u.rol === 'administrador' ? 'Administrador' : 'Editor') + '</span></div>';
-      html += '    <div class="card-row"><span class="label">Estado:</span><span class="value">' + (u.activo ? '✓ Activo' : '✗ Inactivo') + '</span></div>';
-      html += '  </div>';
-      html += '  <div class="card-acciones">';
-      html += puedeEditar
-        ? '<button class="btn btn-secundario btn-pequeno" onclick="editarUsuario(\'' + esc(u.usuario) + '\')">Editar</button>'
-        : '<span class="vacio-accion">—</span>';
-      html += puedeEliminar
-        ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarUsuario(\'' + esc(u.usuario) + '\')">Eliminar</button>'
-        : '';
-      html += '  </div>';
-      html += '</div>';
-    }
-    return html;
-  }
-
-  /**
-   * Renderiza historial como tarjetas en móvil.
-   */
-  function renderHistorialComoTarjetas(registros) {
-    var esAdmin = esAdminSesion();
-    var html = '';
-    for (var i = 0; i < registros.length; i++) {
-      var r = registros[i];
-      html += '<div class="card card-historial" data-historial-id="' + esc(r.ID_Registro) + '">';
-      html += '  <div class="card-header">';
-      html += '    <strong>' + formatearFecha(r.Fecha) + '</strong>';
-      html += '  </div>';
-      html += '  <div class="card-body">';
-      if (r.ID_Cliente) {
-        var cli = buscarClientePorId(r.ID_Cliente);
-        html += '    <div class="card-row"><span class="label">Cliente:</span><span class="value">' + esc((cli ? (cli.Nombre + ' ' + (cli.Apellido || '')).trim() : r.ID_Cliente)) + '</span></div>';
-      }
-      html += '    <div class="card-row"><span class="label">Descripción:</span><span class="value">' + esc(r.Descripcion || '') + '</span></div>';
-      if (r.Resultado) {
-        html += '    <div class="card-row"><span class="label">Resultado:</span><span class="value">' + esc(r.Resultado) + '</span></div>';
-      }
-      html += '  </div>';
-      if (esAdmin) {
-        html += '  <div class="card-acciones">';
-        html += '    <button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarRegistroHistorial(\'' + esc(r.ID_Registro) + '\')">Eliminar</button>';
-        html += '  </div>';
-      }
-      html += '</div>';
-    }
-    return html;
-  }
-
   /**
    * Formatea una fecha para mostrar (ej: "15 sep 2026").
    */
@@ -3862,65 +3704,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     return (d.getDate() + ' ' + meses[d.getMonth()] + ' ' + d.getFullYear()).toLowerCase();
   }
 
-  /**
-   * Busca un cliente por ID.
-   */
-  function buscarClientePorId(id) {
-    for (var i = 0; i < Estado.clientes.length; i++) {
-      if (String(Estado.clientes[i].ID_Cliente) === String(id)) {
-        return Estado.clientes[i];
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Detecta el tamaño de pantalla y renderiza tablas o tarjetas según corresponda.
-   * Devuelve true si quien llama debe pintar la tabla (desktop) y false si ya
-   * se mostraron tarjetas (móvil). La tabla nunca se destruye: solo se oculta.
-   */
-  function renderizarTablaOTarjetas(tipo, datos) {
-    var contenedor = document.getElementById('contenedor' + tipo);
-    if (!contenedor) return true;
-    var tabla = contenedor.querySelector('.tabla-contenedor');
-    var box = document.getElementById('tarjetas' + tipo);
-    if (!_esMovilTarjeta()) {
-      if (box && box.parentNode) box.parentNode.removeChild(box);
-      if (tabla) tabla.style.display = '';
-      return true;
-    }
-    if (tabla) tabla.style.display = 'none';
-    var inner = '';
-    if (!datos || datos.length === 0) {
-      var vacios = {
-        Clientes: 'No hay clientes registrados.',
-        Citas: 'No hay citas registradas.',
-        Usuarios: 'No hay usuarios registrados.',
-        Historial: 'No hay historial registrado.'
-      };
-      inner = '<div class="vacio">' + (vacios[tipo] || 'Sin registros.') + '</div>';
-    } else if (tipo === 'Clientes') {
-      inner = renderClientesComoTarjetas(datos);
-    } else if (tipo === 'Citas') {
-      inner = renderCitasComoTarjetas(datos);
-    } else if (tipo === 'Usuarios') {
-      inner = renderUsuariosComoTarjetas(datos);
-    } else if (tipo === 'Historial') {
-      inner = renderHistorialComoTarjetas(datos);
-    } else {
-      return true;
-    }
-    if (!box) {
-      box = document.createElement('div');
-      box.className = 'card-container';
-      box.id = 'tarjetas' + tipo;
-      contenedor.appendChild(box);
-    }
-    box.innerHTML = inner;
-    return false;
-  }
-
-  /* ==========================================================
+  /* ============================================================
      VISTA: USUARIOS (solo administrador)
      ========================================================== */
 
@@ -4003,9 +3787,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       tbody.innerHTML = '<tr><td colspan="5" class="vacio">No hay usuarios registrados.</td></tr>';
       return;
     }
-
-    // En móvil se muestran tarjetas (la tabla se oculta sin destruirse).
-    if (!renderizarTablaOTarjetas('Usuarios', usuarios)) return;
 
     var sesion = obtenerSesion();
     var nivelSesion = sesion.principal ? 3 : (sesion.rol === 'administrador' ? 2 : 1);
@@ -4196,31 +3977,5 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       })
       .cambiarContrasena(tokenSesion(), actual, nueva);
   }
-
-  /* ============================================================
-     RESIZE LISTENER: Re-renderizar cuando cambia viewport
-     ============================================================ */
-  (function() {
-    var resizeTimeout;
-    function reRenderizarSegunViewport() {
-      var vistaActual = Estado.vistaActual;
-      if (vistaActual === 'Clientes' && Estado.clientes) {
-        renderTablaClientes(document.getElementById('buscarCliente')?.value || '');
-      } else if (vistaActual === 'Citas' && Estado.citas) {
-        aplicarFiltrosCitas();
-      } else if (vistaActual === 'Usuarios' && Estado.usuariosLista) {
-        dibujarUsuarios(document.getElementById('tablaUsuarios'), Estado.usuariosLista);
-      } else if (vistaActual === 'Historial' && Estado.cacheHistorial) {
-        var sel = document.getElementById('sel_cliente_historial');
-        if (sel) {
-          dibujarHistorial(document.getElementById('tablaHistorial'), Estado.cacheHistorial[sel.value] || []);
-        }
-      }
-    }
-    window.addEventListener('resize', function() {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(reRenderizarSegunViewport, 300);
-    });
-  })();
 
 </script>
