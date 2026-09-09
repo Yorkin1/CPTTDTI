@@ -3690,6 +3690,202 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
   }
 
+  /* ============================================================
+     RENDERIZADO DE TARJETAS (Cards) PARA MÓVIL
+     ============================================================ */
+
+  /**
+   * Renderiza clientes como tarjetas en móvil.
+   */
+  function renderClientesComoTarjetas(clientes) {
+    var html = '<div class="card-container">';
+    for (var i = 0; i < clientes.length; i++) {
+     var c = clientes[i];
+     html += '<div class="card card-cliente" data-cliente-id="' + esc(c.ID_Cliente) + '">';
+     html += '  <div class="card-header">';
+     html += '    <strong>' + esc(c.Nombre || '') + ' ' + esc(c.Apellido || '') + '</strong>';
+     html += '    <button class="card-menu-btn" onclick="mostrarMenuAcciones(event, \'cliente\', \'' + esc(c.ID_Cliente) + '\')">⋯</button>';
+     html += '  </div>';
+     html += '  <div class="card-body">';
+     if (c.Telefono) {
+       html += '    <div class="card-row"><span class="label">Teléfono:</span><span class="value">' + esc(c.Telefono) + '</span></div>';
+     }
+     if (c.Email) {
+       html += '    <div class="card-row"><span class="label">Email:</span><span class="value">' + esc(c.Email) + '</span></div>';
+     }
+     if (c.Direccion) {
+       html += '    <div class="card-row"><span class="label">Dirección:</span><span class="value">' + esc(c.Direccion) + '</span></div>';
+     }
+     if (c.Fecha_Registro) {
+       html += '    <div class="card-row"><span class="label">Registro:</span><span class="value">' + formatearFecha(c.Fecha_Registro) + '</span></div>';
+     }
+     html += '  </div>';
+     html += '  <div class="card-acciones">';
+     html += '    <button class="btn btn-secundario btn-pequeno" onclick="editarCliente(\'' + esc(c.ID_Cliente) + '\')">Editar</button>';
+     html += '    <button class="btn btn-peligro btn-pequeno" onclick="eliminarCliente(\'' + esc(c.ID_Cliente) + '\')">Eliminar</button>';
+     html += '  </div>';
+     html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * Renderiza citas como tarjetas en móvil.
+   */
+  function renderCitasComoTarjetas(citas) {
+    var html = '<div class="card-container">';
+    for (var i = 0; i < citas.length; i++) {
+     var ct = citas[i];
+     var cliente = buscarClientePorId(ct.ID_Cliente);
+     var nombreCliente = cliente ? (cliente.Nombre + ' ' + (cliente.Apellido || '')) : 'Cliente desconocido';
+     html += '<div class="card card-cita" data-cita-id="' + esc(ct.ID_Cita) + '">';
+     html += '  <div class="card-header">';
+     html += '    <strong>' + esc(ct.Titulo || '') + '</strong>';
+     html += '    <button class="card-menu-btn" onclick="mostrarMenuAcciones(event, \'cita\', \'' + esc(ct.ID_Cita) + '\')">⋯</button>';
+     html += '  </div>';
+     html += '  <div class="card-body">';
+     html += '    <div class="card-row"><span class="label">Cliente:</span><span class="value">' + esc(nombreCliente) + '</span></div>';
+     html += '    <div class="card-row"><span class="label">Fecha:</span><span class="value">' + formatearFecha(ct.Fecha) + '</span></div>';
+     html += '    <div class="card-row"><span class="label">Hora:</span><span class="value">' + esc(ct.Hora || '') + '</span></div>';
+     html += '    <div class="card-row"><span class="label">Duración:</span><span class="value">' + ct.Duracion_Mins + ' min</span></div>';
+     if (ct.Total_Precio) {
+       html += '    <div class="card-row"><span class="label">Total:</span><span class="value value-highlight">$' + ct.Total_Precio.toFixed(2) + '</span></div>';
+     }
+     html += '    <div class="card-row"><span class="label">Estado:</span><span class="value">' + esc(ct.Estado || 'Programada') + '</span></div>';
+     html += '  </div>';
+     html += '  <div class="card-acciones">';
+     html += '    <button class="btn btn-secundario btn-pequeno" onclick="editarCita(\'' + esc(ct.ID_Cita) + '\')">Editar</button>';
+     html += '    <button class="btn btn-peligro btn-pequeno" onclick="eliminarCita(\'' + esc(ct.ID_Cita) + '\')">Eliminar</button>';
+     html += '  </div>';
+     html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * Renderiza usuarios como tarjetas en móvil.
+   */
+  function renderUsuariosComoTarjetas(usuarios) {
+    var html = '<div class="card-container">';
+    for (var i = 0; i < usuarios.length; i++) {
+     var u = usuarios[i];
+     html += '<div class="card card-usuario" data-usuario-id="' + esc(u.ID_Usuario) + '">';
+     html += '  <div class="card-header">';
+     html += '    <strong>' + esc(u.Nombre || '') + '</strong>';
+     html += '    <button class="card-menu-btn" onclick="mostrarMenuAcciones(event, \'usuario\', \'' + esc(u.ID_Usuario) + '\')">⋯</button>';
+     html += '  </div>';
+     html += '  <div class="card-body">';
+     html += '    <div class="card-row"><span class="label">Email:</span><span class="value">' + esc(u.Email || '') + '</span></div>';
+     html += '    <div class="card-row"><span class="label">Rol:</span><span class="value value-highlight">' + esc(u.Rol || '') + '</span></div>';
+     html += '    <div class="card-row"><span class="label">Estado:</span><span class="value">' + (u.Activo === 'SI' || u.Activo === true ? '✓ Activo' : '✗ Inactivo') + '</span></div>';
+     html += '    <div class="card-row"><span class="label">Registro:</span><span class="value">' + formatearFecha(u.Fecha_Registro) + '</span></div>';
+     html += '  </div>';
+     html += '  <div class="card-acciones">';
+     if (u.Activo === 'SI' || u.Activo === true) {
+       html += '    <button class="btn btn-secundario btn-pequeno" onclick="toggleUsuarioActivo(\'' + esc(u.ID_Usuario) + '\', false)">Desactivar</button>';
+     } else {
+       html += '    <button class="btn btn-secundario btn-pequeno" onclick="toggleUsuarioActivo(\'' + esc(u.ID_Usuario) + '\', true)">Activar</button>';
+     }
+     html += '    <button class="btn btn-peligro btn-pequeno" onclick="eliminarUsuario(\'' + esc(u.ID_Usuario) + '\')">Eliminar</button>';
+     html += '  </div>';
+     html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * Renderiza historial como tarjetas en móvil.
+   */
+  function renderHistorialComoTarjetas(registros) {
+    var html = '<div class="card-container">';
+    for (var i = 0; i < registros.length; i++) {
+     var r = registros[i];
+     html += '<div class="card card-historial" data-historial-id="' + i + '">';
+     html += '  <div class="card-header">';
+     html += '    <strong>' + formatearFecha(r.Fecha) + '</strong>';
+     html += '  </div>';
+     html += '  <div class="card-body">';
+     if (r.ID_Cliente) {
+       var cli = buscarClientePorId(r.ID_Cliente);
+       html += '    <div class="card-row"><span class="label">Cliente:</span><span class="value">' + esc((cli ? cli.Nombre + ' ' + (cli.Apellido || '') : r.ID_Cliente)) + '</span></div>';
+     }
+     html += '    <div class="card-row"><span class="label">Descripción:</span><span class="value">' + esc(r.Descripcion || '') + '</span></div>';
+     if (r.Resultado) {
+       html += '    <div class="card-row"><span class="label">Resultado:</span><span class="value">' + esc(r.Resultado) + '</span></div>';
+     }
+     html += '  </div>';
+     html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  /**
+   * Formatea una fecha para mostrar (ej: "15 sep 2026").
+   */
+  function formatearFecha(fecha) {
+    if (!fecha) return '—';
+    var d = new Date(fecha);
+    if (isNaN(d.getTime())) return esc(String(fecha));
+    var meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return (d.getDate() + ' ' + meses[d.getMonth()] + ' ' + d.getFullYear()).toLowerCase();
+  }
+
+  /**
+   * Busca un cliente por ID.
+   */
+  function buscarClientePorId(id) {
+    for (var i = 0; i < Estado.clientes.length; i++) {
+     if (Estado.clientes[i].ID_Cliente === id) {
+       return Estado.clientes[i];
+     }
+    }
+    return null;
+  }
+
+  /**
+   * Detecta el tamaño de pantalla y renderiza tablas o tarjetas según corresponda.
+   */
+  function renderizarTablaOTarjetas(tipo, datos) {
+    var isMóvil = window.innerWidth < 768;
+    var contenedor = document.getElementById('contenedor' + tipo);
+    if (!contenedor) return;
+
+    var html;
+    if (isMóvil) {
+     switch (tipo) {
+       case 'Clientes':
+         html = renderClientesComoTarjetas(datos);
+         break;
+       case 'Citas':
+         html = renderCitasComoTarjetas(datos);
+         break;
+       case 'Usuarios':
+         html = renderUsuariosComoTarjetas(datos);
+         break;
+       case 'Historial':
+         html = renderHistorialComoTarjetas(datos);
+         break;
+       default:
+         return;
+     }
+    } else {
+     // En desktop, se usa la tabla normal (no hacemos nada aquí)
+     return;
+    }
+
+    // Buscar el div card-container si existe, sino crear uno nuevo
+    var cardContainer = contenedor.querySelector('.card-container');
+    if (cardContainer) {
+     cardContainer.innerHTML = html.substring(html.indexOf('<div class="card">'), html.lastIndexOf('</div>') + 6);
+    } else {
+     contenedor.innerHTML = html;
+    }
+  }
+
   /* ==========================================================
      VISTA: USUARIOS (solo administrador)
      ========================================================== */
