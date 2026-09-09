@@ -636,6 +636,14 @@
     font-size: 13px;
     border-top: 1px solid var(--gris-borde);
     background: var(--blanco);
+    margin-top: auto;
+  }
+
+  /* La app es columna flex a pantalla completa para que el pie baje al fondo. */
+  #appPrincipal {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
 
   /* ---------- Responsivo ---------- */
@@ -644,7 +652,11 @@
     .grid-form { grid-template-columns: 1fr; }
     .titulo-app { font-size: 17px; }
     .logo-negocio { height: 26px; width: 26px; }
-    .menu-toggle { display: block; }
+    .menu-toggle { display: block; flex-shrink: 0; }
+    .nav-sesion { flex-shrink: 0; }
+    /* La marca cede el espacio: el nombre largo se recorta con puntos. */
+    .navbar-marca { flex: 1; min-width: 0; }
+    .titulo-app { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .navbar-enlaces {
       position: absolute;
       top: 62px;
@@ -700,7 +712,6 @@
     /* Ancho por columna en móvil: la clave respira y las filas no se estiran. */
     .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5) { width: 86px; }
     .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 64px; }
-    .tabla-clientes th:nth-child(1), .tabla-clientes td:nth-child(1) { width: 48px; }
     .tabla-clientes th:nth-child(3), .tabla-clientes td:nth-child(3) { width: 112px; }
     .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) { width: 86px; }
     .tabla-historial th:nth-child(8), .tabla-historial td:nth-child(8) { width: 98px; }
@@ -718,6 +729,7 @@
     .tabla-citas th:nth-child(9), .tabla-citas td:nth-child(9),
     .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10),
     .tabla-citas th:nth-child(11), .tabla-citas td:nth-child(11),
+    .tabla-clientes th:nth-child(1), .tabla-clientes td:nth-child(1),
     .tabla-clientes th:nth-child(4), .tabla-clientes td:nth-child(4),
     .tabla-clientes th:nth-child(5), .tabla-clientes td:nth-child(5),
     .tabla-clientes th:nth-child(6), .tabla-clientes td:nth-child(6),
