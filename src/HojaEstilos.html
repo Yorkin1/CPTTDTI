@@ -678,8 +678,12 @@
     .tabla-historial, .tabla-usuarios, .tabla-actividad {
       min-width: 0;
       width: 100%;
-      table-layout: fixed;
+      table-layout: auto;
     }
+    /* En auto las ocultas no roban ancho; las fechas y etiquetas van en una línea. */
+    .tabla-citas td:nth-child(5), .tabla-citas td:nth-child(6),
+    .tabla-historial td:nth-child(3), .tabla-actividad td:nth-child(1),
+    .tabla-usuarios td:nth-child(3), .etiqueta { white-space: nowrap; }
     .tabla-citas th, .tabla-citas td,
     .tabla-clientes th, .tabla-clientes td,
     .tabla-historial th, .tabla-historial td,
@@ -691,12 +695,31 @@
     }
     .col-wrap, .col-cliente, .col-servicios { min-width: 0; max-width: none; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 34px; }
+    /* Ancho por columna en móvil: la clave respira y las filas no se estiran. */
+    .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5) { width: 86px; }
+    .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 64px; }
+    .tabla-clientes th:nth-child(1), .tabla-clientes td:nth-child(1) { width: 48px; }
+    .tabla-clientes th:nth-child(3), .tabla-clientes td:nth-child(3) { width: 112px; }
+    .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) { width: 86px; }
+    .tabla-historial th:nth-child(8), .tabla-historial td:nth-child(8) { width: 98px; }
+    .tabla-actividad th:nth-child(1), .tabla-actividad td:nth-child(1) { width: 86px; }
+    .tabla-actividad th:nth-child(5), .tabla-actividad td:nth-child(5) { width: 112px; }
+    .tabla-usuarios th:nth-child(3), .tabla-usuarios td:nth-child(3) { width: 76px; }
+    /* Servicios conserva su scroll: celdas de una línea con puntos suspensivos,
+       el texto completo vive en la tarjeta de un clic. */
+    .tabla-servicios th, .tabla-servicios td {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tabla-servicios .fila-detalle td { white-space: normal; overflow: visible; }
     /* Columnas clave por tabla (lo oculto vive en la tarjeta de un clic). */
     .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3),
     .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4),
     .tabla-citas th:nth-child(7), .tabla-citas td:nth-child(7),
     .tabla-citas th:nth-child(8), .tabla-citas td:nth-child(8),
     .tabla-citas th:nth-child(9), .tabla-citas td:nth-child(9),
+    .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10),
     .tabla-citas th:nth-child(11), .tabla-citas td:nth-child(11),
     .tabla-clientes th:nth-child(4), .tabla-clientes td:nth-child(4),
     .tabla-clientes th:nth-child(5), .tabla-clientes td:nth-child(5),
