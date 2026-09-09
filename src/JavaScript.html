@@ -621,6 +621,15 @@
       return texto.indexOf(filtro) !== -1;
     });
 
+    // Detectar modo móvil y usar tarjetas si aplica
+    if (window.innerWidth < 768) {
+      if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="vacio">No hay clientes registrados.</td></tr>';
+      }
+      renderizarTablaOTarjetas('Clientes', lista);
+      return;
+    }
+
     if (lista.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" class="vacio">No hay clientes registrados.</td></tr>';
       return;
@@ -1528,6 +1537,13 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     });
     window._citasActuales = citas;
     window._firmaCitas = firmaCitasVigentes();
+
+    // Detectar modo móvil y usar tarjetas si aplica
+    if (window.innerWidth < 768) {
+      renderizarTablaOTarjetas('Citas', citas);
+      return;
+    }
+
     tbody.innerHTML = citas.map(function(c) {
       var info = estadoVigenteCita(c);
       var estado = info.estado;
@@ -2164,6 +2180,13 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       tbody.innerHTML = '<tr><td colspan="' + (esAdmin ? 9 : 8) + '" class="vacio">No hay historial registrado.</td></tr>';
       return;
     }
+
+    // Detectar modo móvil y usar tarjetas si aplica
+    if (window.innerWidth < 768) {
+      renderizarTablaOTarjetas('Historial', registros);
+      return;
+    }
+
     var mapa = _mapaCitas_();
     registros.sort(function(a, b) { return String(b.Fecha).localeCompare(String(a.Fecha)); });
     tbody.innerHTML = registros.map(function(r) {
@@ -3969,6 +3992,13 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       tbody.innerHTML = '<tr><td colspan="5" class="vacio">No hay usuarios registrados.</td></tr>';
       return;
     }
+
+    // Detectar modo móvil y usar tarjetas si aplica
+    if (window.innerWidth < 768) {
+      renderizarTablaOTarjetas('Usuarios', usuarios);
+      return;
+    }
+
     var sesion = obtenerSesion();
     var nivelSesion = sesion.principal ? 3 : (sesion.rol === 'administrador' ? 2 : 1);
     tbody.innerHTML = usuarios.map(function(u) {
@@ -4158,5 +4188,31 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       })
       .cambiarContrasena(tokenSesion(), actual, nueva);
   }
+
+  /* ============================================================
+     RESIZE LISTENER: Re-renderizar cuando cambia viewport
+     ============================================================ */
+  (function() {
+    var resizeTimeout;
+    function reRenderizarSegunViewport() {
+      var vistaActual = Estado.vistaActual;
+      if (vistaActual === 'Clientes' && Estado.clientes) {
+        renderTablaClientes(document.getElementById('buscarCliente')?.value || '');
+      } else if (vistaActual === 'Citas' && Estado.citas) {
+        aplicarFiltrosCitas();
+      } else if (vistaActual === 'Usuarios' && Estado.usuariosLista) {
+        dibujarUsuarios(document.getElementById('tablaUsuarios'), Estado.usuariosLista);
+      } else if (vistaActual === 'Historial' && Estado.cacheHistorial) {
+        var sel = document.getElementById('sel_cliente_historial');
+        if (sel) {
+          dibujarHistorial(document.getElementById('tablaHistorial'), Estado.cacheHistorial[sel.value] || []);
+        }
+      }
+    }
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(reRenderizarSegunViewport, 300);
+    });
+  })();
 
 </script>
