@@ -3693,17 +3693,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
   }
 
-  /**
-   * Formatea una fecha para mostrar (ej: "15 sep 2026").
-   */
-  function formatearFecha(fecha) {
-    if (!fecha) return '—';
-    var d = new Date(fecha);
-    if (isNaN(d.getTime())) return esc(String(fecha));
-    var meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    return (d.getDate() + ' ' + meses[d.getMonth()] + ' ' + d.getFullYear()).toLowerCase();
-  }
-
   /* ============================================================
      VISTA: USUARIOS (solo administrador)
      ========================================================== */
