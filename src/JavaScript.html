@@ -2029,24 +2029,23 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var filaOrigen = tbody.querySelector('tr[data-actividad-idx="' + idx + '"]');
     if (!filaOrigen) return;
     function celdaT(v) { return v ? esc(String(v)) : ''; }
-    var usuarioTxt = celdaT(a.Usuario) +
-      ((a.Email && a.Email !== a.Usuario) ? ' (' + esc(a.Email) + ')' : '');
     var html =
       '<div class="tarjeta-cita">' +
         '<div class="tarjeta-cita-cab"><strong>' + (celdaT(a.Accion) || 'Actividad') + '</strong>' +
           '<span class="etiqueta etiqueta-programada">' + (celdaT(a.Modulo) || '') + '</span></div>' +
         _filaTarjeta('Fecha', celdaT(a.Fecha)) +
-        _filaTarjeta('Usuario', usuarioTxt) +
+        _filaTarjeta('Usuario', celdaT(a.Usuario)) +
+        (a.Email && a.Email !== a.Usuario ? _filaTarjeta('Correo', esc(a.Email)) : '') +
         _filaTarjeta('Rol', celdaT(a.Rol)) +
         _filaTarjeta('Detalle', celdaT(a.Detalle)) +
       '</div>';
-    _insertarTarjeta(tbody, filaOrigen, idx, html, 6);
+    _insertarTarjeta(tbody, filaOrigen, idx, html, 7);
   }
 
   function cargarActividad(forzar, callback) {
     var tbody = document.getElementById('tablaActividad');
     if (!tbody) { if (typeof callback === 'function') callback(); return; }
-    tbody.innerHTML = '<tr><td colspan="6" class="cargando">Cargando…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="cargando">Cargando…</td></tr>';
 
     var filtros = {
       usuario: (document.getElementById('filtro_usuario_monitor') || {}).value || '',
@@ -2059,8 +2058,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       .withSuccessHandler(function(resp) {
         if (sesionInvalida(resp)) { if (typeof callback === 'function') callback(); return; }
         if (!resp || !resp.exito) {
-          tbody.innerHTML = '<tr><td colspan="6" class="vacio">' +
-            esc(resp && resp.mensaje ? resp.mensaje : 'No se pudo cargar la actividad.') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="vacio">' +
+          esc(resp && resp.mensaje ? resp.mensaje : 'No se pudo cargar la actividad.') + '</td></tr>';
           if (typeof callback === 'function') callback();
           return;
         }
@@ -2071,18 +2070,18 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
             msg = 'Aún no hay actividades registradas. El monitor registra las acciones a partir de ahora: ' +
                   'cree o edite un cliente, agende o cambie una cita, registre un usuario, etc., y aparecerán aquí.';
           }
-          tbody.innerHTML = '<tr><td colspan="6" class="vacio">' + esc(msg) + '</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="vacio">' + esc(msg) + '</td></tr>';
           if (typeof callback === 'function') callback();
           return;
         }
         function celda(v) { return v ? esc(String(v)) : '<span class="vacio-accion">&mdash;</span>'; }
         window._actividadActual = act;
         tbody.innerHTML = act.map(function(a, idx) {
-          return '<tr data-actividad-idx="' + idx + '">' +
-            '<td>' + celda(a.Fecha) + '</td>' +
-            '<td>' + celda(a.Usuario) +
-              (a.Email && a.Email !== a.Usuario ? '<br><small>' + esc(a.Email) + '</small>' : '') + '</td>' +
-            '<td>' + celda(a.Rol) + '</td>' +
+      return '<tr data-actividad-idx="' + idx + '">' +
+        '<td>' + celda(a.Fecha) + '</td>' +
+        '<td>' + celda(a.Usuario) + '</td>' +
+        '<td>' + (a.Email && a.Email !== a.Usuario ? esc(a.Email) : '<span class="vacio-accion">&mdash;</span>') + '</td>' +
+        '<td>' + celda(a.Rol) + '</td>' +
             '<td>' + celda(a.Modulo) + '</td>' +
             '<td>' + celda(a.Accion) + '</td>' +
             '<td>' + celda(a.Detalle) + '</td>' +
