@@ -147,6 +147,8 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
   .campo textarea { resize: vertical; min-height: 70px; }
+  /* Reservas en línea: Paso y Límite alineados aunque una etiqueta ocupe 2 líneas. */
+  #bloqueConfigReservas .campo input[type="number"] { margin-top: auto; }
   .ayuda { font-size: 12px; color: var(--gris-texto); margin-top: 4px; }
   .duracion-stepper { position: relative; }
   .duracion-stepper input { padding-right: 30px; width: 100%; }
@@ -730,10 +732,11 @@
       white-space: nowrap;
       word-break: normal;
       overflow-wrap: normal;
+      overflow: hidden;
     }
-    .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5) { width: 80px; }
-    .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 68px; }
-    .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) { width: 92px; text-align: center; }
+    .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5) { width: 84px; font-size: 12px; }
+    .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 76px; font-size: 12px; }
+    .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) { width: 96px; text-align: center; }
     .tabla-citas .etiqueta { padding: 3px 8px; font-size: 11px; }
     /* td[colspan] (vacío/carga): full-width centrado; ignora anchos y columnas ocultas. */
     .tabla-citas tbody td[colspan], .tabla-clientes tbody td[colspan],
