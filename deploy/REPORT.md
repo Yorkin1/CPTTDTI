@@ -1,7 +1,7 @@
 # Reporte de Clientes
 
-**Fecha:** 10/9/2026, 10:56:37 a. m.  
-**Commit:** ad05988
+**Fecha:** 10/9/2026, 11:08:48 a. m.  
+**Commit:** dd28cad
 
 ## Resumen
 
