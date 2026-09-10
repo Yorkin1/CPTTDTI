@@ -675,14 +675,14 @@
     /* body es flex-column: sin min-width:0 el contenedor no baja de su
        min-content y la página se ensancha (~492px) al abrir la tarjeta. */
     .tarjeta { padding: 14px; }
-    .barra-busqueda { flex-direction: column; align-items: stretch; }
-    .cabecera-lista { flex-wrap: wrap; gap: 8px; }
+    .barra-busqueda { flex-direction: column; align-items: stretch; margin-bottom: 12px; }
+    .cabecera-lista { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; }
     .cabecera-lista h2 { flex: 1; min-width: 0; }
     .cabecera-lista .btn-refrescar { margin-left: auto; flex-shrink: 0; }
     .cabecera-lista .acciones-lista { display: contents; }
     .cabecera-lista .btn-refrescar { order: 1; }
-    .cabecera-lista .etiqueta-alcance { order: 2; flex: 1 1 100%; }
-    .cabecera-lista .menu-exportar { order: 3; margin-left: auto; }
+    .cabecera-lista .etiqueta-alcance { order: 2; flex: 1 1 auto; min-width: 0; }
+    .cabecera-lista .menu-exportar { order: 2; margin-left: auto; flex-shrink: 0; }
     .tabla-contenedor { -webkit-overflow-scrolling: touch; max-height: none; overflow-y: visible; }
     /* Sin scroll interno, el encabezado fijo pierde sentido en móvil. */
     .tabla-contenedor thead th { position: static; }
@@ -717,7 +717,7 @@
     .col-wrap, .col-cliente, .col-servicios { min-width: 0; max-width: none; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 34px; }
     /* Fila colapsada en una línea: Cliente + Fecha + Hora + Estado (el título vive en la tarjeta). */
-    .tabla-citas th, .tabla-citas td { padding: 8px 6px; }
+    .tabla-citas th, .tabla-citas td { padding: 6px; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 30px; }
     .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3) {
       overflow: hidden;
@@ -749,7 +749,7 @@
     /* Ancho por columna en móvil: la clave respira y las filas no se estiran. */
     .tabla-clientes th:nth-child(3), .tabla-clientes td:nth-child(3) { width: 112px; }
     .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) { width: 82px; }
-    .tabla-historial th, .tabla-historial td { padding: 8px 6px; }
+    .tabla-historial th, .tabla-historial td { padding: 6px; }
     .tabla-actividad th:nth-child(1), .tabla-actividad td:nth-child(1) { width: 86px; }
     .tabla-actividad th:nth-child(6), .tabla-actividad td:nth-child(6) { width: 112px; }
     .tabla-usuarios th:nth-child(3), .tabla-usuarios td:nth-child(3) { width: 76px; }
@@ -844,11 +844,11 @@
     .tarjeta { overflow-x: clip; }
     .tabla-contenedor img, .tarjeta-cita img { max-width: 100%; }
     .tarjeta-cita-acciones { display: flex; gap: 8px; margin-top: 8px; }
-    thead th, tbody td { padding: 8px 10px; }
+    thead th, tbody td { padding: 6px 8px; }
     .tabla-contenedor input[type="time"] { width: 100px !important; }
   }
   @media (max-width: 360px) {
-    thead th, tbody td { padding: 7px 8px; font-size: 13px; }
+    thead th, tbody td { padding: 5px 6px; font-size: 13px; }
     .btn { padding: 9px 14px; }
     .asistente { padding: 20px 10px; }
     .asistente-tarjeta { padding: 20px 16px; }
