@@ -689,6 +689,26 @@
     }
     .col-wrap, .col-cliente, .col-servicios { min-width: 0; max-width: none; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 34px; }
+    /* Citas en móvil: la fila sin desplegar cabe en una sola línea
+       (Título + Fecha + Hora + Estado) sin estirarse en vertical. */
+    .tabla-citas th, .tabla-citas td { padding: 8px 6px; }
+    .tabla-citas th:first-child, .tabla-citas td:first-child { width: 30px; }
+    .tabla-citas th:nth-child(2), .tabla-citas td:nth-child(2) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5),
+    .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6),
+    .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) {
+      white-space: nowrap;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+    .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5) { width: 80px; }
+    .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 68px; }
+    .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) { width: 92px; text-align: center; }
+    .tabla-citas .etiqueta { padding: 3px 8px; font-size: 11px; }
     /* Columnas clave por tabla (lo oculto vive en la tarjeta de un clic). */
     .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3),
     .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4),
