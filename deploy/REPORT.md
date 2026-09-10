@@ -1,7 +1,7 @@
 # Reporte de Clientes
 
-**Fecha:** 7/9/2026, 3:22:24 p. m.  
-**Commit:** 98d28d6
+**Fecha:** 10/9/2026, 10:43:11 a. m.  
+**Commit:** 872ccf1
 
 ## Resumen
 
@@ -15,7 +15,7 @@
 |---------|--------|-----|
 | taller | ok | https://script.google.com/macros/s/AKfycbzZHuv0sBXm5ls6EV670jEeKvmmiyI5NS8XkkiOOdtlekwpEXz8OKdZiteBhVVbFKpa/exec |
 | York | ok | https://script.google.com/macros/s/AKfycbwrqHTqifWcnIm5bHpt1rie_JWHqeMw0lg_fb2j-sqV9S_dCqF1pcD0MN8R9PlPI6JJ/exec |
-| faffa | ok | https://script.google.com/macros/s/AKfycby2US6MT_enqRni-xZGByLRrIcouYyvRuaCrY495HUZ/exec |
+| GestorCitas | ok | https://script.google.com/macros/s/AKfycbzsdz0SFRVAqyI4qB-Jg5K1zVi6GGULQeuZ7pHjrsA4-37yLQaASlrd5FD3nm__HqChTA/exec |
 
 ---
 
@@ -33,9 +33,9 @@
 - **Spreadsheet ID:** 114EuStaXnbdkuk0Jeo6dgXVQWaQt4PkH5JDoCG_X8J0
 - **URL:** https://script.google.com/macros/s/AKfycbwrqHTqifWcnIm5bHpt1rie_JWHqeMw0lg_fb2j-sqV9S_dCqF1pcD0MN8R9PlPI6JJ/exec
 
-### faffa
+### GestorCitas
 - **Script ID:** 1n5hg19jvkDsp7aTMI3yOxaZ-nXG8is6dAJVmntVWyuO3kIzSHt5hANt8
-- **Deployment ID:** AKfycby2US6MT_enqRni-xZGByLRrIcouYyvRuaCrY495HUZ
+- **Deployment ID:** AKfycbzsdz0SFRVAqyI4qB-Jg5K1zVi6GGULQeuZ7pHjrsA4-37yLQaASlrd5FD3nm__HqChTA
 - **Spreadsheet ID:** 1tL5sQvzkXx_DhY7TzrGnTESLIAxjwgZLFxaOWEZ4PKs
-- **URL:** https://script.google.com/macros/s/AKfycby2US6MT_enqRni-xZGByLRrIcouYyvRuaCrY495HUZ/exec
+- **URL:** https://script.google.com/macros/s/AKfycbzsdz0SFRVAqyI4qB-Jg5K1zVi6GGULQeuZ7pHjrsA4-37yLQaASlrd5FD3nm__HqChTA/exec
 
