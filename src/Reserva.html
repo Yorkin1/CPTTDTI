@@ -306,9 +306,6 @@
         }
       }
 
-      // Disponibilidad en vivo: mientras el usuario puede elegir horario (pasos
-      // de horarios y datos) se re-consulta cada 15 s para reflejar horas
-      // tomadas por otros clientes o que ya pasaron.
       function iniciarActualizacionDisponibilidad() {
         detenerActualizacionDisponibilidad();
         window._intervaloDisponibilidad = setInterval(actualizarDisponibilidad, 15000);
@@ -328,7 +325,6 @@
             if (!resp || !resp.exito) return;
             var antes = (Reserva.seleccion.slots || []).join(',');
             var despues = (resp.slots || []).join(',');
-            // Si la lista no cambió y la elección sigue válida, no hacer nada.
             if (antes === despues &&
                 (!Reserva.seleccion.hora ||
                  (resp.slots || []).indexOf(Reserva.seleccion.hora) !== -1)) {
@@ -364,7 +360,6 @@
       // Valida el formato de un correo electrónico.
       function esEmailValidoReserva(email) {
         email = String(email || '').trim();
-        if (!email) return true; // el correo es opcional
         var patron = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
         return patron.test(email);
       }
@@ -376,7 +371,6 @@
       // iniciando con 809/829/849), igual que el formulario de clientes.
       function esTelefonoValidoReserva(telefono) {
         telefono = String(telefono || '').trim();
-        if (!telefono) return true; // el teléfono es opcional
         var caracteresPermitidos = /^[0-9\s\-\(\)]+$/;
         if (!caracteresPermitidos.test(telefono)) return false;
         var digitos = telefono.replace(/\D/g, '');
@@ -388,7 +382,6 @@
       // guiones (sin dígitos ni símbolos), permitiendo acentos y "ñ".
       function esNombreValidoReserva(texto) {
         texto = String(texto || '').trim();
-        if (!texto) return true; // la obligatoriedad se valida aparte
         var patron = /^[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+$/;
         return patron.test(texto);
       }
@@ -408,7 +401,6 @@
         return resultado;
       }
 
-      // Marca visualmente un campo como inválido/válido.
       function marcarCampoReserva(idCampo, valido) {
         var el = document.getElementById(idCampo);
         if (!el) return;
@@ -465,7 +457,6 @@
         return '$ ' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       }
 
-      // Carga los servicios activos del negocio para el combobox.
       function cargarServiciosPublicos() {
         google.script.run
           .withSuccessHandler(function(resp) {
@@ -489,7 +480,6 @@
         sel.innerHTML = opciones;
       }
 
-      // Agrega (suma 1) el servicio elegido en el combobox a la selección.
       function agregarServicioSeleccion() {
         var sel = document.getElementById('res_servicio');
         var id = sel.value;
@@ -523,13 +513,9 @@
         recalcularDuracionYHorarios();
       }
 
-      // Si no queda ningún servicio, se desmarca la hora elegida.
-      // Los servicios son opcionales: al quitarlos no se borra la hora
-      // elegida (la duración se recalcula con la predeterminada vía
-      // recalcularDuracionYHorarios). Se conserva por compatibilidad.
+      // Sin servicios no se borra la hora elegida (se conserva por compatibilidad).
       function limpiarHoraSiSinServicios() {}
 
-      // Dibuja la lista de servicios elegidos con cantidades y el total.
       function renderResumenServicios() {
         var cont = document.getElementById('resumenServicios');
         if (!cont) return;
@@ -583,8 +569,6 @@
         return duracion;
       }
 
-      // Recalcula los horarios disponibles para la duración que resulta de
-      // los servicios elegidos y refresca la parrilla.
       function recalcularDuracionYHorarios() {
         if (!Reserva.seleccion.fecha) return;
         var duracion = duracionSegunServicios();
@@ -611,7 +595,6 @@
           .obtenerHorariosDisponibles({ fecha: Reserva.seleccion.fecha, duracionMins: duracion });
       }
 
-      // Resumen HTML de los servicios elegidos (para el paso de datos).
       function resumenServiciosHTML() {
         var map = Reserva.seleccion.servicios || {};
         var ids = Object.keys(map);
@@ -803,7 +786,6 @@
         document.getElementById('notaHorarios').textContent =
           'Seleccione un horario libre o pulse "Elegir el mejor horario".';
 
-        // Marcar los horarios libres como seleccionables y reaccionar al clic.
         var botones = contenedor.querySelectorAll('.slot-horario');
         for (var j = 0; j < botones.length; j++) {
           botones[j].addEventListener('click', function() {
@@ -948,7 +930,6 @@
         abrirModalConfirmar();
       }
 
-      // Muestra el resumen y el total de la reserva en el modal de confirmación.
       function abrirModalConfirmar() {
         var modal = document.getElementById('modalConfirmar');
         var cont = document.getElementById('resumenConfirmarModal');
@@ -978,9 +959,7 @@
         if (modal) modal.style.display = 'none';
       }
 
-      // Ejecuta la reserva (llamada al servidor). Se invoca tras confirmar el
-      // modal; la lógica de reservarCitaPublica no cambia (precio y duración
-      // siempre se recalculan desde el catálogo en el servidor).
+      // Ejecuta la reserva tras confirmar el modal.
       function procesarReserva() {
         var datos = Reserva._reserva;
         if (!datos) return;

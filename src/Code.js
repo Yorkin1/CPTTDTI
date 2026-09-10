@@ -1,18 +1,8 @@
 /**
- * ============================================================
- *  Gestor de Clientes y Citas — Backend (Google Apps Script)
- * ============================================================
- *  Aplicación genérica para administrar clientes, citas (con eventos
- *  en Google Calendar) e historial.
- *
- *  Base de datos: Google Sheets (4 hojas)
- *  Programación:  Google Calendar
- *
- *  Todos los comentarios y textos están en español.
- * ============================================================
+ * Gestor de Clientes y Citas — Backend (Google Apps Script).
+ * Base de datos: Google Sheets. Citas: Google Calendar.
  */
 
-// Nombres de las hojas dentro de la hoja de cálculo.
 var HOJA_CLIENTES      = 'Clientes';
 var HOJA_CITAS         = 'Citas';
 var HOJA_HISTORIAL     = 'Historial';
@@ -21,33 +11,26 @@ var HOJA_SERVICIOS     = 'Servicios';
 var HOJA_CONFIGURACION = 'Configuracion';
 var HOJA_ACTIVIDAD     = 'Actividad';
 
-// Máximo de registros de actividad a conservar (se eliminan los más antiguos).
 var MAX_ACTIVIDAD = 1000;
 
-// Clave usada para guardar el ID de la hoja de cálculo en PropertiesService.
 var PROP_ID_HOJA = 'ID_HOJA_CALCULO';
 
-// Clave usada para guardar el ID de la carpeta de Drive de imágenes.
 var PROP_CARPETA_IMAGENES = 'CARPETA_IMAGENES_ID';
 
-// Clave usada para guardar las sesiones activas en PropertiesService.
 var PROP_SESIONES = 'SESIONES_ACTIVAS';
 
 // Clave usada para guardar en PropertiesService los usuarios que ya fueron
 // notificados como "nuevos" al administrador (aviso de UNA sola vez).
 var PROP_USUARIOS_AVISADOS = 'USUARIOS_AVISADOS';
 
-// Duración de una sesión de acceso (12 horas por defecto).
 var DURACION_SESION_MS = 12 * 60 * 60 * 1000;
 
-// Claves y TTL del caché de rendimiento (CacheService).
 var PROP_CONFIG_CACHE = 'CONFIG_CACHE';
 // CacheService limita el TTL a 6 horas (21600 s); la sesión dura 12 h, así
 // que el caché se usa como acelerador y Properties sigue siendo la fuente.
 var CACHE_SESIONES_TTL_SEG = Math.min(Math.floor(DURACION_SESION_MS / 1000), 21600);
 var CACHE_CONFIG_TTL_SEG = 60;
 
-// Encabezados de cada hoja de datos.
 var ENCABEZADOS = {
   Clientes:  ['ID_Cliente', 'Nombre', 'Apellido', 'Telefono', 'Email', 'Direccion', 'Notas', 'Fecha_Registro', 'Foto'],
   Citas:     ['ID_Cita', 'ID_Cliente', 'Titulo', 'Fecha', 'Hora', 'Duracion_Mins', 'Descripcion', 'ID_Evento_Calendar', 'Estado', 'Servicios', 'Total_Precio', 'Agendado_Por'],
@@ -57,10 +40,8 @@ var ENCABEZADOS = {
   Actividad: ['ID_Registro', 'Fecha', 'Usuario', 'Email', 'Rol', 'Modulo', 'Accion', 'Detalle']
 };
 
-// Encabezados de la hoja de configuración (pares clave/valor).
 var ENCABEZADOS_CONFIGURACION = ['Clave', 'Valor'];
 
-// Valores predeterminados de configuración (se crean si faltan).
 var CONFIGURACION_PREDETERMINADA = {
   CONFIGURADA:                    'NO',
   NOMBRE_NEGOCIO:                 'Mi Negocio',
@@ -71,9 +52,7 @@ var CONFIGURACION_PREDETERMINADA = {
   COLOR_SECUNDARIO:               '#16a34a',
   TEMA:                           'claro',
   DURACION_CITA_PREDETERMINADA:   '60',
-  // Reservas en línea (página pública para que el cliente elija horario).
   HABILITAR_RESERVAS:             'SI',
-  // Monitor de actividad exclusivo del dueño (primer administrador).
   HABILITAR_MONITOR:              'SI',
   // Horario de atención: { getDay: {abre, cierra} }. getDay: 0=Domingo...6=Sábado.
   // Sin "abre"/"cierra" el día queda cerrado. Default Lun-Vie 09:00-17:00, Sáb 09:00-13:00.
@@ -84,7 +63,6 @@ var CONFIGURACION_PREDETERMINADA = {
   CITAS_MAX_POR_DIA_POR_SEMANA:   '{}'
 };
 
-// Orden en el que se muestran/guardan las claves de configuración.
 var CLAVES_CONFIGURACION = [
   'CONFIGURADA',
   'NOMBRE_NEGOCIO',
@@ -450,7 +428,6 @@ function _mostrarMensaje_(titulo, mensaje) {
       }
     }
   } catch (err) {
-    // Sin interfaz disponible.
   }
   Logger.log('[' + titulo + '] ' + mensaje);
 }
@@ -469,7 +446,6 @@ function _asegurarHojaConEncabezados_(hojaCalculo, nombreHoja, encabezados) {
   var totalCols = encabezados.length;
 
   if (hoja.getLastRow() === 0) {
-    // Hoja vacía: escribir encabezados.
     hoja.getRange(1, 1, 1, totalCols).setValues([encabezados]);
   } else {
     // Reparar solo los encabezados (fila 1) que falten o difieran,
@@ -534,7 +510,6 @@ function _asegurarHojaConfiguracion_(hojaCalculo) {
     hoja.getRange(1, 1, 1, ENCABEZADOS_CONFIGURACION.length)
       .setValues([ENCABEZADOS_CONFIGURACION]);
   } else {
-    // Reparar encabezados si difieren.
     var fila = hoja.getRange(1, 1, 1, ENCABEZADOS_CONFIGURACION.length).getValues()[0];
     var reparar = false;
     for (var i = 0; i < ENCABEZADOS_CONFIGURACION.length; i++) {
@@ -868,7 +843,7 @@ function _asegurarColumnaFotoEnHojas_() {
   try {
     hojaCalculo = obtenerHojaCalculo_();
   } catch (err) {
-    return; // Sin hoja enlazada: no hacer nada.
+    return;
   }
   var hoja = hojaCalculo.getSheetByName(HOJA_CLIENTES);
   if (!hoja) return;
@@ -953,7 +928,6 @@ function guardarConfiguracion(token, datos) {
       if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
     }
 
-    // Construir el conjunto de valores a persistir.
     var aGuardar = {};
     CLAVES_CONFIGURACION.forEach(function(clave) {
       if (clave === 'CONFIGURADA') return; // se fuerza más abajo
@@ -978,7 +952,6 @@ function guardarConfiguracion(token, datos) {
     // Al guardar desde el asistente, la plantilla queda configurada.
     aGuardar.CONFIGURADA = 'SI';
 
-    // Leer estado actual (clave -> número de fila).
     var valores = hoja.getDataRange().getValues();
     var filaPorClave = {};
     for (var i = 1; i < valores.length; i++) {
@@ -986,7 +959,6 @@ function guardarConfiguracion(token, datos) {
       if (c) filaPorClave[c] = i + 1;
     }
 
-    // Actualizar o insertar cada clave.
     Object.keys(aGuardar).forEach(function(clave) {
       var valor = aGuardar[clave];
       if (filaPorClave[clave]) {
@@ -1132,7 +1104,6 @@ function verificarBaseDatos(token) {
   try {
     var hojaCalculo = obtenerHojaCalculo_();
 
-    // Hojas de datos.
     Object.keys(ENCABEZADOS).forEach(function(nombreHoja) {
       var esperado = ENCABEZADOS[nombreHoja];
       var hoja = hojaCalculo.getSheetByName(nombreHoja);
@@ -1153,7 +1124,6 @@ function verificarBaseDatos(token) {
       resultado.hojas[nombreHoja] = info;
     });
 
-    // Hoja de configuración.
     var hojaCfg = hojaCalculo.getSheetByName(HOJA_CONFIGURACION);
     resultado.hojas[HOJA_CONFIGURACION] = {
       existe: !!hojaCfg,
@@ -1171,7 +1141,6 @@ function verificarBaseDatos(token) {
     resultado.mensaje = 'Error al verificar la base de datos: ' + err.message;
   }
 
-  // Si se ejecuta desde el menú (hay interfaz), mostrar un resumen.
   _mostrarResumenVerificacion_(resultado);
   return resultado;
 }
@@ -1193,8 +1162,6 @@ function _mostrarResumenVerificacion_(resultado) {
   console.log('Verificar base de datos:\n' + texto);
   Logger.log('Verificar base de datos:\n' + texto);
 
-  // Mostrar por UI si hay interfaz; si falla, usar "toast"; si tampoco, el
-  // Logger ya tiene el reporte completo.
   try {
     SpreadsheetApp.getUi().alert('Verificar base de datos', texto, SpreadsheetApp.getUi().ButtonSet.OK);
     return;
@@ -1205,7 +1172,6 @@ function _mostrarResumenVerificacion_(resultado) {
         hojaCalculo.toast(resultado.mensaje, 'Verificar base de datos', 10);
       }
     } catch (errToast) {
-      // Sin interfaz: el reporte quedó en el Logger.
     }
   }
 }
@@ -1259,14 +1225,12 @@ function _filasAObjetosDesdeValores_(datos) {
   var resultado = [];
   for (var i = 1; i < datos.length; i++) {
     var fila = datos[i];
-    // Saltar filas totalmente vacías.
     if (fila.join('') === '') {
       continue;
     }
     var obj = {};
     for (var j = 0; j < encabezados.length; j++) {
       var valor = fila[j];
-      // Normalizar fechas a texto legible.
       if (valor instanceof Date) {
         valor = Utilities.formatDate(valor, zona, 'yyyy-MM-dd HH:mm');
       }
@@ -1430,24 +1394,20 @@ function obtenerCarpetaImagenes_() {
 function agregarCliente(token, datos) {
   try {
     if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
-    // Validar email si se proporciona.
     if (datos.email && !esEmailValido_(datos.email)) {
       return { exito: false, mensaje: 'El correo electrónico no tiene un formato válido.' };
     }
-    // Validar teléfono si se proporciona.
     if (datos.telefono && !esTelefonoValido_(datos.telefono)) {
       return { exito: false, mensaje: 'El teléfono no tiene un formato válido.' };
     }
     var hoja = obtenerHoja_(HOJA_CLIENTES);
-    // Detectar duplicados.
     if (datos.email && existeDuplicado_(hoja, 'Email', datos.email, 0)) {
       return { exito: false, mensaje: 'Ya existe un cliente con ese correo electrónico.' };
     }
     if (datos.telefono && existeDuplicado_(hoja, 'Telefono', datos.telefono, 0)) {
       return { exito: false, mensaje: 'Ya existe un cliente con ese teléfono.' };
     }
-    // La foto puede venir como data URL (se sube a Drive aquí mismo, en la
-    // misma llamada) o como URL ya existente.
+    // La foto puede venir como data URL o como URL ya existente.
     var fotoUrl = String(datos.foto || '');
     if (datos.fotoDataUrl) {
       try {
@@ -1505,15 +1465,13 @@ function actualizarCliente(token, id, datos) {
     if (!fila) {
       return { exito: false, mensaje: 'No se encontró el cliente indicado.' };
     }
-    // Detectar duplicados (ignorando la fila del propio cliente).
     if (datos.email && existeDuplicado_(hoja, 'Email', datos.email, fila)) {
       return { exito: false, mensaje: 'Ya existe otro cliente con ese correo electrónico.' };
     }
     if (datos.telefono && existeDuplicado_(hoja, 'Telefono', datos.telefono, fila)) {
       return { exito: false, mensaje: 'Ya existe otro cliente con ese teléfono.' };
     }
-    // La foto puede venir como data URL (se sube a Drive aquí mismo) o como
-    // URL ya existente.
+    // La foto puede venir como data URL o como URL ya existente.
     var fotoUrl = String(datos.foto || '');
     if (datos.fotoDataUrl) {
       try {
@@ -2589,7 +2547,6 @@ function agendarCita(token, datos) {
     var hoja = obtenerHoja_(HOJA_CITAS);
     var id = generarId('CITA');
 
-    // Construir fecha/hora de inicio y fin.
     var partesFecha = String(datos.fecha).split('-');
     var partesHora = String(datos.hora).split(':');
     var inicio = new Date(
@@ -2681,7 +2638,6 @@ function agendarCita(token, datos) {
 
     var avisoCorreo = '';
     try {
-      // correoCliente y nombreCliente ya se obtuvieron antes de crear el evento.
       if (correoCliente) {
         var asunto = 'Cita agendada';
         var cuerpo = 'Estimado/a ' + (nombreCliente || 'cliente') +
@@ -3000,11 +2956,9 @@ function actualizarCita(token, id, datos) {
     var colTotal = ENCABEZADOS.Citas.indexOf('Total_Precio') + 1;
     hoja.getRange(fila, colServicios).setValue(selServiciosUpd.items.length > 0 ? JSON.stringify(selServiciosUpd.items) : '');
     hoja.getRange(fila, colTotal).setValue(selServiciosUpd.items.length > 0 ? selServiciosUpd.total : '');
-    // Mantener Fecha y Hora como texto.
     hoja.getRange(fila, colFecha).setNumberFormat('@').setValue(String(datos.fecha || ''));
     hoja.getRange(fila, colHora).setNumberFormat('@').setValue(String(datos.hora || ''));
 
-    // Actualizar el evento de Calendar si existe.
     var colEvento = ENCABEZADOS.Citas.indexOf('ID_Evento_Calendar') + 1;
     var idEvento = hoja.getRange(fila, colEvento).getValue();
     if (idEvento) {
@@ -3035,7 +2989,6 @@ function actualizarCita(token, id, datos) {
     Logger.log('Cita actualizada: ' + id);
     _registrarActividad_(token, 'Citas', 'Editó cita', 'ID ' + id);
 
-    // Avisar al cliente por correo solo si cambió fecha, hora, título o cliente.
     var nuevoTitulo = String(datos.titulo || '').trim();
     var nuevaFecha = String(datos.fecha || '').trim();
     var nuevaHora = String(datos.hora || '').trim();
@@ -3688,7 +3641,6 @@ function reservarCitaPublica(datos) {
       return { exito: false, mensaje: 'No se puede reservar en fechas pasadas. Elija otra fecha.' };
     }
 
-    // Datos del cliente.
     var cli = datos.cliente || {};
     var nombre = String(cli.nombre || '').trim();
     var apellido = String(cli.apellido || '').trim();
@@ -3744,7 +3696,6 @@ function reservarCitaPublica(datos) {
       descripcion = descripcion ? descripcion + '\n' + desgloseServicios : desgloseServicios;
     }
 
-    // Evento de Calendar.
     var partesFecha = fecha.split('-');
     var partesHora = hora.split(':');
     var inicio = new Date(
@@ -3766,7 +3717,6 @@ function reservarCitaPublica(datos) {
       Logger.log('Advertencia: no se pudo crear el evento de reserva: ' + errorCalendario);
     }
 
-    // Fila en la hoja Citas (Fecha y Hora como texto).
     var hoja = obtenerHoja_(HOJA_CITAS);
     var idCita = generarId('CITA');
     hoja.appendRow([
@@ -3781,7 +3731,6 @@ function reservarCitaPublica(datos) {
     hoja.getRange(filaCita, colFechaC).setNumberFormat('@').setValue(fecha);
     hoja.getRange(filaCita, colHoraC).setNumberFormat('@').setValue(hora);
 
-    // Confirmación por correo (la "constancia" del horario reservado).
     var avisoCorreo = '';
     try {
       if (email) {
@@ -3925,7 +3874,6 @@ function editarReservaPublica(datos) {
       return { exito: false, mensaje: 'Ingrese su correo electrónico o su teléfono.' };
     }
 
-    // Buscar la cita y verificar que sigue editable.
     var hoja = obtenerHoja_(HOJA_CITAS);
     var fila = buscarFilaPorId_(hoja, 'ID_Cita', idCita);
     if (!fila) {
@@ -3973,7 +3921,6 @@ function editarReservaPublica(datos) {
       return { exito: false, mensaje: 'No se pudo verificar su reserva. Haga una nueva reserva.', noExiste: true };
     }
 
-    // Choque ignorando la propia cita.
     var choque = _citaTieneChoque_(fecha, hora, duracion, idCita);
     if (choque && choque.choca) {
       return { exito: false, mensaje: choque.mensaje };
@@ -3990,7 +3937,6 @@ function editarReservaPublica(datos) {
       }
     }
 
-    // Validar slot excluyendo la propia cita.
     var dispon = obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion, excluirIdCita: idCita });
     if (!dispon.exito) return dispon;
     if (dispon.slots.indexOf(hora) === -1) {
@@ -4010,7 +3956,6 @@ function editarReservaPublica(datos) {
       descripcion = descripcion ? descripcion + '\n' + desg : desg;
     }
 
-    // Actualizar la fila (misma cita, sin duplicar).
     var colFechaE = ENCABEZADOS.Citas.indexOf('Fecha') + 1;
     var colHoraE = ENCABEZADOS.Citas.indexOf('Hora') + 1;
     var colDurE = ENCABEZADOS.Citas.indexOf('Duracion_Mins') + 1;
@@ -4049,7 +3994,6 @@ function editarReservaPublica(datos) {
       Logger.log('Advertencia: no se pudo mover el evento de reserva: ' + errorCalE);
     }
 
-    // Aviso al cliente.
     var avisoCorreoE = '';
     try {
       if (email) {
@@ -4075,7 +4019,6 @@ function editarReservaPublica(datos) {
       Logger.log('Error al enviar correo de edición pública: ' + errCE);
     }
 
-    // Aviso al equipo (ANTES -> AHORA).
     var avisoEquipoE = '';
     try {
       var destEquipo = _correosAvisoCita_(null);
@@ -4217,17 +4160,14 @@ function generarPDFHistorial(token, encabezados, filas) {
       } catch (eImg) { /* logo omitido */ }
     }
 
-    // Nombre del negocio en el color de marca (título).
     var pNombre = body.appendParagraph(nombre);
     pNombre.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
     pNombre.editAsText().setBold(true).setFontSize(16).setForegroundColor(colorPrim);
 
-    // Tabla: encabezados + datos.
     var matriz = [encabezados].concat(filas || []);
     var tabla = body.appendTable(matriz);
     tabla.setBorderColor('#CCCCCC');
 
-    // Cabecera: fondo color de marca, texto blanco, tamaño moderado y padding ajustado.
     var filaCab = tabla.getRow(0);
     for (var c = 0; c < encabezados.length; c++) {
       var celda = filaCab.getCell(c);
@@ -4237,7 +4177,6 @@ function generarPDFHistorial(token, encabezados, filas) {
       parr.editAsText().setForegroundColor('#FFFFFF').setBold(true).setFontSize(10);
     }
 
-    // Filas de datos: texto oscuro y tamaño normal (evita heredar color/marca).
     for (var r = 1; r < tabla.getNumRows(); r++) {
       var filaD = tabla.getRow(r);
       for (var c2 = 0; c2 < encabezados.length; c2++) {
@@ -4293,11 +4232,9 @@ function generarExcelHistorial(token, encabezados, filas) {
       '<cols><col min="1" max="' + nCols + '" width="22" customWidth="1"/></cols>' +
       '<sheetData>';
 
-    // Fila 1: título (nombre del negocio) con estilo 2.
     sheetXml += '<row r="1"><c r="A1" s="2" t="inlineStr"><is><t xml:space="preserve">' +
       _escaparXml_(nombre) + '</t></is></c></row>';
 
-    // Fila 2: encabezados con estilo 1 (color de marca).
     sheetXml += '<row r="2">';
     for (var c = 0; c < encabezados.length; c++) {
       var refH = _columnaExcel_(c + 1) + '2';
@@ -4307,7 +4244,6 @@ function generarExcelHistorial(token, encabezados, filas) {
     }
     sheetXml += '</row>';
 
-    // Filas 3+: datos.
     if (filas) {
       for (var r = 0; r < filas.length; r++) {
         var fila = filas[r];
@@ -4325,7 +4261,6 @@ function generarExcelHistorial(token, encabezados, filas) {
     sheetXml += '<mergeCells count="1"><mergeCell ref="A1:' + ultCol + '1"/></mergeCells>';
     sheetXml += '</worksheet>';
 
-    // Estilos: fuentes blancas negrita + fill de color de marca.
     var stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
       '<fonts count="3">' +

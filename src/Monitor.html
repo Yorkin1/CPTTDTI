@@ -24,12 +24,14 @@
         <option value="Configuración">Configuración</option>
       </select>
     </label>
-    <label>Desde
-      <input type="date" id="filtro_desde_monitor">
-    </label>
-    <label>Hasta
-      <input type="date" id="filtro_hasta_monitor">
-    </label>
+    <div class="rango-fechas">
+      <label>Desde
+        <input type="date" id="filtro_desde_monitor">
+      </label>
+      <label>Hasta
+        <input type="date" id="filtro_hasta_monitor">
+      </label>
+    </div>
   </div>
 
   <div class="tabla-contenedor">
@@ -46,7 +48,7 @@
         </tr>
       </thead>
       <tbody id="tablaActividad">
-        <tr><td colspan="6" class="cargando">Cargando…</td></tr>
+        <tr><td colspan="7" class="cargando">Cargando…</td></tr>
       </tbody>
     </table>
   </div>

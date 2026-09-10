@@ -21,12 +21,7 @@
       <div class="cargando">Cargando…</div>
     </div>
 
-    <!-- ============================================================
-         ASISTENTE DE CONFIGURACIÓN INICIAL (POST-REGISTRO ADMIN)
-         Pantalla completa que se muestra al primer administrador tras
-         registrarse, hasta que CONFIGURADA = "SI". Se configura DESPUÉS
-         de crear la cuenta (ya no hay asistente pre-login).
-         ============================================================ -->
+    <!-- Asistente inicial: se muestra al primer admin hasta CONFIGURADA = "SI". -->
     <div id="asistenteInicial" class="asistente" style="display:none;">
       <div class="asistente-tarjeta asistente-inicial">
         <div class="asistente-cabecera">
@@ -108,11 +103,7 @@
       </div>
     </div>
 
-    <!-- ============================================================
-         PLANTILLA SIN CONFIGURAR
-         Se muestra cuando la copia aún no se vinculó a su base de datos:
-         falta ejecutar "Client Manager → Iniciar configuración".
-         ============================================================ -->
+    <!-- Sin configurar: falta "Client Manager → Iniciar configuración". -->
     <div id="pantallaSinConfigurar" class="asistente" style="display:none;">
       <div class="asistente-tarjeta">
         <div class="asistente-cabecera">
@@ -131,10 +122,7 @@
       </div>
     </div>
 
-    <!-- ============================================================
-         INICIO DE SESIÓN
-         Se muestra cuando la app está configurada pero no hay sesión.
-         ============================================================ -->
+    <!-- Login: se muestra configurada la app pero sin sesión. -->
     <div id="pantallaLogin" class="asistente" style="display:none;">
       <div class="asistente-tarjeta">
         <div class="asistente-cabecera">
@@ -199,9 +187,7 @@
       </div>
     </div>
 
-    <!-- ============================================================
-         APLICACIÓN PRINCIPAL (dashboard)
-         ============================================================ -->
+    <!-- App principal (dashboard). -->
     <div id="appPrincipal" style="display:none;">
       <!-- Barra de navegación -->
       <header class="navbar">
@@ -255,10 +241,7 @@
     <!-- Notificaciones tipo toast -->
     <div id="toast" class="toast"></div>
 
-    <!-- ============================================================
-         MODAL: CAMBIAR MI CONTRASEÑA
-         Disponible para todos los roles desde la barra superior.
-         ============================================================ -->
+    <!-- Modal: cambiar contraseña (todos los roles). -->
     <div id="modalContrasena" class="modal-fondo" style="display:none;">
       <div class="modal">
         <div class="modal-cabecera">
@@ -283,11 +266,7 @@
       </div>
     </div>
 
-    <!-- ============================================================
-         PLANTILLAS DE VISTAS PRECARGADAS
-         Los fragmentos se incrustan al cargar la página y se inyectan
-         localmente en #contenido al navegar (sin llamadas al servidor).
-         ============================================================ -->
+    <!-- Vistas precargadas: se inyectan localmente sin llamar al servidor. -->
     <script type="text/plain" id="tpl-Clientes"><?!= include('Clientes') ?></script>
     <script type="text/plain" id="tpl-Servicios"><?!= include('Servicios') ?></script>
     <script type="text/plain" id="tpl-Citas"><?!= include('Citas') ?></script>

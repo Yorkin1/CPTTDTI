@@ -1,8 +1,5 @@
 <style>
-  /* ============================================================
-     Hoja de estilos — Gestor de Clientes y Citas
-     Paleta profesional (azules / blancos), diseño responsivo.
-     ============================================================ */
+  /* Hoja de estilos — Gestor de Clientes y Citas. */
 
   :root {
     --azul-oscuro: #1e3a8a;
@@ -37,7 +34,7 @@
     flex-direction: column;
   }
 
-  /* ---------- Barra de navegación ---------- */
+  /* Barra de navegación */
   .navbar {
     background: linear-gradient(135deg, var(--azul-oscuro), var(--azul-claro));
     color: var(--blanco);
@@ -52,8 +49,8 @@
     top: 0;
     z-index: 100;
   }
-  .navbar-marca { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .titulo-app { font-size: 19px; font-weight: 600; letter-spacing: 0.2px; }
+  .navbar-marca { display: flex; align-items: center; gap: 10px; flex: 0 1 auto; min-width: 0; }
+  .titulo-app { font-size: 19px; font-weight: 600; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .logo-negocio {
     height: 34px;
     width: 34px;
@@ -83,7 +80,7 @@
     cursor: pointer;
   }
 
-  /* ---------- Contenedor principal ---------- */
+  /* Contenedor principal */
   .contenedor {
     flex: 1;
     width: 100%;
@@ -100,7 +97,7 @@
   }
   .cabecera-vista p { color: var(--gris-texto); font-size: 15px; }
 
-  /* ---------- Tarjetas ---------- */
+  /* Tarjetas */
   .tarjeta {
     background: var(--blanco);
     border-radius: var(--radio);
@@ -117,7 +114,7 @@
     border-bottom: 2px solid var(--azul-muy-claro);
   }
 
-  /* ---------- Formularios ---------- */
+  /* Formularios */
   .grid-form {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -180,7 +177,7 @@
   body.tema-oscuro .duracion-flechas button { background: #1e293b; }
   body.tema-oscuro .duracion-flechas button:hover { background: #334155; }
 
-  /* ---------- Combobox / selects (mejor diseño) ---------- */
+  /* Combobox / selects (mejor diseño) */
   select {
     appearance: none;
     -webkit-appearance: none;
@@ -206,7 +203,6 @@
     padding: 8px;
   }
 
-  /* Selector de filtro dentro de la barra de búsqueda (p. ej. estado de citas). */
   .barra-busqueda select {
     padding: 10px 34px 10px 12px;
     border: 1px solid var(--gris-borde);
@@ -229,7 +225,7 @@
     flex-wrap: wrap;
   }
 
-  /* ---------- Botones ---------- */
+  /* Botones */
   .btn {
     border: none;
     border-radius: 8px;
@@ -259,7 +255,6 @@
     box-sizing: border-box;
   }
 
-  /* Cabecera de listado con botón de refrescar a la derecha */
   .cabecera-lista {
     display: flex;
     align-items: center;
@@ -275,7 +270,7 @@
     color: var(--azul-oscuro);
   }
 
-  /* ---------- Tablas ---------- */
+  /* Tablas */
   .tabla-area { position: relative; }
   .tabla-contenedor { overflow-x: auto; position: relative; max-height: 420px; overflow-y: auto; }
   .tabla-contenedor thead th { position: sticky; top: 0; z-index: 2; }
@@ -321,7 +316,7 @@
   .fila-completada td { opacity: .65; }
   .fila-completada td:first-child { opacity: 1; }
 
-  /* ---------- Sesión (barra superior) ---------- */
+  /* Sesión (barra superior) */
   .nav-sesion {
     display: flex;
     align-items: center;
@@ -335,7 +330,7 @@
     white-space: nowrap;
   }
 
-  /* ---------- Menú desplegable del usuario ---------- */
+  /* Menú desplegable del usuario */
   .menu-usuario { position: relative; }
   .menu-usuario-boton {
     display: flex;
@@ -398,7 +393,7 @@
     margin: 5px 8px;
   }
 
-  /* ---------- Fotos ---------- */
+  /* Fotos */
   .foto-mini {
     width: 40px;
     height: 40px;
@@ -434,7 +429,7 @@
     background: #fff;
   }
 
-  /* ---------- Buscador / filtros ---------- */
+  /* Buscador / filtros */
   .barra-busqueda {
     display: flex;
     flex-wrap: wrap;
@@ -485,7 +480,6 @@
     font-size: 14px;
     font-family: inherit;
   }
-  /* En PC, controles de la barra un poco más grandes (todos iguales). */
   @media (min-width: 721px) {
     .barra-busqueda input {
       padding: 12px 16px;
@@ -541,7 +535,7 @@
   }
   .menu-exportar-item:hover { background: var(--azul-muy-claro); }
 
-  /* ---------- Etiquetas de estado ---------- */
+  /* Etiquetas de estado */
   .etiqueta {
     display: inline-block;
     padding: 3px 10px;
@@ -555,7 +549,7 @@
   .fila-expirada td { opacity: .5; }
   .fila-expirada .check-completar { opacity: .5; }
 
-  /* ---------- Estados vacíos / carga ---------- */
+  /* Estados vacíos / carga */
   .vacio, .cargando {
     text-align: center;
     padding: 34px 16px;
@@ -575,7 +569,7 @@
   }
   @keyframes girar { to { transform: rotate(360deg); } }
 
-  /* ---------- Toast ---------- */
+  /* Toast */
   .toast {
     position: fixed;
     bottom: 24px;
@@ -598,7 +592,7 @@
   .toast.error { background: var(--rojo); }
   .toast.aviso { background: #f59e0b; }
 
-  /* ---------- Carga acotada a la tabla de una lista ---------- */
+  /* Carga acotada a la tabla de una lista */
   .spinner-carga {
     width: 36px; height: 36px;
     margin: 0 auto;
@@ -628,7 +622,7 @@
   body.tema-oscuro .carga-zona { background: var(--blanco); }
   body.tema-oscuro .carga-zona-contenido p { color: #cbd5e1; }
 
-  /* ---------- Pie ---------- */
+  /* Pie */
   .pie {
     text-align: center;
     padding: 16px;
@@ -646,15 +640,15 @@
     min-height: 100vh;
   }
 
-  /* ---------- Responsivo ---------- */
+  /* Responsivo */
   body { overflow-x: hidden; }
   @media (max-width: 720px) {
     .grid-form { grid-template-columns: 1fr; }
+    #bloqueConfigReservas .grid-form { grid-template-columns: 1fr 1fr; }
     .titulo-app { font-size: 17px; }
     .logo-negocio { height: 26px; width: 26px; }
     .menu-toggle { display: block; flex-shrink: 0; }
     .nav-sesion { flex-shrink: 0; }
-    /* La marca cede el espacio: el nombre largo se recorta con puntos. */
     .navbar-marca { flex: 1; min-width: 0; }
     .titulo-app { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .navbar-enlaces {
@@ -683,7 +677,6 @@
     .cabecera-lista { flex-wrap: wrap; gap: 8px; }
     .cabecera-lista h2 { flex: 1; min-width: 0; }
     .cabecera-lista .btn-refrescar { margin-left: auto; flex-shrink: 0; }
-    /* Historial: alcance y exportar bajan; refrescar queda arriba a la derecha. */
     .cabecera-lista .acciones-lista { display: contents; }
     .cabecera-lista .btn-refrescar { order: 1; }
     .cabecera-lista .etiqueta-alcance { order: 2; flex: 1 1 100%; }
@@ -721,8 +714,7 @@
     }
     .col-wrap, .col-cliente, .col-servicios { min-width: 0; max-width: none; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 34px; }
-    /* Citas en móvil: la fila sin desplegar cabe en una sola línea
-       (Título + Fecha + Hora + Estado) sin estirarse en vertical. */
+    /* Fila colapsada en una línea: Título + Fecha + Hora + Estado. */
     .tabla-citas th, .tabla-citas td { padding: 8px 6px; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 30px; }
     .tabla-citas th:nth-child(2), .tabla-citas td:nth-child(2) {
@@ -741,6 +733,17 @@
     .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 68px; }
     .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) { width: 92px; text-align: center; }
     .tabla-citas .etiqueta { padding: 3px 8px; font-size: 11px; }
+    /* td[colspan] (vacío/carga): full-width centrado; ignora anchos y columnas ocultas. */
+    .tabla-citas tbody td[colspan], .tabla-clientes tbody td[colspan],
+    .tabla-historial tbody td[colspan], .tabla-usuarios tbody td[colspan],
+    .tabla-actividad tbody td[colspan], .tabla-servicios tbody td[colspan] {
+      display: table-cell;
+      width: auto;
+      max-width: none;
+      white-space: normal;
+      text-align: center;
+      padding: 34px 16px;
+    }
     /* Ancho por columna en móvil: la clave respira y las filas no se estiran. */
     .tabla-clientes th:nth-child(3), .tabla-clientes td:nth-child(3) { width: 112px; }
     .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) { width: 82px; }
@@ -748,6 +751,8 @@
     .tabla-actividad th:nth-child(1), .tabla-actividad td:nth-child(1) { width: 86px; }
     .tabla-actividad th:nth-child(6), .tabla-actividad td:nth-child(6) { width: 112px; }
     .tabla-usuarios th:nth-child(3), .tabla-usuarios td:nth-child(3) { width: 76px; }
+    .tabla-usuarios th:nth-child(1), .tabla-usuarios td:nth-child(1) { max-width: 150px; }
+    .tabla-usuarios td:nth-child(1) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* Servicios igual que las demás: Nombre flexible, Precio y Estado compactos. */
     .tabla-servicios th:nth-child(2), .tabla-servicios td:nth-child(2) { width: 84px; }
     .tabla-servicios th:nth-child(3), .tabla-servicios td:nth-child(3) { width: 92px; }
@@ -848,9 +853,7 @@
     .modal { padding: 18px; }
   }
 
-  /* ============================================================
-     Personalización dinámica (color primario configurable)
-     ============================================================ */
+  /* Personalización dinámica (color primario configurable). */
   .navbar {
     background: linear-gradient(135deg, var(--color-primario), var(--color-primario));
   }
@@ -860,7 +863,7 @@
   .tarjeta h2 { color: var(--color-primario); }
   thead th { color: var(--color-primario); }
 
-  /* ---------- Pantalla de carga inicial ---------- */
+  /* Pantalla de carga inicial */
   .pantalla-carga {
     position: fixed;
     inset: 0;
@@ -871,7 +874,7 @@
     z-index: 300;
   }
 
-  /* ---------- Banner de bienvenida ---------- */
+  /* Banner de bienvenida */
   .banner-bienvenida {
     max-width: 1080px;
     margin: 18px auto 0;
@@ -883,7 +886,7 @@
     font-size: 15px;
   }
 
-  /* ---------- Asistente de configuración inicial ---------- */
+  /* Asistente de configuración inicial */
   .asistente {
     min-height: 100vh;
     width: 100%;
@@ -914,7 +917,7 @@
     cursor: pointer;
   }
 
-  /* ---------- Modal (cambiar contraseña) ---------- */
+  /* Modal (cambiar contraseña) */
   .modal-fondo {
     position: fixed;
     inset: 0;
@@ -956,11 +959,10 @@
   }
   .modal-cerrar:hover { color: var(--rojo); }
 
-  /* ---------- Color secundario configurable ---------- */
+  /* Color secundario configurable */
   .etiqueta-completada { color: var(--color-secundario); }
   .toast.exito { background: var(--color-secundario); }
 
-  /* Selector de servicios en el formulario de citas */
   .servicios-cita { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 4px; }
   .servicios-cita.colapsado { display: none; }
   .fila-servicio-cita {
@@ -971,7 +973,6 @@
   .servicio-chk { display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; }
   .servicio-chk input { width: auto; accent-color: var(--color-primario); }
 
-  /* Encabezado del bloque plegable de servicios (etiqueta + botón) */
   .encabezado-plegable { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
   .encabezado-plegable label { margin: 0; }
   #btnToggleServiciosCita { white-space: nowrap; padding: 10px 18px; font-size: 14px; font-weight: 700; }
@@ -981,9 +982,7 @@
     #btnToggleServiciosCita { width: 100%; padding: 12px; font-size: 15px; }
   }
 
-  /* ============================================================
-     TEMA OSCURO (configurable desde Configuración)
-     ============================================================ */
+  /* Tema oscuro. */
   body.tema-oscuro {
     --gris-fondo: #0f172a;
     --blanco: #1e293b;

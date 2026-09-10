@@ -1,6 +1,4 @@
-// Restaura ~/.clasprc.json a partir del secret CLASP_CREDENTIALS.
-// Soporta formato V3 (tokens.default), V1 local (token + oauth2ClientSettings),
-// V1 con solo token, y V1 global (access_token suelto). Usado por ambos workflows.
+// Restaura ~/.clasprc.json desde el secret CLASP_CREDENTIALS (acepta formatos V3 y V1).
 const fs = require("fs");
 const os = require("os");
 const path = require("path");

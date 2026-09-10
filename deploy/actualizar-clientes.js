@@ -1,6 +1,4 @@
-// Actualiza cada cliente activo: clasp push + versionado vía Apps Script API.
-// Reemplaza el antiguo `node -e '...'` inline del workflow (propenso a SyntaxError
-// por quoting y a `try` sin `catch`). Cada cliente falla de forma aislada.
+// Despliega src/ a cada cliente activo (push + versión + redeploy vía API). Cada cliente falla aislado.
 const { execSync } = require("child_process");
 const fs = require("fs");
 const os = require("os");

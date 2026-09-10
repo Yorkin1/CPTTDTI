@@ -97,18 +97,13 @@
     }, 3500);
   }
 
-  // Overlay de carga acotado a la tabla de una lista: se muestra mientras se
-  // escribe/borra/refresca, para que el usuario note el delay del servidor
-  // sin tapar toda la página. El objetivo es un wrapper NO scrolleable
-  // (.tabla-area) que envuelve al .tabla-contenedor, de modo que la capa
-  // blanca cubra toda el área de la tabla aunque se desplace horizontalmente.
+  // Overlay de carga acotado a la tabla: cubre todo aunque haya scroll horizontal.
   function zonaDeCarga(tbodyId) {
     var tbody = document.getElementById(tbodyId);
     if (!tbody || !tbody.closest) return null;
     var cont = tbody.closest('.tabla-contenedor');
     if (!cont) return null;
-    // Si el contenedor scrolleable aún no está envuelto en el wrapper fijo,
-    // lo envolvemos dinámicamente (una sola vez).
+    // Envuelve el contenedor una sola vez si aún no lo está.
     var area = cont.parentNode;
     if (!area || area.className.indexOf('tabla-area') === -1) {
       var wrapper = document.createElement('div');
@@ -162,12 +157,7 @@
     };
   }
 
-  // Fuerza la recarga desde el servidor de la lista indicada y avisa al usuario.
-  // Muestra el overlay de carga sobre la tabla mientras la petición al
-  // servidor está en vuelo.
-  // Refresca TODAS las listas/tablas del sistema. Cualquier botón "↻ Refrescar"
-  // dispara esta función para mantener sincronizados clientes, citas, servicios,
-  // usuarios, historial y (si aplica) el monitor de actividad.
+  // Recarga listas del servidor con overlay; "↻ Refrescar" las recarga TODAS para sincronizar.
   function refrescarTodasLasListas(terminar) {
     var cargadores = [
       function(cb) { cargarClientes(cb, true); },
@@ -211,7 +201,6 @@
       mostrarToast('Listas actualizadas.', 'exito');
     };
     mostrarCargaZona(tbodyId, 'Refrescando datos…');
-    // Cualquier botón de refrescar actualiza TODAS las tablas del sistema.
     refrescarTodasLasListas(terminar);
   }
 /* -------------------- Validación de formato -------------------- */
@@ -219,7 +208,7 @@
   // Valida el formato general de un correo electrónico.
   function esEmailValido(email) {
     email = String(email || '').trim();
-    if (!email) return true; // el correo es opcional
+    if (!email) return true;
     var patron = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     return patron.test(email);
   }
@@ -232,7 +221,7 @@
   // válido (809, 829 u 849).
   function esTelefonoValido(telefono) {
     telefono = String(telefono || '').trim();
-    if (!telefono) return true; // el teléfono es opcional
+    if (!telefono) return true;
     var caracteresPermitidos = /^[0-9\s\-\(\)]+$/;
     if (!caracteresPermitidos.test(telefono)) return false;
 
@@ -245,7 +234,7 @@
   // (sin dígitos ni símbolos), permitiendo acentos y la letra "ñ".
   function esNombreValido(texto) {
     texto = String(texto || '').trim();
-    if (!texto) return true; // la obligatoriedad se valida aparte
+    if (!texto) return true;
     var patron = /^[A-Za-zÀ-ÖØ-öø-ÿ'\-\s]+$/;
     return patron.test(texto);
   }
@@ -279,33 +268,28 @@
     var vistaAnterior = Estado.vistaActual;
     Estado.vistaActual = nombreVista;
 
-    // Ocultar el banner de bienvenida apenas el usuario cambia de vista por
-    // primera vez (no en la carga inicial ni al re-renderizar la misma vista).
+    // Ocultar bienvenida al cambiar de vista por primera vez.
     if (!Estado.primeraVistaCargada && vistaAnterior !== nombreVista) {
       Estado.primeraVistaCargada = true;
       ocultarBienvenida();
     }
 
-    // Detener el refresco automático de citas al cambiar de pantalla.
     if (window._intervaloCitas) {
       clearInterval(window._intervaloCitas);
       window._intervaloCitas = null;
     }
 
-    // Resaltar enlace activo.
     var enlaces = document.querySelectorAll('.nav-enlace');
     for (var i = 0; i < enlaces.length; i++) {
       enlaces[i].classList.toggle('activo', enlaces[i].dataset.vista === nombreVista);
     }
 
-    // Cerrar menú móvil.
     document.getElementById('navEnlaces').classList.remove('abierto');
 
     var contenido = document.getElementById('contenido');
     contenido.innerHTML = '<div class="cargando">Cargando…</div>';
 
-    // Las vistas están precargadas como plantillas locales; se inyectan
-    // sin llamar al servidor, lo que hace la navegación casi instantánea.
+    // Vistas precargadas: sin servidor, navegación instantánea.
     setTimeout(function() {
       var tpl = document.getElementById('tpl-' + nombreVista);
       if (!tpl) {
@@ -315,16 +299,13 @@
       contenido.innerHTML = tpl.innerHTML;
       aplicarEtiquetasVista(contenido);
       inicializarVista(nombreVista);
-      // Forzar la sincronización con las hojas al entrar a Clientes/Citas:
-      // así una reserva hecha desde la página pública aparece nada más navegar
-      // a la vista, sin depender del polling ni de la visibilidad de la pestaña.
+      // Sincronizar al entrar a Clientes/Citas (reservas públicas recientes).
       if (nombreVista === 'Clientes' || nombreVista === 'Citas') {
         chequearCambios(true);
       }
     }, 60);
   }
 
-  // Ejecuta la inicialización específica de cada vista.
   function inicializarVista(nombreVista) {
     if (nombreVista === 'Clientes')  return initClientes();
     if (nombreVista === 'Servicios') return initServicios();
@@ -364,7 +345,6 @@
     document.getElementById('btnCerrarModalFoto').addEventListener('click', cerrarModalFoto);
     document.getElementById('btnCancelarModalFoto').addEventListener('click', cerrarModalFoto);
     document.getElementById('btnUsarFoto').addEventListener('click', usarFotoSeleccionada);
-    // En móvil, un clic sobre la fila del cliente despliega su tarjeta.
     var tbodyCli = document.getElementById('tablaClientes');
     if (tbodyCli) tbodyCli.addEventListener('click', function(e) {
       _clicTarjetaMovil(e, 'data-cliente-id', function(id) { alternarTarjetaCliente(id); });
@@ -375,7 +355,7 @@
   // Reservas en línea: la gestión vive en la vista Servicios (visible para todos).
   function iniciarGestionReservas() {
     var chk = document.getElementById('cfg2_reservas_habilitar');
-    if (!chk) return; // La tarjeta no existe: no hacer nada.
+    if (!chk) return;
 
     // El editor NO puede cambiar el horario de reservas: solo ve los botones
     // para compartir el enlace. Se oculta el bloque de configuración y el guardar.
@@ -489,9 +469,7 @@
     window._firmaCambios = null;
   }
 
-  // Detecta cambios externos comparando la firma de las hojas de datos.
-  // Con `forzar=true` refresca aunque la firma no haya cambiado (se usa al
-  // navegar a Clientes/Citas para garantizar datos frescos).
+  // Detecta cambios externos por firma; con `forzar=true` refresca aunque no haya cambiado.
   function chequearCambios(forzar) {
     // Con la pestaña oculta no se consulta el servidor (ahorra cuota y carga).
     if (document.hidden) return;
@@ -502,13 +480,7 @@
         var clave = firma.clientes + '|' + firma.citas + '|' + firma.historial;
         if (!forzar && window._firmaCambios !== null && window._firmaCambios === clave) return;
         window._firmaCambios = clave;
-        // Refrescar SIEMPRE las cachés compartidas (clientes y citas), aunque la
-        // vista abierta sea otra: así un cliente o una cita creados externamente
-        // (p. ej. desde la página pública de reservas) aparecen al cambiar de
-        // vista, sin necesidad de recargar la página. Cada carga re-renderiza
-        // solo la vista que esté visible actualmente. El primer chequeo también
-        // sincroniza: la línea base que se captura pudo ya incluir cambios hechos
-        // entre la carga inicial del panel y este momento.
+        // Refrescar SIEMPRE clientes y citas aunque se vea otra vista (cambios externos).
         cargarClientes(null, true);
         cargarCitas(true);
         if (Estado.vistaActual === 'Historial') {
@@ -895,7 +867,6 @@
 
     cargarServicios(true);
     iniciarGestionReservas();
-    // En móvil, un clic sobre la fila del servicio despliega su tarjeta.
     var tbodyServ = document.getElementById('tablaServicios');
     if (tbodyServ) tbodyServ.addEventListener('click', function(e) {
       _clicTarjetaMovil(e, 'data-servicio-id', function(id) { alternarTarjetaServicio(id); });
@@ -1138,7 +1109,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   function initCitas() {
     document.getElementById('formCita').addEventListener('submit', guardarCita);
     document.getElementById('btnCancelarCita').addEventListener('click', cancelarEdicionCita);
-    // Lista de servicios plegable: arranca colapsada.
     var btnTglSvc = document.getElementById('btnToggleServiciosCita');
     if (btnTglSvc) btnTglSvc.addEventListener('click', alternarServiciosCita);
     var contSvcInit = document.getElementById('cita_servicios');
@@ -1150,7 +1120,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('filtroFechaCita').addEventListener('change', aplicarFiltrosCitas);
     var btnQF = document.getElementById('btnQuitarFiltrosCita');
     if (btnQF) btnQF.addEventListener('click', limpiarFiltrosCita);
-    // En móvil, un clic sobre la fila de una cita despliega su tarjeta.
     var tbodyCitas = document.getElementById('tablaCitas');
     if (tbodyCitas) tbodyCitas.addEventListener('click', _clicFilaCitaMovil);
     var btnContHoy = document.getElementById('contadorHoy');
@@ -1162,7 +1131,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       llenarSelectClientes('cita_cliente');
       cargarCitas();
     });
-    // Cargar el catálogo de servicios para que el usuario elija al agendar.
     cargarServicios(true, renderServiciosCita);
 
     // Re-rendiza las citas de forma automática: así una cita que había estado
@@ -1308,7 +1276,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         checks[i].checked = false;
       }
     }
-    // Al editar, expandir la lista solo si quedó algo marcado.
     var marcados = 0;
     for (var m = 0; m < checks.length; m++) {
       if (checks[m].checked) marcados++;
@@ -1336,7 +1303,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     });
     dibujarCitas(tbody, lista);
     actualizarContadorHoy();
-    // El botón "Quitar filtros" solo aparece con algún filtro activado.
     var btnQF = document.getElementById('btnQuitarFiltrosCita');
     if (btnQF) btnQF.style.display = (term || est || fDia) ? '' : 'none';
   }
@@ -1398,7 +1364,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     return { estado: 'Programada', completada: false, expirada: false, bloqueada: false };
   }
 
-  // Fecha (timestamp) en que termina la cita: fecha + hora + duración.
   function finCitaDate(fecha, hora, durMin) {
     var f = fechaLegible(fecha);
     var h = horaLegible(hora);
@@ -1521,7 +1486,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         minuscInicial(etCitas()) + ' registradas.</td></tr>';
       return;
     }
-    // Ordenar por fecha y hora.
     citas.sort(function(a, b) {
       return (fechaLegible(a.Fecha) + horaLegible(a.Hora)).localeCompare(
         fechaLegible(b.Fecha) + horaLegible(b.Hora));
@@ -1578,7 +1542,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }).join('');
   }
 
-  // En móvil, un clic sobre la fila despliega su tarjeta con el detalle.
   function _esMovilTarjeta() {
     return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
   }
@@ -1722,7 +1685,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       return;
     }
 
-    // Aviso rápido de superposición con otra cita del mismo día.
     if (citaChocaLocal(datos.fecha, datos.hora, datos.duracionMins, id || '')) {
       mostrarToast('Ya existe ' + articuloEtiqueta(etCita()) + ' ' + minuscInicial(etCita()) + ' en ese horario. Elija otra hora.', 'error');
       return;
@@ -1858,7 +1820,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       }
     }
     calcularDuracionCita();
-    // Al volver a agendar nuevo, colapsar la lista de servicios.
     var contSvcCancel = document.getElementById('cita_servicios');
     if (contSvcCancel) contSvcCancel.classList.add('colapsado');
     actualizarBotonServiciosCita();
@@ -1876,7 +1837,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       .withSuccessHandler(function(respuesta) {
         ocultarCargaZona('tablaCitas');
         if (sesionInvalida(respuesta)) return;
-        // Reflejar el cambio de inmediato en la caché local.
         (Estado.citas || []).forEach(function(c) {
           if (String(c.ID_Cita) === String(id)) c.Estado = estado;
         });
@@ -1943,7 +1903,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('hist_fecha_hasta').addEventListener('change', _alCambiarFiltroHistorial);
     var btnQFHist = document.getElementById('btnQuitarFiltrosHistorial');
     if (btnQFHist) btnQFHist.addEventListener('click', limpiarFiltrosHistorial);
-    // En móvil, un clic sobre la fila del historial despliega su tarjeta.
     var tbodyHist = document.getElementById('tablaHistorial');
     if (tbodyHist) tbodyHist.addEventListener('click', function(e) {
       _clicTarjetaMovil(e, 'data-historial-id', function(id) { alternarTarjetaHistorial(id); });
@@ -2010,7 +1969,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('filtro_modulo_monitor').addEventListener('change', _alCambiarFiltroMonitor);
     document.getElementById('filtro_desde_monitor').addEventListener('change', _alCambiarFiltroMonitor);
     document.getElementById('filtro_hasta_monitor').addEventListener('change', _alCambiarFiltroMonitor);
-    // En móvil, un clic sobre la fila de actividad despliega su tarjeta.
     var tbodyAct = document.getElementById('tablaActividad');
     if (tbodyAct) tbodyAct.addEventListener('click', function(e) {
       _clicTarjetaMovil(e, 'data-actividad-idx', function(idx) { alternarTarjetaActividad(idx); });
@@ -2065,12 +2023,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         }
         var act = resp.actividades || [];
         if (act.length === 0) {
-          var msg = 'No hay actividad registrada.';
-          if (resp.total === 0) {
-            msg = 'Aún no hay actividades registradas. El monitor registra las acciones a partir de ahora: ' +
-                  'cree o edite un cliente, agende o cambie una cita, registre un usuario, etc., y aparecerán aquí.';
-          }
-          tbody.innerHTML = '<tr><td colspan="7" class="vacio">' + esc(msg) + '</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="vacio">Aún no hay actividades registradas.</td></tr>';
           if (typeof callback === 'function') callback();
           return;
         }
@@ -2090,7 +2043,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         if (typeof callback === 'function') callback();
       })
       .withFailureHandler(function(err) {
-        tbody.innerHTML = '<tr><td colspan="6" class="vacio">Error al cargar la actividad.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="vacio">Error al cargar la actividad.</td></tr>';
         mostrarToast(err.message, 'error');
         if (typeof callback === 'function') callback();
       })
@@ -2257,7 +2210,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     actualizarVisibilidadQFHistorial();
   }
 
-  // El botón "Quitar filtros" de Historial solo aparece con algún filtro activado.
   function actualizarVisibilidadQFHistorial() {
     var btn = document.getElementById('btnQuitarFiltrosHistorial');
     if (!btn) return;
@@ -2359,9 +2311,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (el) el.textContent = 'Se exportará: ' + _describirAlcanceExportar_();
   }
 
-  // Prepara la exportación: confirma el alcance, obtiene el historial filtrado
-  // por el cliente seleccionado y aplica los filtros de fecha.
-  // Al tener los datos listos invoca alListo(filas, restaurar).
+  // Exporta el historial filtrado; al terminar invoca alListo(filas, restaurar).
   function _prepararExportar_(boton, alListo) {
     var texto = boton ? boton.textContent : '';
     if (boton) { boton.disabled = true; boton.textContent = 'Exportando…'; }
@@ -2492,9 +2442,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
   }
 
-  // Lee un .txt con servicios preestablecidos (formato: Nombre|Precio|Duración|Descripción,
-  // una línea por servicio; líneas vacías o que empiecen con # se ignoran) y los crea en
-  // el catálogo. Quedan editables como cualquier otro servicio desde la pestaña Servicios.
+  // Importa servicios desde un .txt (Nombre|Precio|Duración|Descripción, una línea por servicio).
   function importarServiciosDesdeArchivo() {
     var input = document.getElementById('cfg_servicios_archivo');
     var archivo = input.files[0];
@@ -2577,7 +2525,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     cerrarModalLogo();
   }
 
-  // Muestra/oculta la vista previa del logo según la URL (o imagen recién cargada).
   function actualizarVistaLogoConfiguracion(url) {
     var img = document.getElementById('cfg2_logo_preview');
     var btn = document.getElementById('cfg2_logo_quitar');
@@ -2625,7 +2572,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     };
   }
 
-  // Rellena los campos de horario del formulario desde un objeto de configuración.
   function rellenarHorarioAtencion(horario) {
     for (var d = 0; d < 7; d++) {
       var dia = horario[d] || {};
@@ -2659,7 +2605,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
   }
 
-  // Lee los campos de horario y devuelve el objeto para guardar en configuración.
   function leerHorarioAtencionFormulario() {
     var horario = {};
     for (var d = 0; d < 7; d++) {
@@ -2700,7 +2645,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     return porSemana;
   }
 
-  // Copia el enlace público de reservas al portapapeles.
   function copiarEnlaceReservas() {
     if (Estado.reservaUrl) {
       copiarTextoReservas(Estado.reservaUrl);
@@ -2782,7 +2726,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     btn.disabled = true;
     btn.textContent = 'Guardando…';
 
-    // Si se eligió un logo nuevo, se lee como data URL antes de enviar.
     var archivoLogo = document.getElementById('cfg2_logo_archivo').files[0];
     if (archivoLogo) {
       var lector = new FileReader();
@@ -2842,7 +2785,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
      ========================================================== */
 
   document.addEventListener('DOMContentLoaded', function() {
-    // Consultar el estado/configuración de la aplicación.
     google.script.run
       .withSuccessHandler(function(estado) {
         Estado.config = estado || Estado.config;
@@ -2963,10 +2905,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     mostrarLogin();
   }
 
-  // Avisa al administrador cuando se registra alguien nuevo (desde la última
-  // vez que se notificó). El control de "ya avisados" se guarda en el SERVIDOR
-  // (PropertiesService), por lo que el aviso ocurre UNA sola vez por usuario
-  // sin importar el navegador ni el dispositivo.
+  // Avisa UNA sola vez por usuario nuevo (control en el SERVIDOR).
   function avisarNuevosUsuarios() {
     var sesion = obtenerSesion();
     if (!sesion || sesion.rol !== 'administrador') return;
@@ -3019,7 +2958,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
   }
 
-  // Muestra el formulario de recuperación (ocultando login/registro).
   function mostrarFormRecuperar(ver) {
     var fLogin = document.getElementById('formLogin');
     var fRegistro = document.getElementById('formRegistro');
@@ -3031,7 +2969,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (titulo) titulo.textContent = ver ? 'Recuperar contraseña' : 'Iniciar sesión';
   }
 
-  // Alterna entre el formulario de inicio de sesión y el de registro.
   function alternarFormAcceso(registro) {
     var fLogin = document.getElementById('formLogin');
     var fRegistro = document.getElementById('formRegistro');
@@ -3170,8 +3107,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
 
   /* -------------------- Asistente de configuración inicial -------------------- */
 
-  // Plantillas de ejemplo: solo cambian etiquetas/textos de configuración,
-  // sin modificar el código genérico.
+  // Plantillas de ejemplo (solo etiquetas/textos, sin tocar el código genérico).
   var PRESETS_CONFIG = {
     gasolinera: {
       NOMBRE_NEGOCIO: 'Estación de Combustible',
@@ -3272,7 +3208,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     ocultar('appPrincipal');
     mostrar('asistenteInicial');
 
-    // Rellenar valores actuales como sugerencia.
     var c = Estado.config;
     setVal('cfg_nombre_negocio', c.nombreNegocio && c.nombreNegocio !== 'Mi Negocio' ? c.nombreNegocio : '');
     setVal('cfg_mensaje_bienvenida', c.mensajeBienvenida || '');
@@ -3308,7 +3243,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
   }
 
-  // Vista previa / quitar logo dentro del asistente inicial.
   function actualizarVistaLogoAsistente(url) {
     var img = document.getElementById('cfg_logo_preview');
     var btn = document.getElementById('cfg_logo_quitar');
@@ -3370,7 +3304,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     btn.disabled = true;
     btn.textContent = 'Guardando…';
 
-    // Si se eligió un logo nuevo, se lee como data URL antes de enviar.
     var archivoLogo = document.getElementById('cfg_logo_archivo').files[0];
     if (archivoLogo) {
       var lector = new FileReader();
@@ -3396,7 +3329,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         btn.disabled = false;
         btn.textContent = 'Guardar y comenzar';
         if (respuesta && respuesta.exito) {
-          // Recargar el estado y entrar al dashboard ya configurado.
           google.script.run
             .withSuccessHandler(function(estado) {
               Estado.config = estado || Estado.config;
@@ -3426,9 +3358,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
 
   /* -------------------- Dashboard -------------------- */
 
-  // Carga la configuración, los clientes y las citas en UNA sola llamada al
-  // servidor (menos invocaciones = arranque más rápido). Puebla el estado en
-  // memoria para que las vistas se dibujen al instante.
+  // Carga configuración, clientes y citas en UNA sola llamada (arranque rápido).
   function cargarDatosIniciales(callback) {
     google.script.run
       .withSuccessHandler(function(resp) {
@@ -3453,9 +3383,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       .obtenerDatosIniciales(tokenSesion());
   }
 
-  // Repinta la barra superior con los datos de la sesión actual (nombre,
-  // avatar y visibilidad de las pestañas de administrador). Se usa al iniciar
-  // el dashboard y tras editar los datos del propio usuario.
+  // Repinta la barra superior con los datos de la sesión actual.
   function actualizarBarraSesion() {
     var sesion = obtenerSesion();
     if (!sesion) return;
@@ -3484,14 +3412,11 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
 
     aplicarConfiguracionGlobal();
 
-    // Chequeo silencioso de cambios externos (se agregó un cliente o se
-    // registró una cita, p. ej. desde la página pública de reservas).
-    // Solo refresca la vista abierta cuando la firma cambió de verdad.
+    // Chequeo silencioso cada 30 s; al volver a la pestaña se comprueba de inmediato.
     if (window._intervaloFirma) clearInterval(window._intervaloFirma);
     window._firmaCambios = null;
     window._intervaloFirma = setInterval(chequearCambios, 30000);
-    // Al volver a la pestaña se comprueba de inmediato si hubo cambios (p. ej.
-    // una reserva hecha en otra pestaña/equipo), sin esperar al siguiente timer.
+
     if (!window._vinculadoVisibilidad) {
       window._vinculadoVisibilidad = true;
       document.addEventListener('visibilitychange', function() {
@@ -3508,7 +3433,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (!document.body.getAttribute('data-vinculado')) {
       document.body.setAttribute('data-vinculado', '1');
 
-      // Enlaces de navegación.
       var enlaces = document.querySelectorAll('.nav-enlace');
       for (var i = 0; i < enlaces.length; i++) {
         enlaces[i].addEventListener('click', function(e) {
@@ -3517,12 +3441,10 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         });
       }
 
-      // Botón de menú móvil.
       document.getElementById('menuToggle').addEventListener('click', function() {
         document.getElementById('navEnlaces').classList.toggle('abierto');
       });
 
-      // Cerrar sesión.
       document.getElementById('btnSalir').addEventListener('click', cerrarSesion);
 
       // Menú desplegable del usuario (cambiar contraseña / salir).
@@ -3563,11 +3485,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
 
     }
 
-    // Mostrar un estado de carga mientras llegan los datos en una sola llamada.
     var contenidoIni = document.getElementById('contenido');
     if (contenidoIni) contenidoIni.innerHTML = '<div class="cargando">Cargando…</div>';
 
-    // Cargar la vista inicial una vez que estén los datos en memoria.
     cargarDatosIniciales(function() {
       avisarNuevosUsuarios();
       irAVista('Clientes');
@@ -3581,12 +3501,13 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     aplicarColorSecundario(c.colorSecundario);
     aplicarTema(c.tema);
 
-    // Título del negocio en la barra y en el documento.
     var titulo = document.getElementById('tituloNegocio');
-    if (titulo) titulo.textContent = c.nombreNegocio || 'Gestor de Clientes';
+    if (titulo) {
+      titulo.textContent = c.nombreNegocio || 'Gestor de Clientes';
+      titulo.title = c.nombreNegocio || 'Gestor de Clientes';
+    }
     document.title = (c.nombreNegocio || 'Gestor de Clientes');
 
-    // Logo del negocio (arriba a la izquierda, antes del nombre).
     var logo = document.getElementById('logoNegocio');
     if (logo) {
       if (c.logoUrl) {
@@ -3598,11 +3519,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       }
     }
 
-    // Favicon: duplica el logo del negocio en la pestaña del navegador.
     var favicon = document.getElementById('faviconApp');
     if (favicon && c.logoUrl) favicon.href = c.logoUrl;
 
-    // Instalable a pantalla completa (PWA): icono de iOS, título y manifest dinámico.
     var appleIcon = document.getElementById('appleTouchIcon');
     if (appleIcon && c.logoUrl) appleIcon.href = c.logoUrl;
     var metaTitulo = document.getElementById('metaAppleTitle');
@@ -3611,7 +3530,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (metaColor) metaColor.setAttribute('content', c.colorPrimario || '#4285F4');
     actualizarManifestPWA(c);
 
-    // Mensaje de bienvenida (máximo 5 veces por usuario; se oculta al cambiar de vista).
     var banner = document.getElementById('bannerBienvenida');
     var msg = document.getElementById('mensajeBienvenida');
     if (banner && msg && c.mensajeBienvenida && !Estado.bienvenidaMostrada) {
@@ -3622,17 +3540,14 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       }
     }
 
-    // Pie de página.
     var pie = document.getElementById('pieNegocio');
     if (pie) pie.textContent = (c.nombreNegocio || 'Gestor de Clientes') + ' · © ' + new Date().getFullYear();
 
-    // Etiquetas de la barra de navegación.
     var navCitas = document.getElementById('navCitas');
     if (navCitas) navCitas.textContent = etCitas();
   }
 
-  // Arma un manifest de PWA en memoria (nombre, colores e ícono del negocio)
-  // para que "Agregar a pantalla de inicio" abra la app en pantalla completa.
+  // Manifest PWA en memoria para "Agregar a pantalla de inicio".
   function actualizarManifestPWA(c) {
     var link = document.getElementById('manifestApp');
     if (!link) return;
@@ -3654,8 +3569,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     link.href = URL.createObjectURL(blob);
   }
 
-  // Devuelve true si el banner de bienvenida debe mostrarse (máx. 5 veces
-  // por usuario). Al mostrarse, incrementa el contador en localStorage.
+  // Banner de bienvenida: máx. 5 veces por usuario (contador en localStorage).
   function debeMostrarBienvenida() {
     var sesion = obtenerSesion();
     if (!sesion || !sesion.usuario) return false;
@@ -3666,7 +3580,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     return true;
   }
 
-  // Oculta el banner de bienvenida (p. ej. al cambiar de vista por primera vez).
   function ocultarBienvenida() {
     var banner = document.getElementById('bannerBienvenida');
     if (banner) banner.style.display = 'none';
@@ -3734,7 +3647,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   function initUsuarios() {
     document.getElementById('formUsuario').addEventListener('submit', guardarUsuario);
     document.getElementById('btnCancelarUsuario').addEventListener('click', cancelarEdicionUsuario);
-    // En móvil, un clic sobre la fila del usuario despliega su tarjeta.
     var tbodyUsu = document.getElementById('tablaUsuarios');
     if (tbodyUsu) tbodyUsu.addEventListener('click', function(e) {
       _clicTarjetaMovil(e, 'data-usuario-id', function(id) { alternarTarjetaUsuario(id); });

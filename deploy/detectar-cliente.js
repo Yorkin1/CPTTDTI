@@ -1,5 +1,4 @@
-// Detecta spreadsheetId/deploymentId de un cliente vía Apps Script API.
-// Entradas por env (evita interpolar ${{ inputs }} dentro de JS): INPUT_SLUG, INPUT_SCRIPT_ID.
+// Detecta spreadsheetId/deploymentId de un cliente (entradas por env: INPUT_SLUG, INPUT_SCRIPT_ID).
 const { execSync } = require("child_process");
 const fs = require("fs");
 const os = require("os");
