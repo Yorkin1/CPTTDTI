@@ -636,6 +636,14 @@
     font-size: 13px;
     border-top: 1px solid var(--gris-borde);
     background: var(--blanco);
+    margin-top: auto;
+  }
+
+  /* La app es columna flex a pantalla completa para que el pie baje al fondo. */
+  #appPrincipal {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
 
   /* ---------- Responsivo ---------- */
@@ -644,7 +652,11 @@
     .grid-form { grid-template-columns: 1fr; }
     .titulo-app { font-size: 17px; }
     .logo-negocio { height: 26px; width: 26px; }
-    .menu-toggle { display: block; }
+    .menu-toggle { display: block; flex-shrink: 0; }
+    .nav-sesion { flex-shrink: 0; }
+    /* La marca cede el espacio: el nombre largo se recorta con puntos. */
+    .navbar-marca { flex: 1; min-width: 0; }
+    .titulo-app { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .navbar-enlaces {
       position: absolute;
       top: 62px;
@@ -663,25 +675,45 @@
     .nav-enlace { padding: 12px 14px; }
     .navbar { gap: 12px; padding: 0 12px; }
     .menu-usuario-boton .nombre-sesion { display: none; }
-    .contenedor { padding: 18px 12px; }
+    .contenedor { padding: 18px 12px; min-width: 0; }
+    /* body es flex-column: sin min-width:0 el contenedor no baja de su
+       min-content y la página se ensancha (~492px) al abrir la tarjeta. */
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; }
+    .cabecera-lista h2 { flex: 1; min-width: 0; }
+    .cabecera-lista .btn-refrescar { margin-left: auto; flex-shrink: 0; }
+    /* Historial: alcance y exportar bajan; refrescar queda arriba a la derecha. */
+    .cabecera-lista .acciones-lista { display: contents; }
+    .cabecera-lista .btn-refrescar { order: 1; }
+    .cabecera-lista .etiqueta-alcance { order: 2; flex: 1 1 100%; }
+    .cabecera-lista .menu-exportar { order: 3; margin-left: auto; }
     .tabla-contenedor { -webkit-overflow-scrolling: touch; max-height: none; overflow-y: visible; }
     /* Sin scroll interno, el encabezado fijo pierde sentido en móvil. */
     .tabla-contenedor thead th { position: static; }
     /* Tablas al ancho de la pantalla, sin scroll lateral. */
     table { font-size: 13px; }
-    .tabla-citas, .tabla-clientes,
-    .tabla-historial, .tabla-usuarios, .tabla-actividad {
+    /* Citas con layout fijo: la fila colapsada muestra Título+Fecha+Hora+Estado en una línea. */
+    .tabla-citas {
       min-width: 0;
       width: 100%;
       table-layout: fixed;
     }
+    .tabla-clientes,
+    .tabla-historial, .tabla-usuarios, .tabla-actividad, .tabla-servicios {
+      min-width: 0;
+      width: 100%;
+      table-layout: auto;
+    }
+    /* En auto las ocultas no roban ancho; las fechas y etiquetas van en una línea. */
+    .tabla-historial td:nth-child(3), .tabla-actividad td:nth-child(1),
+    .tabla-usuarios td:nth-child(3), .tabla-servicios td:nth-child(2),
+    .tabla-servicios td:nth-child(3), .etiqueta { white-space: nowrap; }
     .tabla-citas th, .tabla-citas td,
     .tabla-clientes th, .tabla-clientes td,
     .tabla-historial th, .tabla-historial td,
     .tabla-usuarios th, .tabla-usuarios td,
+    .tabla-servicios th, .tabla-servicios td,
     .tabla-actividad th, .tabla-actividad td {
       white-space: normal;
       overflow-wrap: break-word;
@@ -709,6 +741,16 @@
     .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 68px; }
     .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) { width: 92px; text-align: center; }
     .tabla-citas .etiqueta { padding: 3px 8px; font-size: 11px; }
+    /* Ancho por columna en móvil: la clave respira y las filas no se estiran. */
+    .tabla-clientes th:nth-child(3), .tabla-clientes td:nth-child(3) { width: 112px; }
+    .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) { width: 82px; }
+    .tabla-historial th, .tabla-historial td { padding: 8px 6px; }
+    .tabla-actividad th:nth-child(1), .tabla-actividad td:nth-child(1) { width: 86px; }
+    .tabla-actividad th:nth-child(6), .tabla-actividad td:nth-child(6) { width: 112px; }
+    .tabla-usuarios th:nth-child(3), .tabla-usuarios td:nth-child(3) { width: 76px; }
+    /* Servicios igual que las demás: Nombre flexible, Precio y Estado compactos. */
+    .tabla-servicios th:nth-child(2), .tabla-servicios td:nth-child(2) { width: 84px; }
+    .tabla-servicios th:nth-child(3), .tabla-servicios td:nth-child(3) { width: 92px; }
     /* Columnas clave por tabla (lo oculto vive en la tarjeta de un clic). */
     .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3),
     .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4),
@@ -716,39 +758,24 @@
     .tabla-citas th:nth-child(8), .tabla-citas td:nth-child(8),
     .tabla-citas th:nth-child(9), .tabla-citas td:nth-child(9),
     .tabla-citas th:nth-child(11), .tabla-citas td:nth-child(11),
+    .tabla-clientes th:nth-child(1), .tabla-clientes td:nth-child(1),
     .tabla-clientes th:nth-child(4), .tabla-clientes td:nth-child(4),
-    .tabla-clientes th:nth-child(5), .tabla-clientes td:nth-child(5),
     .tabla-clientes th:nth-child(6), .tabla-clientes td:nth-child(6),
     .tabla-clientes th:nth-child(7), .tabla-clientes td:nth-child(7),
-    .tabla-historial th:nth-child(2), .tabla-historial td:nth-child(2),
-    .tabla-historial th:nth-child(4), .tabla-historial td:nth-child(4),
     .tabla-historial th:nth-child(5), .tabla-historial td:nth-child(5),
     .tabla-historial th:nth-child(6), .tabla-historial td:nth-child(6),
     .tabla-historial th:nth-child(7), .tabla-historial td:nth-child(7),
+    .tabla-historial th:nth-child(8), .tabla-historial td:nth-child(8),
     .tabla-historial th:nth-child(9), .tabla-historial td:nth-child(9),
     .tabla-usuarios th:nth-child(4), .tabla-usuarios td:nth-child(4),
     .tabla-usuarios th:nth-child(5), .tabla-usuarios td:nth-child(5),
     .tabla-actividad th:nth-child(3), .tabla-actividad td:nth-child(3),
     .tabla-actividad th:nth-child(4), .tabla-actividad td:nth-child(4),
-    .tabla-actividad th:nth-child(6), .tabla-actividad td:nth-child(6) { display: none; }
-    /* Servicios conserva su scroll lateral y todas sus columnas, como antes. */
-    .tabla-servicios { min-width: 700px; }
-    .tabla-servicios thead th:first-child { position: sticky; left: 0; z-index: 4; }
-    .tabla-servicios tbody td:first-child {
-      position: sticky; left: 0; z-index: 3;
-      background: #fff;
-      box-shadow: 1px 0 0 var(--gris-borde);
-    }
-    .tabla-servicios tbody tr:nth-child(even) td:first-child { background: #f8fafc; }
-    .tabla-servicios tbody tr:hover td:first-child { background: #eef2ff; }
-    .tabla-servicios tbody tr.fila-detalle:nth-child(even) td:first-child { background: var(--azul-muy-claro); box-shadow: none; }
-    /* Reparto fijo: Nombre compacto y Descripción con el espacio sobrante. */
-    .tabla-servicios { table-layout: fixed; }
-    .tabla-servicios th:nth-child(1), .tabla-servicios td:nth-child(1) { width: 120px; }
-    .tabla-servicios th:nth-child(2), .tabla-servicios td:nth-child(2) { width: 85px; }
-    .tabla-servicios th:nth-child(3), .tabla-servicios td:nth-child(3) { width: 75px; }
-    .tabla-servicios th:nth-child(5), .tabla-servicios td:nth-child(5) { width: 85px; }
-    .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6) { width: 150px; }
+    .tabla-actividad th:nth-child(5), .tabla-actividad td:nth-child(5),
+    .tabla-actividad th:nth-child(7), .tabla-actividad td:nth-child(7),
+    .tabla-servicios th:nth-child(4), .tabla-servicios td:nth-child(4),
+    .tabla-servicios th:nth-child(5), .tabla-servicios td:nth-child(5),
+    .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6) { display: none; }
     /* Horario de atención compacto (conserva su scroll solo en pantallas muy angostas). */
     .tabla-horario { min-width: 0; }
     .tabla-horario th, .tabla-horario td { padding: 6px 4px; font-size: 12px; }
@@ -763,28 +790,27 @@
     tr[data-servicio-id].expandida td:first-child, tr[data-historial-id].expandida td:first-child,
     tr[data-usuario-id].expandida td:first-child, tr[data-actividad-idx].expandida td:first-child { background: #eef2ff; }
     .fila-detalle td { white-space: normal; background: var(--azul-muy-claro); padding: 10px; }
-    /* La tarjeta ocupa el ancho de su contenedor (nunca más). */
-    .fila-detalle { display: block; }
-    .fila-detalle td:first-child {
-      display: block;
-      position: sticky;
-      left: 0;
-      width: 100%;
-      max-width: 100%;
+    /* La tarjeta es una fila normal: el td con colspan ocupa todo el ancho.
+       (Con display:block Chromium angostaba la fila a ~34px y la tarjeta
+       quedaba como tira vertical estirada hacia abajo.) */
+    tr.fila-detalle { display: table-row; }
+    tr.fila-detalle > td:first-child {
+      display: table-cell;
+      position: static;
+      width: auto;
+      max-width: none;
       box-sizing: border-box;
       background: var(--azul-muy-claro);
       box-shadow: none;
-    }
-    /* Servicios sí tiene scroll: ahí la tarjeta usa el ancho visible. */
-    .tabla-servicios .fila-detalle td:first-child {
-      width: calc(100vw - 52px);
-      max-width: calc(100vw - 52px);
     }
     .tarjeta-cita {
       background: #fff;
       border: 1px solid var(--gris-borde);
       border-radius: 10px;
       padding: 12px 14px;
+      max-width: 100%;
+      overflow: hidden;
+      min-width: 0;
     }
     .tarjeta-cita-cab {
       display: flex;
@@ -794,7 +820,9 @@
       margin-bottom: 8px;
       border-bottom: 1px solid var(--gris-borde);
     }
-    .tarjeta-cita-cab strong { flex: 1; font-size: 15px; min-width: 0; overflow-wrap: break-word; }
+    .tarjeta-cita-cab strong { flex: 1 1 0; font-size: 15px; min-width: 0; overflow-wrap: break-word; }
+    /* flex-basis en 0 (no 0%): con 0% Chromium usa el max-content del texto
+       para el min-content de la tarjeta y la tabla se ensancha (~438px). */
     .tarjeta-cita-fila {
       display: flex;
       justify-content: space-between;
