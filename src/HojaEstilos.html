@@ -645,6 +645,8 @@
   @media (max-width: 720px) {
     .grid-form { grid-template-columns: 1fr; }
     #bloqueConfigReservas .grid-form { grid-template-columns: 1fr 1fr; }
+    #bloqueConfigReservas .campo { min-width: 0; }
+    #bloqueConfigReservas .campo input { width: 100%; min-width: 0; }
     .titulo-app { font-size: 17px; }
     .logo-negocio { height: 26px; width: 26px; }
     .menu-toggle { display: block; flex-shrink: 0; }
@@ -686,7 +688,7 @@
     .tabla-contenedor thead th { position: static; }
     /* Tablas al ancho de la pantalla, sin scroll lateral. */
     table { font-size: 13px; }
-    /* Citas con layout fijo: la fila colapsada muestra Título+Fecha+Hora+Estado en una línea. */
+    /* Citas con layout fijo: la fila colapsada muestra Cliente+Fecha+Hora+Estado en una línea. */
     .tabla-citas {
       min-width: 0;
       width: 100%;
@@ -714,10 +716,10 @@
     }
     .col-wrap, .col-cliente, .col-servicios { min-width: 0; max-width: none; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 34px; }
-    /* Fila colapsada en una línea: Título + Fecha + Hora + Estado. */
+    /* Fila colapsada en una línea: Cliente + Fecha + Hora + Estado (el título vive en la tarjeta). */
     .tabla-citas th, .tabla-citas td { padding: 8px 6px; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 30px; }
-    .tabla-citas th:nth-child(2), .tabla-citas td:nth-child(2) {
+    .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3) {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -757,7 +759,7 @@
     .tabla-servicios th:nth-child(2), .tabla-servicios td:nth-child(2) { width: 84px; }
     .tabla-servicios th:nth-child(3), .tabla-servicios td:nth-child(3) { width: 92px; }
     /* Columnas clave por tabla (lo oculto vive en la tarjeta de un clic). */
-    .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3),
+    .tabla-citas th:nth-child(2), .tabla-citas td:nth-child(2),
     .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4),
     .tabla-citas th:nth-child(7), .tabla-citas td:nth-child(7),
     .tabla-citas th:nth-child(8), .tabla-citas td:nth-child(8),
@@ -794,7 +796,7 @@
     tr[data-cita-id].expandida td:first-child, tr[data-cliente-id].expandida td:first-child,
     tr[data-servicio-id].expandida td:first-child, tr[data-historial-id].expandida td:first-child,
     tr[data-usuario-id].expandida td:first-child, tr[data-actividad-idx].expandida td:first-child { background: #eef2ff; }
-    .fila-detalle td { white-space: normal; background: var(--azul-muy-claro); padding: 10px; }
+    .fila-detalle td { white-space: normal; background: var(--azul-muy-claro); padding: 6px; }
     /* La tarjeta es una fila normal: el td con colspan ocupa todo el ancho.
        (Con display:block Chromium angostaba la fila a ~34px y la tarjeta
        quedaba como tira vertical estirada hacia abajo.) */
@@ -812,7 +814,7 @@
       background: #fff;
       border: 1px solid var(--gris-borde);
       border-radius: 10px;
-      padding: 12px 14px;
+      padding: 8px 10px;
       max-width: 100%;
       overflow: hidden;
       min-width: 0;
@@ -821,8 +823,8 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding-bottom: 8px;
-      margin-bottom: 8px;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
       border-bottom: 1px solid var(--gris-borde);
     }
     .tarjeta-cita-cab strong { flex: 1 1 0; font-size: 15px; min-width: 0; overflow-wrap: break-word; }
@@ -832,7 +834,7 @@
       display: flex;
       justify-content: space-between;
       gap: 12px;
-      padding: 4px 0;
+      padding: 2px 0;
       font-size: 14px;
     }
     .tarjeta-cita-fila > span:first-child { color: var(--gris-texto); font-weight: 600; flex-shrink: 0; }
@@ -841,7 +843,7 @@
     /* Red de seguridad: nada dentro de la tarjeta puede salirse a los lados. */
     .tarjeta { overflow-x: clip; }
     .tabla-contenedor img, .tarjeta-cita img { max-width: 100%; }
-    .tarjeta-cita-acciones { display: flex; gap: 8px; margin-top: 10px; }
+    .tarjeta-cita-acciones { display: flex; gap: 8px; margin-top: 8px; }
     thead th, tbody td { padding: 8px 10px; }
     .tabla-contenedor input[type="time"] { width: 100px !important; }
   }
