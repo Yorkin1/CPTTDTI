@@ -22,169 +22,24 @@ jobs:
         with:
           node-version: 20
 
+      - run: npm install -g @google/clasp
       - run: npm install googleapis
 
       - name: Restaurar credenciales
-        run: |
-          node --input-type=commonjs -e '
-            const fs = require("fs");
-            const raw = JSON.parse(process.env.CLASP_CREDENTIALS);
-            let output;
-            if (raw.tokens && raw.tokens.default) {
-              output = { token: raw.tokens.default };
-            } else if (raw.token) {
-              output = raw;
-            } else {
-              output = raw;
-            }
-            fs.writeFileSync(process.env.HOME + "/.clasprc.json", JSON.stringify(output));
-            console.log("OK: credenciales restauradas");
-          '
+        run: node deploy/restaurar-credenciales.js
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
       - name: Obtener datos del cliente
         id: detectar
-        run: |
-          node --input-type=commonjs -e '
-            (async () => {
-              const fs = require("fs");
-              const { google } = require("googleapis");
-
-              const slug = "${{ github.event.inputs.slug }}";
-              let scriptIdInput = "${{ github.event.inputs.script_id }}";
-
-              if (scriptIdInput.includes("script.google.com")) {
-                const matchMacro = scriptIdInput.match(/\/macros\/s\/([a-zA-Z0-9_-]+)/);
-                const matchProject = scriptIdInput.match(/\/projects\/([a-zA-Z0-9_-]+)/);
-                if (matchMacro) {
-                  scriptIdInput = matchMacro[1];
-                } else if (matchProject) {
-                  scriptIdInput = matchProject[1];
-                } else {
-                  console.error("No se pudo extraer el Script ID de la URL del editor");
-                  process.exit(1);
-                }
-              } else if (scriptIdInput.includes("docs.google.com") || scriptIdInput.includes("spreadsheets")) {
-                console.error("ERROR: Pusiste la URL del spreadsheet, no del Apps Script.");
-                console.error("Necesitas ir a Extensiones > Apps Script en la hoja, y copiar el ID de la URL del editor.");
-                console.error("Ejemplo: https://script.google.com/macros/s/ESTE_ES_EL_ID/exec");
-                process.exit(1);
-              }
-
-              const scriptId = scriptIdInput;
-              console.log("Script ID: " + scriptId);
-
-              // Leer credenciales del secret directamente (formato tokens.default)
-              const rawPath = "/tmp/raw-clasprc.json";
-              fs.writeFileSync(rawPath, process.env.CLASP_CREDENTIALS || fs.readFileSync(process.env.HOME + "/.clasprc.json", "utf8"));
-              const clasprc = JSON.parse(fs.readFileSync(rawPath, "utf8"));
-
-              const tokenObj = clasprc.tokens?.default || clasprc.token || clasprc;
-              const clientId = tokenObj.client_id || "";
-              const clientSecret = tokenObj.client_secret || "";
-              const accessToken = tokenObj.access_token;
-              const refreshToken = tokenObj.refresh_token;
-
-              if (!accessToken || !refreshToken || !clientId || !clientSecret) {
-                console.error("Faltan campos en las credenciales");
-                console.error("Estructura:", JSON.stringify(Object.keys(clasprc)));
-                process.exit(1);
-              }
-
-              const oauth2 = new google.auth.OAuth2(clientId, clientSecret, "https://developers.google.com/oauthplayground");
-              oauth2.setCredentials({
-                access_token: accessToken,
-                refresh_token: refreshToken
-              });
-
-              const script = google.script({ version: "v1", auth: oauth2 });
-
-              const projectRes = await script.projects.get({ scriptId });
-              const project = projectRes.data;
-              const spreadsheetId = project.parentId || "";
-              console.log("Spreadsheet ID: " + spreadsheetId);
-
-              const deployRes = await script.projects.deployments.list({ scriptId });
-              const deployments = deployRes.data.deployments || [];
-
-              const versionedDeployments = deployments.filter(d =>
-                d.deploymentConfig && d.deploymentConfig.versionNumber &&
-                parseInt(d.deploymentConfig.versionNumber) > 0
-              );
-              let deploymentId;
-
-              if (versionedDeployments.length > 0) {
-                deploymentId = versionedDeployments[0].deploymentId;
-                console.log("Usando implementación versionada: " + deploymentId);
-              } else {
-                console.log("No hay implementaciones versionadas. Creando una nueva...");
-                const claspJson = {
-                  scriptId: scriptId,
-                  rootDir: "./src",
-                  scriptExtensions: [".js", ".gs"],
-                  htmlExtensions: [".html"],
-                  jsonExtensions: [".json"],
-                  filePushOrder: [],
-                  skipSubdirectories: false
-                };
-                fs.writeFileSync(".clasp.json", JSON.stringify(claspJson, null, 2));
-                const { execSync } = require("child_process");
-                const output = execSync("clasp deploy -d \"deploy inicial\"", { encoding: "utf8", stdio: "pipe" });
-                console.log(output);
-                const match = output.match(/https:\/\/script\.google\.com\/macros\/s\/([a-zA-Z0-9_-]+)\/exec/);
-                if (match && match[1]) {
-                  deploymentId = match[1];
-                  console.log("Nueva implementación creada: " + deploymentId);
-                } else {
-                  console.error("No se pudo extraer el deploymentId");
-                  process.exit(1);
-                }
-              }
-
-              console.log("Deployment ID: " + deploymentId);
-
-              const result = {
-                slug: slug,
-                scriptId: scriptId,
-                deploymentId: deploymentId,
-                spreadsheetId: spreadsheetId
-              };
-              fs.writeFileSync("/tmp/cliente-detectado.json", JSON.stringify(result, null, 2));
-              console.log("Cliente detectado correctamente");
-            })();
-          '
+        run: node deploy/detectar-cliente.js
         env:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+          INPUT_SLUG: ${{ github.event.inputs.slug }}
+          INPUT_SCRIPT_ID: ${{ github.event.inputs.script_id }}
 
       - name: Agregar a clientes.json
-        run: |
-          node --input-type=commonjs -e '
-            const fs = require("fs");
-            const cliente = JSON.parse(fs.readFileSync("/tmp/cliente-detectado.json", "utf8"));
-            const clientesPath = "./deploy/clientes.json";
-
-            let clientes = [];
-            if (fs.existsSync(clientesPath)) {
-              clientes = JSON.parse(fs.readFileSync(clientesPath, "utf8"));
-            }
-
-            if (clientes.some(c => c.slug === cliente.slug)) {
-              console.error("Ya existe un cliente con el slug: " + cliente.slug);
-              process.exit(1);
-            }
-
-            clientes.push({
-              slug: cliente.slug,
-              scriptId: cliente.scriptId,
-              deploymentId: cliente.deploymentId,
-              spreadsheetId: cliente.spreadsheetId,
-              activo: true
-            });
-
-            fs.writeFileSync(clientesPath, JSON.stringify(clientes, null, 2));
-            console.log("Cliente agregado: " + cliente.slug);
-          '
+        run: node deploy/agregar-cliente-json.js
 
       - name: Commit cambios
         run: |
