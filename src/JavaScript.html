@@ -929,8 +929,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     filtro = (filtro || '').toLowerCase();
     var lista = (Estado.servicios || []).filter(function(s) {
       if (!filtro) return true;
-      var texto = ((s.Nombre || '') + ' ' + (s.Descripcion || '')).toLowerCase();
-      return texto.indexOf(filtro) !== -1;
+      return String(s.Nombre || '').toLowerCase().indexOf(filtro) !== -1;
     });
     if (lista.length === 0) {
       var mensaje = filtro ? 'No se encontraron servicios.' : 'No hay servicios registrados.';
@@ -2941,12 +2940,34 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       .obtenerUsuariosNuevos(tokenSesion());
   }
 
+  // Mostrar/ocultar contraseña (botón ojo en login y registro).
+  document.addEventListener('click', function(e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.btn-ojo') : null;
+    if (!btn) return;
+    var campo = document.getElementById(btn.getAttribute('data-para'));
+    if (!campo) return;
+    var visible = campo.type === 'text';
+    campo.type = visible ? 'password' : 'text';
+    btn.textContent = visible ? '👁' : '🙈';
+    btn.title = visible ? 'Mostrar contraseña' : 'Ocultar contraseña';
+    btn.setAttribute('aria-label', btn.title);
+  });
+
   function mostrarLogin() {
     detenerChequeoCambios();
     ocultar('pantallaCarga');
     ocultar('asistenteInicial');
     ocultar('appPrincipal');
     mostrar('pantallaLogin');
+    // Restablecer los ojos de contraseña a oculto cada vez que se muestra el login.
+    var ojos = document.querySelectorAll('.btn-ojo');
+    for (var iOjo = 0; iOjo < ojos.length; iOjo++) {
+      var cOjo = document.getElementById(ojos[iOjo].getAttribute('data-para'));
+      if (cOjo) cOjo.type = 'password';
+      ojos[iOjo].textContent = '👁';
+      ojos[iOjo].title = 'Mostrar contraseña';
+      ojos[iOjo].setAttribute('aria-label', 'Mostrar contraseña');
+    }
     var form = document.getElementById('formLogin');
     if (!form.getAttribute('data-vinculado')) {
       form.setAttribute('data-vinculado', '1');

@@ -147,6 +147,23 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
   .campo textarea { resize: vertical; min-height: 70px; }
+  /* Mostrar/ocultar contraseña (ojo en login y registro). */
+  .campo-contrasena { position: relative; }
+  .campo-contrasena input { width: 100%; padding-right: 42px; }
+  .btn-ojo {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px 8px;
+    color: var(--gris-texto);
+  }
+  .btn-ojo:hover { color: var(--color-primario); }
   /* Reservas en línea: Paso y Límite alineados aunque una etiqueta ocupe 2 líneas. */
   #bloqueConfigReservas .campo input[type="number"] { margin-top: auto; }
   .ayuda { font-size: 12px; color: var(--gris-texto); margin-top: 4px; }

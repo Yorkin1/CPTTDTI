@@ -138,7 +138,10 @@
             </div>
             <div class="campo ancho-completo">
               <label for="login_contrasena">Contraseña *</label>
-              <input type="password" id="login_contrasena" required placeholder="••••••••" autocomplete="current-password">
+              <div class="campo-contrasena">
+                <input type="password" id="login_contrasena" required placeholder="••••••••" autocomplete="current-password">
+                <button type="button" class="btn-ojo" data-para="login_contrasena" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁</button>
+              </div>
             </div>
           </div>
           <div class="acciones-form">
@@ -172,11 +175,17 @@
             </div>
             <div class="campo ancho-completo">
               <label for="reg_contrasena">Contraseña *</label>
-              <input type="password" id="reg_contrasena" required minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+              <div class="campo-contrasena">
+                <input type="password" id="reg_contrasena" required minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+                <button type="button" class="btn-ojo" data-para="reg_contrasena" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁</button>
+              </div>
             </div>
             <div class="campo ancho-completo">
               <label for="reg_contrasena_confirmar">Confirmar contraseña *</label>
-              <input type="password" id="reg_contrasena_confirmar" required minlength="8" placeholder="Repita la contraseña" autocomplete="new-password">
+              <div class="campo-contrasena">
+                <input type="password" id="reg_contrasena_confirmar" required minlength="8" placeholder="Repita la contraseña" autocomplete="new-password">
+                <button type="button" class="btn-ojo" data-para="reg_contrasena_confirmar" title="Mostrar contraseña" aria-label="Mostrar contraseña">👁</button>
+              </div>
             </div>
           </div>
           <div class="acciones-form">
