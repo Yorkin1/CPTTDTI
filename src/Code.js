@@ -31,6 +31,15 @@ var PROP_CONFIG_CACHE = 'CONFIG_CACHE';
 var CACHE_SESIONES_TTL_SEG = Math.min(Math.floor(DURACION_SESION_MS / 1000), 21600);
 var CACHE_CONFIG_TTL_SEG = 60;
 
+// Cache de listados (Clientes y Servicios): acelera las cargas repetidas del
+// dashboard. TTL corto (60 s) + invalidación explícita en cada escritura.
+// CacheService admite 100 KB por clave: solo se guarda si el JSON pesa menos
+// de 90 KB; si no, se lee directo de la hoja (fallback transparente).
+var PROP_CACHE_CLIENTES = 'LISTA_CLIENTES';
+var PROP_CACHE_SERVICIOS = 'LISTA_SERVICIOS';
+var CACHE_LISTAS_TTL_SEG = 60;
+var CACHE_LISTAS_MAX_BYTES = 90 * 1024;
+
 var ENCABEZADOS = {
   Clientes:  ['ID_Cliente', 'Nombre', 'Apellido', 'Telefono', 'Email', 'Direccion', 'Notas', 'Fecha_Registro', 'Foto'],
   Citas:     ['ID_Cita', 'ID_Cliente', 'Titulo', 'Fecha', 'Hora', 'Duracion_Mins', 'Descripcion', 'ID_Evento_Calendar', 'Estado', 'Servicios', 'Total_Precio', 'Agendado_Por'],
@@ -180,6 +189,10 @@ function limpiarDatos(token) {
 
     // 4) Hojas iniciales vacías ("Hoja 1"/"Sheet1").
     _eliminarHojaInicialSiVacia_(hojaCalculo);
+
+    // 5) La estructura pudo cambiar: invalidar listados cacheados.
+    _invalidarCacheLista_(PROP_CACHE_CLIENTES);
+    _invalidarCacheLista_(PROP_CACHE_SERVICIOS);
 
     var mensaje = 'Limpieza completada:\n\n' + resumen.join('\n');
     try {
@@ -406,6 +419,10 @@ function _limpiarDatosCopiados_(hojaCalculo) {
     hojaCfg.setFrozenRows(1);
     limpiado = true;
   }
+
+  // Los datos heredados se vaciaron: invalidar listados cacheados.
+  _invalidarCacheLista_(PROP_CACHE_CLIENTES);
+  _invalidarCacheLista_(PROP_CACHE_SERVICIOS);
 
   return limpiado;
 }
@@ -1203,6 +1220,47 @@ function generarId(prefijo) {
 }
 
 /**
+ * Lee una hoja como objetos usando el cache de listados (TTL corto).
+ * Si el cache no existe o el JSON supera el límite por clave, lee directo.
+ * @param {Sheet} hoja   Hoja a leer.
+ * @param {string} clave Clave del cache (PROP_CACHE_CLIENTES / PROP_CACHE_SERVICIOS).
+ * @return {Array} objetos.
+ */
+function _leerListaConCache_(hoja, clave) {
+  try {
+    var crudo = CacheService.getScriptCache().get(clave);
+    if (crudo) {
+      var lista = JSON.parse(crudo);
+      if (Array.isArray(lista)) return lista;
+    }
+  } catch (errCache) {
+    Logger.log('Cache de listados no disponible (' + clave + '): ' + errCache);
+  }
+  var frescos = filasAObjetos_(hoja);
+  try {
+    var json = JSON.stringify(frescos);
+    if (json.length <= CACHE_LISTAS_MAX_BYTES) {
+      CacheService.getScriptCache().put(clave, json, CACHE_LISTAS_TTL_SEG);
+    }
+  } catch (errGuardar) {
+    Logger.log('No se pudo guardar el cache (' + clave + '): ' + errGuardar);
+  }
+  return frescos;
+}
+
+/**
+ * Invalida el cache de un listado tras una escritura exitosa.
+ * @param {string} clave Clave del cache a eliminar.
+ */
+function _invalidarCacheLista_(clave) {
+  try {
+    CacheService.getScriptCache().remove(clave);
+  } catch (err) {
+    Logger.log('No se pudo invalidar el cache (' + clave + '): ' + err);
+  }
+}
+
+/**
  * Convierte las filas de una hoja en un arreglo de objetos
  * usando la primera fila como claves.
  */
@@ -1432,6 +1490,7 @@ function agregarCliente(token, datos) {
     ]);
     Logger.log('Cliente agregado: ' + id);
     _registrarActividad_(token, 'Clientes', 'Agregó cliente', ((datos.nombre || '') + ' ' + (datos.apellido || '')).trim() + (datos.email ? ' (' + datos.email + ')' : ''));
+    _invalidarCacheLista_(PROP_CACHE_CLIENTES);
     return { exito: true, mensaje: 'Cliente agregado correctamente.', id: id, foto: fotoUrl, fechaRegistro: fechaRegistro };
   } catch (err) {
     Logger.log('Error al agregar cliente: ' + err);
@@ -1444,8 +1503,7 @@ function agregarCliente(token, datos) {
  */
 function obtenerClientes(token) {
   if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
-  var hoja = obtenerHoja_(HOJA_CLIENTES);
-  return filasAObjetos_(hoja);
+  return _leerListaConCache_(obtenerHoja_(HOJA_CLIENTES), PROP_CACHE_CLIENTES);
 }
 
 /**
@@ -1495,6 +1553,7 @@ function actualizarCliente(token, id, datos) {
     }
     Logger.log('Cliente actualizado: ' + id);
     _registrarActividad_(token, 'Clientes', 'Editó cliente', 'ID ' + id + (datos.email ? ' (' + datos.email + ')' : ''));
+    _invalidarCacheLista_(PROP_CACHE_CLIENTES);
     return { exito: true, mensaje: 'Cliente actualizado correctamente.', foto: fotoUrl };
   } catch (err) {
     Logger.log('Error al actualizar cliente: ' + err);
@@ -1518,6 +1577,7 @@ function eliminarCliente(token, id) {
     hoja.deleteRow(fila);
     Logger.log('Cliente eliminado: ' + id);
     _registrarActividad_(token, 'Clientes', 'Eliminó cliente', 'ID ' + id);
+    _invalidarCacheLista_(PROP_CACHE_CLIENTES);
     return { exito: true, mensaje: 'Cliente eliminado correctamente.' };
   } catch (err) {
     Logger.log('Error al eliminar cliente: ' + err);
@@ -1563,7 +1623,7 @@ function _validarServicio_(datos) {
 function obtenerServicios(token) {
   if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
   try {
-    return filasAObjetos_(obtenerHoja_(HOJA_SERVICIOS));
+    return _leerListaConCache_(obtenerHoja_(HOJA_SERVICIOS), PROP_CACHE_SERVICIOS);
   } catch (err) {
     Logger.log('Error en obtenerServicios: ' + err);
     return { exito: false, mensaje: 'Error al obtener los servicios: ' + err.message };
@@ -1589,6 +1649,7 @@ function agregarServicio(token, datos) {
     hoja.appendRow([id, s.nombre, s.precio, s.duracionMins, s.descripcion, s.activo]);
     Logger.log('Servicio creado: ' + id);
     _registrarActividad_(token, 'Servicios', 'Agregó servicio', (s.nombre || '') + (s.precio != null ? ' ($' + s.precio + ')' : ''));
+    _invalidarCacheLista_(PROP_CACHE_SERVICIOS);
     return { exito: true, mensaje: 'Servicio creado correctamente.', id: id };
   } catch (err) {
     Logger.log('Error al crear servicio: ' + err);
@@ -1645,6 +1706,7 @@ function importarServiciosDesdeTexto(token, lista) {
     if (creados) partes.push(creados + ' nuevo(s)');
     if (actualizados) partes.push(actualizados + ' actualizado(s)');
     var mensaje = (partes.length ? partes.join(', ') : '0 servicios procesados') + (omitidos ? ', ' + omitidos + ' omitido(s) por datos inválidos' : '') + '.';
+    _invalidarCacheLista_(PROP_CACHE_SERVICIOS);
     return { exito: true, creados: creados, actualizados: actualizados, omitidos: omitidos, mensaje: mensaje };
   } catch (err) {
     Logger.log('Error al importar servicios: ' + err);
@@ -1675,6 +1737,7 @@ function actualizarServicio(token, id, datos) {
     ]]);
     Logger.log('Servicio actualizado: ' + id);
     _registrarActividad_(token, 'Servicios', 'Editó servicio', 'ID ' + id);
+    _invalidarCacheLista_(PROP_CACHE_SERVICIOS);
     return { exito: true, mensaje: 'Servicio actualizado correctamente.' };
   } catch (err) {
     Logger.log('Error al actualizar servicio: ' + err);
@@ -1699,6 +1762,7 @@ function eliminarServicio(token, id) {
     hoja.deleteRow(fila);
     Logger.log('Servicio eliminado: ' + id);
     _registrarActividad_(token, 'Servicios', 'Eliminó servicio', 'ID ' + id);
+    _invalidarCacheLista_(PROP_CACHE_SERVICIOS);
     return { exito: true, mensaje: 'Servicio eliminado correctamente.' };
   } catch (err) {
     Logger.log('Error al eliminar servicio: ' + err);
@@ -2771,7 +2835,8 @@ function obtenerFirmaCambios(token) {
     exito: true,
     clientes: firmaHoja(HOJA_CLIENTES),
     citas: firmaHoja(HOJA_CITAS),
-    historial: firmaHoja(HOJA_HISTORIAL)
+    historial: firmaHoja(HOJA_HISTORIAL),
+    servicios: firmaHoja(HOJA_SERVICIOS)
   };
 }
 
@@ -3491,6 +3556,7 @@ function _buscarOCrearClientePublico_(nombre, apellido, email, telefono) {
   var fechaRegistro = Utilities.formatDate(new Date(), obtenerZonaHoraria_(), 'yyyy-MM-dd HH:mm');
   hoja.appendRow([id, nombre, apellido, telefono, email, '', '', fechaRegistro, '']);
   Logger.log('Cliente creado por reserva pública: ' + id);
+  _invalidarCacheLista_(PROP_CACHE_CLIENTES);
   return id;
 }
 

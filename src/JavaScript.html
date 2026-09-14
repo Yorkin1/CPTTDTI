@@ -477,12 +477,13 @@
       .withSuccessHandler(function(firma) {
         if (sesionInvalida(firma)) return;
         if (!firma || !firma.exito) return;
-        var clave = firma.clientes + '|' + firma.citas + '|' + firma.historial;
+        var clave = firma.clientes + '|' + firma.citas + '|' + firma.historial + '|' + (firma.servicios || '');
         if (!forzar && window._firmaCambios !== null && window._firmaCambios === clave) return;
         window._firmaCambios = clave;
         // Refrescar SIEMPRE clientes y citas aunque se vea otra vista (cambios externos).
         cargarClientes(null, true);
         cargarCitas(true);
+        cargarServicios(true);
         if (Estado.vistaActual === 'Historial') {
           var sel = document.getElementById('sel_cliente_historial');
           if (sel) cargarHistorial(sel.value || '', true);
