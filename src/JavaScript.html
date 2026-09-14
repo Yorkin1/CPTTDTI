@@ -867,6 +867,10 @@
 
     cargarServicios(true);
     iniciarGestionReservas();
+    var buscarServicio = document.getElementById('buscarServicio');
+    if (buscarServicio) buscarServicio.addEventListener('input', debounce(function(e) {
+      renderTablaServicios(e.target.value);
+    }, 250));
     var tbodyServ = document.getElementById('tablaServicios');
     if (tbodyServ) tbodyServ.addEventListener('click', function(e) {
       _clicTarjetaMovil(e, 'data-servicio-id', function(id) { alternarTarjetaServicio(id); });
@@ -914,13 +918,23 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       .obtenerServicios(tokenSesion());
   }
 
-  function renderTablaServicios() {
+  function renderTablaServicios(filtro) {
     var tbody = document.getElementById('tablaServicios');
     if (!tbody) return;
     var esAdmin = esAdminSesion();
-    var lista = Estado.servicios || [];
+    if (typeof filtro !== 'string') {
+      var campo = document.getElementById('buscarServicio');
+      filtro = campo ? campo.value : '';
+    }
+    filtro = (filtro || '').toLowerCase();
+    var lista = (Estado.servicios || []).filter(function(s) {
+      if (!filtro) return true;
+      var texto = ((s.Nombre || '') + ' ' + (s.Descripcion || '')).toLowerCase();
+      return texto.indexOf(filtro) !== -1;
+    });
     if (lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="' + (esAdmin ? 6 : 5) + '" class="vacio">No hay servicios registrados.</td></tr>';
+      var mensaje = filtro ? 'No se encontraron servicios.' : 'No hay servicios registrados.';
+      tbody.innerHTML = '<tr><td colspan="' + (esAdmin ? 6 : 5) + '" class="vacio">' + mensaje + '</td></tr>';
       return;
     }
     tbody.innerHTML = lista.map(function(s) {
