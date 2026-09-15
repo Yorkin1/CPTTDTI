@@ -180,20 +180,31 @@ Use esta lista para comprobar que la plantilla funciona correctamente como plant
 ## 📂 Estructura del proyecto
 
 ```
-client-manager-gas/
-├── appsscript.json      # Manifiesto: scopes y config. de la app web (executeAs=USER_DEPLOYING)
-├── Code.gs              # Backend: onOpen, doGet, configurarPlantilla, API config, CRUD, Calendar, usuarios, reservas públicas
-├── Index.html           # Estructura principal: asistente de configuración + login + dashboard (SPA)
-├── HojaEstilos.html     # Estilos CSS (colores configurables, tema claro/oscuro, responsivo)
-├── JavaScript.html      # Lógica del cliente (asistente, personalización dinámica, formularios, tablas, sesión)
-├── Clientes.html        # Vista: alta/listado de clientes + ajustes de reservas en línea
-├── Citas.html           # Vista: agendar citas (crea evento en Calendar)
-├── Historial.html       # Vista: historial por cliente
-├── Configuracion.html   # Vista (solo admin): claves de configuración general
-├── Usuarios.html        # Vista (solo admin): gestión de usuarios y roles
-├── Reserva.html         # Página pública de reservas en línea (4 pasos, sin login)
-└── README.md            # Esta guía
+CPTTDTI/
+├── README.md                    # Esta guía
+├── src/
+│   ├── Code.js                  # Backend: onOpen, doGet, configurarPlantilla, API config, CRUD, Calendar, usuarios, reservas públicas, WhatsApp
+│   ├── Index.html               # Estructura principal: asistente de configuración + login + dashboard (SPA)
+│   ├── HojaEstilos.html         # Estilos CSS (colores configurables, tema claro/oscuro, responsivo)
+│   ├── JavaScript.html          # Lógica del cliente (asistente, personalización dinámica, formularios, tablas, sesión)
+│   ├── Clientes.html            # Vista: alta/listado de clientes + ajustes de reservas en línea
+│   ├── Citas.html               # Vista: agendar citas (crea evento en Calendar)
+│   ├── Servicios.html           # Vista: catálogo de servicios + ajustes de reservas en línea
+│   ├── Historial.html           # Vista: historial por cliente
+│   ├── Configuracion.html       # Vista (solo admin): claves de configuración general
+│   ├── Usuarios.html            # Vista (solo admin): gestión de usuarios y roles
+│   ├── Monitor.html             # Vista (solo dueño): monitor de actividad
+│   └── Reserva.html             # Página pública de reservas en línea (4 pasos, sin login)
+├── deploy/                      # Actualización automatizada a copias de clientes
+│   ├── clientes.json
+│   ├── actualizar-clientes.js
+│   ├── detectar-cliente.js
+│   ├── generar-manifest.js      # Genera src/appsscript.json (no se commitea)
+│   └── REPORT.md
+└── .github/workflows/           # Actions: actualizar copias, agregar cliente
 ```
+
+> `src/appsscript.json` (manifiesto: scopes y `executeAs=USER_DEPLOYING`) se genera en el workflow y no se commitea.
 
 ### Hojas de la base de datos
 
