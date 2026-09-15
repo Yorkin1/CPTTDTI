@@ -155,8 +155,6 @@ Use esta lista para comprobar que la plantilla funciona correctamente como plant
 - [ ] **Reservas en línea:** con las reservas habilitadas, desde una ventana anónima se abre `…/exec?v=reservar`, se elige horario y se confirma; la cita aparece en el dashboard y en Calendar.
 - [ ] **Reserva de un cliente ya registrado:** si el correo/teléfono coincide con una ficha, la página avisa y la reserva queda vinculada a ese cliente.
 - [ ] **Días cerrados:** un día sin horas en el horario de atención no muestra horarios disponibles.
-- [ ] **WhatsApp negocio:** con `TEL_NEGOCIO` configurado, tras confirmar en `…/exec?v=reservar` aparece "Avisar por WhatsApp" que abre el chat del negocio; sin `TEL_NEGOCIO` el botón queda oculto.
-- [ ] **WhatsApp cita:** al actualizar una cita con teléfono válido se pregunta "¿Enviar aviso por WhatsApp?"; sin teléfono no se pregunta y el flujo no se rompe.
 
 ---
 
