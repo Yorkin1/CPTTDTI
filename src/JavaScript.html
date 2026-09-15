@@ -3668,10 +3668,11 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var rolTxt = u.rol === 'administrador' ? 'Administrador' : 'Editor';
     var html =
       '<div class="tarjeta-cita">' +
-        '<div class="tarjeta-cita-cab"><strong>' + esc(u.usuario) + '</strong>' +
+        '<div class="tarjeta-cita-cab"><strong>' + esc(u.nombre) + '</strong>' +
           '<span class="etiqueta etiqueta-programada">' + esc(rolTxt) + '</span></div>' +
-        _filaTarjeta('Nombre', esc(u.nombre)) +
         _filaTarjeta('Estado', u.activo ? 'Activo' : 'Inactivo') +
+        _filaTarjeta('Correo electrónico', esc(u.usuario)) +
+        _filaTarjeta('Nombre', esc(u.nombre)) +
         ((puedeEditar || puedeEliminar)
           ? '<div class="tarjeta-cita-acciones">' +
             (puedeEditar ? '<button class="btn btn-secundario btn-pequeno" onclick="editarUsuario(\'' + esc(u.usuario) + '\')">Editar</button>' : '') +
