@@ -713,6 +713,9 @@
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; margin-bottom: 12px; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: none; }
+    /* Cabeceras sin grupo de acciones (Clientes, Servicios…): segunda raya
+       completa bajo la fila, igual que en Historial. */
+    .cabecera-lista:not(:has(.acciones-lista)) { border-bottom: 2px solid var(--azul-muy-claro); }
     .cabecera-lista h2 { flex: 0 1 auto; min-width: 0; }
     .cabecera-lista .btn-refrescar { order: 0; margin-left: auto; flex-shrink: 0; }
     .cabecera-lista .acciones-lista { order: 0; display: flex; flex: 1 1 100%; align-items: center; gap: 8px; margin-left: 0; border-top: 2px solid var(--azul-muy-claro); padding-top: 8px; }
