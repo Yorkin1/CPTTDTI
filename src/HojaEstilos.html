@@ -716,6 +716,8 @@
     /* Cabeceras sin grupo de acciones (Clientes, Servicios…): segunda raya
        completa bajo la fila, igual que en Historial. */
     .cabecera-lista:not(:has(.acciones-lista)) { border-bottom: 2px solid var(--azul-muy-claro); }
+    /* Citas: solo la raya del título (el título largo con contador no admite doble raya). */
+    .cabecera-lista:has(#contadorHoy) { border-bottom: none; }
     .cabecera-lista h2 { flex: 0 1 auto; min-width: 0; }
     .cabecera-lista .btn-refrescar { order: 0; margin-left: auto; flex-shrink: 0; }
     .cabecera-lista .acciones-lista { order: 0; display: flex; flex: 1 1 100%; align-items: center; gap: 8px; margin-left: 0; border-top: 2px solid var(--azul-muy-claro); padding-top: 8px; }
@@ -777,6 +779,8 @@
     .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 76px; font-size: 12px; }
     .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) { width: 96px; text-align: center; }
     .tabla-citas .etiqueta { padding: 3px 8px; font-size: 11px; }
+    /* Contador "Hoy": más compacto en móvil. */
+    #contadorHoy { padding: 2px 6px; font-size: 10px; }
     /* td[colspan] (vacío/carga): full-width centrado; ignora anchos y columnas ocultas. */
     .tabla-citas tbody td[colspan], .tabla-clientes tbody td[colspan],
     .tabla-historial tbody td[colspan], .tabla-usuarios tbody td[colspan],
