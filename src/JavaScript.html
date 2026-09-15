@@ -2443,17 +2443,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       btnImportarServicios.addEventListener('click', function() { archivoServicios.click(); });
       archivoServicios.addEventListener('change', importarServiciosDesdeArchivo);
     }
-
-    // Botón de correo con los enlaces: visible SOLO para el dueño.
-    var btnCorreo = document.getElementById('btnEnviarEnlacesDueno');
-    if (btnCorreo) {
-      if (esDuenoSesion()) {
-        btnCorreo.style.display = '';
-        btnCorreo.addEventListener('click', enviarEnlacesAlDueno);
-      } else {
-        btnCorreo.style.display = 'none';
-      }
-    }
   }
 
   // Importa servicios desde un .txt (Nombre|Precio|Duración|Descripción, una línea por servicio).
@@ -2673,28 +2662,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         mostrarToast('Error: ' + err.message, 'error');
       })
       .obtenerUrlReservas();
-  }
-
-  // Envía los enlaces de acceso (app + reservas) al correo del dueño.
-  // El botón solo se muestra al dueño; el servidor re-valida el permiso.
-  function enviarEnlacesAlDueno() {
-    var btn = document.getElementById('btnEnviarEnlacesDueno');
-    if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
-    google.script.run
-      .withSuccessHandler(function(resp) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Enviar enlaces a mi correo'; }
-        if (sesionInvalida(resp)) return;
-        if (resp && resp.exito) {
-          mostrarToast(resp.mensaje || 'Correo enviado.', 'exito');
-        } else {
-          mostrarToast((resp && resp.mensaje) || 'No se pudo enviar el correo.', 'error');
-        }
-      })
-      .withFailureHandler(function(err) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Enviar enlaces a mi correo'; }
-        mostrarToast('Error: ' + err.message, 'error');
-      })
-      .enviarEnlacesAlDueno(tokenSesion());
   }
 
   function copiarTextoReservas(url) {
@@ -3376,7 +3343,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
               ocultar('asistenteInicial');
               iniciarDashboard();
               mostrarToast('¡Configuración completada! Bienvenido a su sistema.', 'exito');
-              if (respuesta.avisoCorreo) mostrarToast(respuesta.avisoCorreo, 'aviso');
             })
             .withFailureHandler(function(err) {
               mostrarToast('Error al recargar la configuración: ' + err.message, 'error');
