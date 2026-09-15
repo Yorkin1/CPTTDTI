@@ -300,6 +300,9 @@
     font-size: 18px;
     color: var(--azul-oscuro);
   }
+  /* Refrescar siempre al final (en Historial va fuera del grupo de acciones). */
+  .cabecera-lista .acciones-lista { margin-left: auto; }
+  .cabecera-lista .btn-refrescar { order: 2; }
 
   /* Tablas */
   .tabla-area { position: relative; }
@@ -711,11 +714,10 @@
     .barra-busqueda { flex-direction: column; align-items: stretch; margin-bottom: 12px; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; }
     .cabecera-lista h2 { flex: 1 1 auto; min-width: 0; }
-    .cabecera-lista .btn-refrescar { margin-left: auto; flex-shrink: 0; }
-    .cabecera-lista .acciones-lista { display: contents; }
-    .cabecera-lista .btn-refrescar { order: 0; }
-    .cabecera-lista .etiqueta-alcance { order: 1; flex: 1 1 auto; min-width: 0; max-width: calc(100% - 116px); }
-    .cabecera-lista .menu-exportar { order: 1; margin-left: auto; flex-shrink: 0; }
+    .cabecera-lista .btn-refrescar { order: 0; margin-left: auto; flex-shrink: 0; }
+    .cabecera-lista .acciones-lista { order: 0; display: flex; flex: 1 1 100%; align-items: center; gap: 8px; margin-left: 0; }
+    .cabecera-lista .etiqueta-alcance { flex: 1 1 auto; min-width: 0; text-align: right; }
+    .cabecera-lista .menu-exportar { margin-left: auto; flex-shrink: 0; }
     .tabla-contenedor { -webkit-overflow-scrolling: touch; max-height: 460px; overflow-y: auto; }
     /* Con scroll interno en móvil, el encabezado queda fijo. */
     .tabla-contenedor thead th { position: sticky; top: 0; z-index: 2; }
