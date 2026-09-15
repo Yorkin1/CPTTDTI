@@ -7,7 +7,6 @@ Plantilla **gratuita** y **genérica** para administrar **clientes**, **citas** 
 - 🌐 **Aplicación web** moderna, responsiva y **100 % en español**.
 - 🎨 **Asistente de personalización** en el primer uso (nombre del negocio, etiquetas, color, tema, etc.).
 - 🗓️ **Reservas en línea**: sus clientes reservan su propio horario desde una página pública, sin iniciar sesión.
-- 💬 **Avisos por WhatsApp**: tras actualizar una cita se ofrece enviar el aviso al cliente, y en la reserva confirmada aparece "Avisar por WhatsApp" al número del negocio. Sin API, sin token, teléfono en formato nacional.
 - 🔐 **Usuarios con roles** (admin/editor), registro abierto y contraseñas protegidas.
 
 > Cada persona que copia la plantilla obtiene **su propia base de datos**: los datos de una copia **nunca**
