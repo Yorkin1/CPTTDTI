@@ -1,7 +1,7 @@
 # Reporte de Clientes
 
-**Fecha:** 15/9/2026, 9:29:53 a. m.  
-**Commit:** bb2cbb9
+**Fecha:** 15/9/2026, 9:37:48 a. m.  
+**Commit:** cebdfa2
 
 ## Resumen
 
