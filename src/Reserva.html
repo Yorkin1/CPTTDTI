@@ -53,6 +53,8 @@
         text-align: center;
       }
       .hora12 { font-variant-numeric: tabular-nums; }
+      /* Texto corto del botón Continuar: solo visible en móvil. */
+      .txt-corto { display: none; }
 
       /* Servicios de la reserva */
       .fila-servicio {
@@ -87,6 +89,8 @@
       @media (max-width: 720px) {
         .parrilla-horarios { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
         .slot-horario { padding: 11px 6px; font-size: 14px; }
+        .txt-largo { display: none; }
+        .txt-corto { display: inline; }
         /* Fila de servicio en 2 líneas: nombre arriba (recortado) y
            controles + subtotal + quitar abajo, sin salirse de la tarjeta. */
         .fila-servicio { row-gap: 6px; }
@@ -144,11 +148,10 @@
         </div>
         <div class="tarjeta" id="tarjetaServicios">
           <h2>Servicios</h2>
-          <p class="ayuda">Seleccione al menos un servicio para continuar. Puede agregar varios; la duración y el total se calculan automáticamente.</p>
+          <p class="ayuda">Seleccione al menos un servicio.</p>
           <div class="grid-form">
             <div class="campo">
-              <label for="res_servicio">Servicio *</label>
-              <select id="res_servicio">
+              <select id="res_servicio" aria-label="Servicio">
                 <option value="">— Elija un servicio —</option>
               </select>
             </div>
@@ -169,7 +172,7 @@
             </div>
           </div>
           <div class="acciones-form">
-            <button type="button" class="btn btn-primario" id="btnContinuarHorario">Continuar con este horario</button>
+            <button type="button" class="btn btn-primario" id="btnContinuarHorario"><span class="txt-largo">Continuar con este horario</span><span class="txt-corto">Continuar</span></button>
             <button type="button" class="btn btn-secundario" id="btnVolverInicio">Cambiar fecha</button>
           </div>
         </div>
