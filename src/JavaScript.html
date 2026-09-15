@@ -3437,6 +3437,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (navUsuarios) navUsuarios.style.display = sesion.rol === 'administrador' ? 'inline-block' : 'none';
     var navConfiguracion = document.getElementById('navConfiguracion');
     if (navConfiguracion) navConfiguracion.style.display = sesion.rol === 'administrador' ? 'inline-block' : 'none';
+    var btnIrConfiguracion = document.getElementById('btnIrConfiguracion');
+    if (btnIrConfiguracion) btnIrConfiguracion.style.display = sesion.rol === 'administrador' ? '' : 'none';
     var navMonitor = document.getElementById('navMonitor');
     if (navMonitor) navMonitor.style.display =
       (esDuenoSesion() && Estado.config && Estado.config.habilitarMonitor === true) ? 'inline-block' : 'none';
@@ -3511,6 +3513,12 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       document.getElementById('btnCambiarContrasenaGlobal').addEventListener('click', function() {
         cerrarMenuUsuario_();
         abrirModalContrasena();
+      });
+      // Ir a Configuración desde el menú del usuario (solo administrador).
+      var btnIrConfig = document.getElementById('btnIrConfiguracion');
+      if (btnIrConfig) btnIrConfig.addEventListener('click', function() {
+        cerrarMenuUsuario_();
+        irAVista('Configuracion');
       });
       document.getElementById('btnCerrarModalContrasena').addEventListener('click', cerrarModalContrasena);
       document.getElementById('formContrasenaGlobal').addEventListener('submit', cambiarMiContrasenaGlobal);
