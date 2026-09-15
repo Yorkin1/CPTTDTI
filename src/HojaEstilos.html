@@ -120,7 +120,7 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 14px;
   }
-  .campo { display: flex; flex-direction: column; }
+  .campo { display: flex; flex-direction: column; min-width: 0; }
   .campo.ancho-completo { grid-column: 1 / -1; }
   .campo label {
     font-size: 13px;
@@ -138,6 +138,16 @@
     font-family: inherit;
     background: #fff;
     transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+    max-width: 100%;
+  }
+  /* El input de archivo trae texto largo del navegador ("Sin archivos
+     seleccionados…"): se recorta en vez de salirse de la tarjeta. */
+  .campo input[type="file"] {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .campo input:focus,
   .campo select:focus,
