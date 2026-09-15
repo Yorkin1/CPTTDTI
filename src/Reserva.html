@@ -226,6 +226,7 @@
             <button type="button" class="btn btn-primario" id="btnOtraReserva">Reservar otro horario</button>
             <button type="button" class="btn btn-secundario" id="btnEditarReserva">Editar / Modificar reserva</button>
             <button type="button" class="btn btn-secundario" id="btnImprimirConstancia">Imprimir constancia</button>
+            <button type="button" class="btn btn-secundario" id="btnAvisarWhatsApp" style="display:none;">Avisar por WhatsApp</button>
           </div>
         </div>
       </section>
@@ -1058,7 +1059,29 @@
         document.getElementById('resumenConfirmacion').innerHTML = html;
         document.getElementById('notaConfirmacion').textContent =
           (resp.mensaje || '') + ' ¡Gracias por su reserva!';
+        configurarBotonWhatsAppReserva(resp);
         pasarAPaso('pasoConfirmacion');
+      }
+
+      // Botón "Avisar por WhatsApp" ($0, wa.me): abre el chat del negocio con
+      // el resumen de la reserva. Solo visible si TEL_NEGOCIO está configurado.
+      function configurarBotonWhatsAppReserva(resp) {
+        var btn = document.getElementById('btnAvisarWhatsApp');
+        if (!btn) return;
+        var wa = Reserva.config && Reserva.config.telNegocioWa;
+        if (!wa) {
+          btn.style.display = 'none';
+          btn.onclick = null;
+          return;
+        }
+        btn.style.display = '';
+        btn.onclick = function() {
+          var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
+          var negocio = (Reserva.config && Reserva.config.nombreNegocio) || '';
+          var msg = 'Hola' + (negocio ? ' ' + negocio : '') + ', reservé ' + etiqueta +
+            ' para el ' + fechaDMYReserva(resp.fecha) + ' a las ' + hora12Reserva(resp.hora) + '.';
+          window.open('https://wa.me/' + wa + '?text=' + encodeURIComponent(msg), '_blank');
+        };
       }
 
       document.addEventListener('DOMContentLoaded', function() {
