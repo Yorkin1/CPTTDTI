@@ -7,6 +7,7 @@ Plantilla **gratuita** y **genérica** para administrar **clientes**, **citas** 
 - 🌐 **Aplicación web** moderna, responsiva y **100 % en español**.
 - 🎨 **Asistente de personalización** en el primer uso (nombre del negocio, etiquetas, color, tema, etc.).
 - 🗓️ **Reservas en línea**: sus clientes reservan su propio horario desde una página pública, sin iniciar sesión.
+- 💬 **Avisos por WhatsApp (botones wa.me, $0)**: tras actualizar una cita se ofrece enviar el aviso al cliente, y en la reserva confirmada aparece "Avisar por WhatsApp" al número del negocio. Sin API, sin token, teléfono en formato nacional.
 - 🔐 **Usuarios con roles** (admin/editor), registro abierto y contraseñas protegidas.
 
 > Cada persona que copia la plantilla obtiene **su propia base de datos**: los datos de una copia **nunca**
@@ -112,8 +113,9 @@ Si aparece “Google no ha verificado esta aplicación”, es normal (la app es 
 
 ### 7) Completar el asistente
 Ingrese: **nombre del negocio**, **mensaje de bienvenida**,
-**etiqueta de cita**, **color primario** y **duración predeterminada de cita**.
-Al guardar, `CONFIGURADA` pasa a **`SI`**.
+**etiqueta de cita**, **color primario**, **duración predeterminada de cita** y
+**WhatsApp del negocio (nacional, opcional, ej. 809-555-1234)** + código de país (`+1` por defecto).
+Al guardar, `CONFIGURADA` pasa a **`SI`**. El WhatsApp también puede cambiarse luego en la pestaña **Configuración**.
 
 ### 8) Registrar el primer usuario e iniciar sesión
 La pantalla de login ofrece **Registrarse**. El **primer usuario** en registrarse se convierte en
@@ -154,6 +156,8 @@ Use esta lista para comprobar que la plantilla funciona correctamente como plant
 - [ ] **Reservas en línea:** con las reservas habilitadas, desde una ventana anónima se abre `…/exec?v=reservar`, se elige horario y se confirma; la cita aparece en el dashboard y en Calendar.
 - [ ] **Reserva de un cliente ya registrado:** si el correo/teléfono coincide con una ficha, la página avisa y la reserva queda vinculada a ese cliente.
 - [ ] **Días cerrados:** un día sin horas en el horario de atención no muestra horarios disponibles.
+- [ ] **WhatsApp negocio:** con `TEL_NEGOCIO` configurado, tras confirmar en `…/exec?v=reservar` aparece "Avisar por WhatsApp" que abre el chat del negocio; sin `TEL_NEGOCIO` el botón queda oculto.
+- [ ] **WhatsApp cita:** al actualizar una cita con teléfono válido se pregunta "¿Enviar aviso por WhatsApp?"; sin teléfono no se pregunta y el flujo no se rompe.
 
 ---
 
@@ -219,6 +223,18 @@ client-manager-gas/
 | `HABILITAR_RESERVAS` | `SI` |
 | `HORARIO_ATENCION` | JSON por día (Lun–Vie 09:00–17:00, Sáb 09:00–13:00, Dom cerrado) |
 | `PASO_RESERVA_MIN` | `30` |
+| `TEL_NEGOCIO` | `` (nacional, ej. `809-555-1234`; se usa para el botón "Avisar por WhatsApp") |
+| `PAIS_CODIGO` | `+1` (solo para convertir a internacional en memoria; lo guardado sigue nacional) |
+
+---
+
+## 💬 Avisos por WhatsApp (botones wa.me, $0)
+
+Sin API, sin token y sin permisos extra. El teléfono se guarda en **formato nacional**; la conversión a internacional (`PAIS_CODIGO`) ocurre solo en memoria al armar el link `https://wa.me/<dígitos>?text=<mensaje>`.
+
+- **Citas:** al actualizar una cita con éxito se pregunta "¿Enviar aviso por WhatsApp?" y se abre el chat del cliente con fecha/hora/título nuevos.
+- **Reserva pública:** tras confirmar aparece "Avisar por WhatsApp", que abre el chat del negocio (`TEL_NEGOCIO`) con el resumen de la reserva.
+- Si falta el teléfono, el botón/pregunta no aparece y nada se rompe.
 
 ---
 
