@@ -69,7 +69,11 @@ var CONFIGURACION_PREDETERMINADA = {
   PASO_RESERVA_MIN:               '30',
   // Límite de citas por día: '' = sin límite global. Por día de la semana: JSON {"1":5,"2":8}.
   CITAS_MAX_POR_DIA:              '',
-  CITAS_MAX_POR_DIA_POR_SEMANA:   '{}'
+  CITAS_MAX_POR_DIA_POR_SEMANA:   '{}',
+  // WhatsApp del negocio (botones wa.me, $0). Se guarda en formato nacional
+  // (ej. 809-555-1234); la conversión a internacional se hace solo en memoria.
+  TEL_NEGOCIO:                    '',
+  PAIS_CODIGO:                    '+1'
 };
 
 var CLAVES_CONFIGURACION = [
@@ -87,7 +91,9 @@ var CLAVES_CONFIGURACION = [
   'HORARIO_ATENCION',
   'PASO_RESERVA_MIN',
   'CITAS_MAX_POR_DIA',
-  'CITAS_MAX_POR_DIA_POR_SEMANA'
+  'CITAS_MAX_POR_DIA_POR_SEMANA',
+  'TEL_NEGOCIO',
+  'PAIS_CODIGO'
 ];
 
 /**
@@ -809,7 +815,10 @@ function obtenerEstadoAplicacion() {
       horarioAtencion:              _parseHorarioAtencion_(cfg.HORARIO_ATENCION),
       pasoReserva:                  parseInt(cfg.PASO_RESERVA_MIN, 10) || 30,
       citasMaxPorDia:               parseInt(cfg.CITAS_MAX_POR_DIA, 10) || 0,
-      citasMaxPorDiaPorSemana:      cfg.CITAS_MAX_POR_DIA_POR_SEMANA || '{}'
+      citasMaxPorDiaPorSemana:      cfg.CITAS_MAX_POR_DIA_POR_SEMANA || '{}',
+      telNegocio:                   cfg.TEL_NEGOCIO || '',
+      telNegocioWa:                 _telefonoWA_(cfg.TEL_NEGOCIO || ''),
+      paisCodigo:                   cfg.PAIS_CODIGO || CONFIGURACION_PREDETERMINADA.PAIS_CODIGO
     };
   } catch (err) {
     // Sin hoja de cálculo vinculada (no se ejecutó "Iniciar configuración"):
@@ -1292,6 +1301,45 @@ function esTelefonoValido_(telefono) {
   } catch (err) {
     return telefono.length > 0;
   }
+}
+
+/**
+ * Normaliza un teléfono en formato nacional a dígitos internacionales para
+ * wa.me, sin modificar lo guardado en la hoja. Respeta si ya trae código.
+ * Ej. "809-555-1234" + PAIS_CODIGO "+1" -> "18095551234".
+ * @param {string} telefono Teléfono nacional (como está guardado).
+ * @return {string} Dígitos para wa.me ('' si no válido).
+ */
+function _telefonoWA_(telefono) {
+  var crudo = String(telefono || '').trim();
+  if (!crudo) return '';
+  var soloDigitos = crudo.replace(/\D/g, '');
+  if (!soloDigitos) return '';
+  // Si ya trae "+" se asume internacional completo.
+  if (crudo.charAt(0) === '+') return soloDigitos;
+  var cfg = null;
+  try {
+    cfg = obtenerConfiguracion();
+  } catch (err) {
+    cfg = null;
+  }
+  var codigo = String((cfg && cfg.PAIS_CODIGO) || CONFIGURACION_PREDETERMINADA.PAIS_CODIGO || '+1').replace(/\D/g, '');
+  if (!codigo) codigo = '1';
+  // Si ya empieza con el código del país, no duplicarlo.
+  if (soloDigitos.indexOf(codigo) === 0) return soloDigitos;
+  return codigo + soloDigitos;
+}
+
+/**
+ * Arma un link wa.me con mensaje pre-llenado (botón $0, sin API).
+ * @param {string} telefono Teléfono nacional.
+ * @param {string} mensaje Texto del mensaje.
+ * @return {string} URL wa.me ('' si teléfono inválido).
+ */
+function _linkWhatsApp_(telefono, mensaje) {
+  var digitos = _telefonoWA_(telefono);
+  if (!digitos) return '';
+  return 'https://wa.me/' + digitos + '?text=' + encodeURIComponent(String(mensaje || ''));
 }
 
 /**
@@ -3103,7 +3151,9 @@ function obtenerEstadoPublico() {
       pasoReserva:                parseInt(cfg.PASO_RESERVA_MIN, 10) || 30,
       horarioAtencion:            _parseHorarioAtencion_(cfg.HORARIO_ATENCION),
       citasMaxPorDia:             parseInt(cfg.CITAS_MAX_POR_DIA, 10) || 0,
-      citasMaxPorDiaPorSemana:    cfg.CITAS_MAX_POR_DIA_POR_SEMANA || '{}'
+      citasMaxPorDiaPorSemana:    cfg.CITAS_MAX_POR_DIA_POR_SEMANA || '{}',
+      telNegocio:                 cfg.TEL_NEGOCIO || '',
+      telNegocioWa:               _telefonoWA_(cfg.TEL_NEGOCIO || '')
     };
   } catch (err) {
     Logger.log('Error en obtenerEstadoPublico: ' + err);
