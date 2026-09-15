@@ -299,7 +299,6 @@
     margin: 0;
     font-size: 18px;
     color: var(--azul-oscuro);
-    border-bottom: none;
   }
   /* Refrescar siempre al final (en Historial va fuera del grupo de acciones). */
   .cabecera-lista .acciones-lista { margin-left: auto; }
@@ -713,10 +712,10 @@
        min-content y la página se ensancha (~492px) al abrir la tarjeta. */
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; margin-bottom: 12px; }
-    .cabecera-lista { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; }
+    .cabecera-lista { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: none; }
     .cabecera-lista h2 { flex: 1 1 auto; min-width: 0; }
     .cabecera-lista .btn-refrescar { order: 0; margin-left: auto; flex-shrink: 0; }
-    .cabecera-lista .acciones-lista { order: 0; display: flex; flex: 1 1 100%; align-items: center; gap: 8px; margin-left: 0; }
+    .cabecera-lista .acciones-lista { order: 0; display: flex; flex: 1 1 100%; align-items: center; gap: 8px; margin-left: 0; border-top: 2px solid var(--azul-muy-claro); }
     .cabecera-lista .etiqueta-alcance { flex: 1 1 auto; min-width: 0; text-align: right; }
     .cabecera-lista .menu-exportar { margin-left: auto; flex-shrink: 0; }
     .tabla-contenedor { -webkit-overflow-scrolling: touch; max-height: 460px; overflow-y: auto; }
