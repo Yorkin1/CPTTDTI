@@ -87,6 +87,17 @@
       @media (max-width: 720px) {
         .parrilla-horarios { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
         .slot-horario { padding: 11px 6px; font-size: 14px; }
+        /* Fila de servicio en 2 líneas: nombre arriba (recortado) y
+           controles + subtotal + quitar abajo, sin salirse de la tarjeta. */
+        .fila-servicio { row-gap: 6px; }
+        .servicio-nombre {
+          flex: 1 1 100%;
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .servicio-subtotal { flex: 1; min-width: 0; }
       }
     </style>
   </head>
