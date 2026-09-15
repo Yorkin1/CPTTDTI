@@ -84,11 +84,11 @@ Abra la plantilla maestra y use `Archivo → Hacer una copia`. Trabajará siempr
 - Toma la **hoja de cálculo actual** (`SpreadsheetApp.getActiveSpreadsheet()`).
 - Guarda **su propio ID** en `PropertiesService` bajo la clave **`ID_HOJA_CALCULO`**.
 - En la **primera configuración de cada copia** (cuando ese ID aún está vacío),
-  **vacía los datos copiados de la maestra** (Clientes, Citas, Historial y
-  Usuarios quedan solo con encabezados) y **restablece `Configuracion`** a los
+  **vacía los datos copiados de la maestra** (todas las hojas de datos quedan
+  solo con encabezados) y **restablece `Configuracion`** a los
   valores predeterminados (`CONFIGURADA = NO`). Así cada copia comienza limpia.
 - Usa **`LockService`** para evitar ejecuciones simultáneas.
-- Verifica/crea las hojas **Clientes, Citas, Historial** y **Configuracion**.
+- Verifica/crea las hojas **Clientes, Citas, Historial, Usuarios, Servicios, Actividad** y **Configuracion**.
 - **Repara los encabezados sin borrar, mover ni sobrescribir** los registros existentes.
 - Crea los **valores de configuración predeterminados** que falten.
 
@@ -112,9 +112,8 @@ Si aparece “Google no ha verificado esta aplicación”, es normal (la app es 
 
 ### 7) Completar el asistente
 Ingrese: **nombre del negocio**, **mensaje de bienvenida**,
-**etiqueta de cita**, **color primario**, **duración predeterminada de cita** y
-**WhatsApp del negocio (nacional, opcional, ej. 809-555-1234)** + código de país (`+1` por defecto).
-Al guardar, `CONFIGURADA` pasa a **`SI`**. El WhatsApp también puede cambiarse luego en la pestaña **Configuración**.
+**etiqueta de cita**, **color primario** y **duración predeterminada de cita**.
+Al guardar, `CONFIGURADA` pasa a **`SI`**.
 
 ### 8) Registrar el primer usuario e iniciar sesión
 La pantalla de login ofrece **Registrarse**. El **primer usuario** en registrarse se convierte en
@@ -136,8 +135,8 @@ Use esta lista para comprobar que la plantilla funciona correctamente como plant
 - [ ] **ID propio por copia:** en una copia recién hecha, ejecutar *Iniciar configuración* y confirmar que
       `ID_HOJA_CALCULO` (en *Configuración del proyecto → Propiedades del script*, o vía log) es el **ID de la copia**,
       **no** el de la plantilla maestra.
-- [ ] **Copia limpia:** tras copiar la plantilla y ejecutar *Iniciar configuración*, las hojas **Clientes, Citas,
-      Historial y Usuarios** quedan solo con encabezados y `CONFIGURADA = NO` (sin datos heredados de la maestra).
+- [ ] **Copia limpia:** tras copiar la plantilla y ejecutar *Iniciar configuración*, todas las hojas de datos
+      quedan solo con encabezados y `CONFIGURADA = NO` (sin datos heredados de la maestra).
 - [ ] **Aislamiento de datos:** agregar un cliente/cita en la copia y verificar que en la
       **plantilla maestra no aparece ningún dato nuevo** (las hojas de la maestra quedan intactas).
 - [ ] **Calendar del desplegador:** agendar una cita desde la app web y confirmar que el evento se crea
@@ -164,7 +163,7 @@ Use esta lista para comprobar que la plantilla funciona correctamente como plant
 |----------|----------|
 | **No veo el menú `Client Manager`** | Cierre y vuelva a abrir la hoja copiada; el menú se crea en `onOpen`. Si no aparece, ejecute `onOpen` manualmente desde el editor una vez. |
 | **“Se requiere autorización” y no avanza** | Ejecute *Iniciar configuración*, elija su cuenta y `Configuración avanzada → Ir a … (no seguro) → Permitir`. |
-| **La app carga en blanco** | Verifique que todos los archivos HTML tengan el **nombre exacto** (sin `.html`) y que `Code.gs` esté completo. |
+| **La app carga en blanco** | Verifique que todos los archivos HTML tengan el **nombre exacto** (sin `.html`) y que `Code.js` esté completo. |
 | **“No hay hoja de cálculo configurada”** | Ejecute **`Client Manager → Iniciar configuración`** dentro de su copia. |
 | **La app muestra “Falta configurar esta copia”** | Es lo esperado antes del paso 3: ejecute **`Client Manager → Iniciar configuración`** en su copia y pulse **Reintentar**. |
 | **No se crea el evento en Calendar** | Asegúrese de haber desplegado la app **Ejecutar como: Yo** y de haber aprobado el permiso de Calendar. |
@@ -183,7 +182,7 @@ Use esta lista para comprobar que la plantilla funciona correctamente como plant
 CPTTDTI/
 ├── README.md                    # Esta guía
 ├── src/
-│   ├── Code.js                  # Backend: onOpen, doGet, configurarPlantilla, API config, CRUD, Calendar, usuarios, reservas públicas, WhatsApp
+│   ├── Code.js                  # Backend: onOpen, doGet, configurarPlantilla, API config, CRUD, Calendar, usuarios, reservas públicas
 │   ├── Index.html               # Estructura principal: asistente de configuración + login + dashboard (SPA)
 │   ├── HojaEstilos.html         # Estilos CSS (colores configurables, tema claro/oscuro, responsivo)
 │   ├── JavaScript.html          # Lógica del cliente (asistente, personalización dinámica, formularios, tablas, sesión)
@@ -211,9 +210,11 @@ CPTTDTI/
 | Hoja | Columnas |
 |------|----------|
 | **Clientes** | ID_Cliente, Nombre, Apellido, Telefono, Email, Direccion, Notas, Fecha_Registro, Foto |
-| **Citas** | ID_Cita, ID_Cliente, Titulo, Fecha, Hora, Duracion_Mins, Descripcion, ID_Evento_Calendar, Estado |
+| **Citas** | ID_Cita, ID_Cliente, Titulo, Fecha, Hora, Duracion_Mins, Descripcion, ID_Evento_Calendar, Estado, Servicios, Total_Precio, Agendado_Por |
 | **Historial** | ID_Registro, ID_Cliente, ID_Cita, Fecha, Descripcion, Resultado |
 | **Usuarios** | ID_Usuario, Nombre, Email, Salt, Hash, Rol, Activo, Fecha_Registro |
+| **Servicios** | ID_Servicio, Nombre, Precio, Duracion_Mins, Descripcion, Activo |
+| **Actividad** | ID_Registro, Fecha, Usuario, Email, Rol, Modulo, Accion, Detalle |
 | **Configuracion** | Clave, Valor |
 
 ### Claves de la hoja `Configuracion`
@@ -229,20 +230,11 @@ CPTTDTI/
 | `TEMA` | `claro` |
 | `DURACION_CITA_PREDETERMINADA` | `60` |
 | `HABILITAR_RESERVAS` | `SI` |
+| `HABILITAR_MONITOR` | `SI` |
 | `HORARIO_ATENCION` | JSON por día (Lun–Vie 09:00–17:00, Sáb 09:00–13:00, Dom cerrado) |
 | `PASO_RESERVA_MIN` | `30` |
-| `TEL_NEGOCIO` | `` (nacional, ej. `809-555-1234`; se usa para el botón "Avisar por WhatsApp") |
-| `PAIS_CODIGO` | `+1` (solo para convertir a internacional en memoria; lo guardado sigue nacional) |
-
----
-
-## 💬 Avisos por WhatsApp
-
-Sin API, sin token y sin permisos extra. El teléfono se guarda en **formato nacional**; la conversión a internacional (`PAIS_CODIGO`) ocurre solo en memoria al armar el link `https://wa.me/<dígitos>?text=<mensaje>`.
-
-- **Citas:** al actualizar una cita con éxito se pregunta "¿Enviar aviso por WhatsApp?" y se abre el chat del cliente con fecha/hora/título nuevos.
-- **Reserva pública:** tras confirmar aparece "Avisar por WhatsApp", que abre el chat del negocio (`TEL_NEGOCIO`) con el resumen de la reserva.
-- Si falta el teléfono, el botón/pregunta no aparece y nada se rompe.
+| `CITAS_MAX_POR_DIA` | `` (sin límite global) |
+| `CITAS_MAX_POR_DIA_POR_SEMANA` | `{}` (límite por día de semana en JSON) |
 
 ---
 
