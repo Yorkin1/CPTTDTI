@@ -1082,7 +1082,8 @@
         btn.onclick = function() {
           var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
           var negocio = (Reserva.config && Reserva.config.nombreNegocio) || '';
-          var msg = 'Hola' + (negocio ? ' ' + negocio : '') + ', reservé ' + etiqueta +
+          var msg = 'Hola' + (negocio ? ' ' + negocio : '') + ', reservé ' + articuloReserva(etiqueta) + ' ' +
+            String(etiqueta).charAt(0).toLowerCase() + String(etiqueta).slice(1) +
             ' para el ' + fechaDMYReserva(resp.fecha) + ' a las ' + hora12Reserva(resp.hora) + '.';
           window.open('https://wa.me/' + wa + '?text=' + encodeURIComponent(msg), '_blank');
         };
