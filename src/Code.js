@@ -955,7 +955,9 @@ function guardarConfiguracion(token, datos) {
     CLAVES_CONFIGURACION.forEach(function(clave) {
       if (clave === 'CONFIGURADA') return; // se fuerza más abajo
       if (clave === 'LOGO_URL') return;    // se maneja explícitamente (permite limpiarla)
-      if (datos[clave] !== undefined && datos[clave] !== null && String(datos[clave]) !== '') {
+      if (datos[clave] !== undefined && datos[clave] !== null) {
+        // '' es un vaciado explícito (p. ej. quitar el teléfono) y SÍ se guarda.
+        // undefined (p. ej. HABILITAR_MONITOR para no dueños) no se toca.
         aGuardar[clave] = String(datos[clave]);
       }
     });
