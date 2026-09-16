@@ -397,17 +397,14 @@
 
   function mostrarQrReservas(url) {
     var img = document.getElementById('imgQrReservas');
-    var txt = document.getElementById('qrReservasUrl');
     var desc = document.getElementById('enlaceDescargarQr');
     if (!img || !url) return;
     var src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
     img.onerror = function() {
       img.style.display = 'none';
-      if (txt) txt.textContent = 'Enlace de reservas: ' + String(url).replace(/^https?:\/\//, '');
     };
     img.src = src;
     img.style.display = 'block';
-    if (txt) txt.textContent = String(url).replace(/^https?:\/\//, '');
     if (desc) { desc.href = src; desc.style.display = 'inline-block'; }
   }
 
