@@ -1853,7 +1853,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     waPendiente = { tel: tel, msg: msg };
     var modal = document.getElementById('modalAvisoWhatsApp');
     if (!modal) {
-      if (window.confirm('Cita actualizada. ¿Enviar aviso por WhatsApp a ' + nombre + '?')) {
+      if (window.confirm('Cita actualizada. ¿Enviar aviso por WhatsApp?')) {
         abrirWA(tel, msg);
       }
       return;
