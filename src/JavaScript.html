@@ -3781,6 +3781,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('campoUsuarioContrasenaConfirmar').style.display = 'none';
     document.getElementById('usu_rol').value = u.rol === 'administrador' ? 'administrador' : 'editor';
     document.getElementById('usu_activo').value = u.activo ? 'SI' : 'NO';
+    // El Estado solo se muestra al editar, no al crear.
+    document.getElementById('campoUsuarioEstado').style.display = '';
     document.getElementById('tituloFormUsuario').textContent = 'Editar usuario';
     document.getElementById('btnGuardarUsuario').textContent = 'Actualizar usuario';
     document.getElementById('btnCancelarUsuario').style.display = 'inline-block';
@@ -3796,6 +3798,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('usu_contrasena_confirmar').placeholder = 'Repita la contraseña';
     document.getElementById('campoUsuarioContrasenaConfirmar').style.display = '';
     document.getElementById('usu_activo').value = 'SI';
+    document.getElementById('campoUsuarioEstado').style.display = 'none';
     document.getElementById('tituloFormUsuario').textContent = 'Nuevo usuario';
     document.getElementById('btnGuardarUsuario').textContent = 'Crear usuario';
     document.getElementById('btnCancelarUsuario').style.display = 'none';
@@ -3810,7 +3813,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       nombre: document.getElementById('usu_nombre').value.trim(),
       contrasena: original ? '' : document.getElementById('usu_contrasena').value,
       rol: document.getElementById('usu_rol').value,
-      activo: document.getElementById('usu_activo').value
+      // Al crear no se muestra Estado: el usuario nace activo.
+      activo: original ? document.getElementById('usu_activo').value : 'SI'
     };
     if (!usuario) {
       mostrarToast('El usuario es obligatorio.', 'error');
