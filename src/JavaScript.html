@@ -1827,6 +1827,21 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   // Tras actualizar una cita con éxito, ofrece enviar el aviso por WhatsApp
   // en un modal propio (con vista previa). Sin teléfono válido no pregunta.
   var waPendiente = null;
+  // true si el título ya menciona el negocio (igual, lo contiene, o comparte
+  // una palabra de 4+ letras): así el mensaje no repite la palabra dos veces.
+  function tituloMencionaNegocio_(titulo, negocio) {
+    var n = String(negocio || '').trim().toLowerCase();
+    if (!n) return false;
+    var t = String(titulo || '').trim().toLowerCase();
+    if (!t) return false;
+    if (t === n || t.indexOf(n) !== -1) return true;
+    var palabras = n.split(/\s+/);
+    for (var i = 0; i < palabras.length; i++) {
+      var p = palabras[i].replace(/[^a-záéíóúñü0-9]/g, '');
+      if (p.length >= 4 && new RegExp('\\b' + p + '\\b').test(t)) return true;
+    }
+    return false;
+  }
   function ofrecerAvisoWhatsApp(datos) {
     var tel = String((datos && datos.telefonoCliente) || '').trim();
     if (!tel) return;
@@ -1834,8 +1849,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var etiqueta = etCita();
     var negocio = (Estado.config && Estado.config.nombreNegocio) || '';
     var titulo = String((datos && datos.titulo) || '').trim();
-    // Si el título ya es el nombre del negocio, no se repite al final.
-    var enNegocio = (negocio && titulo.toLowerCase() !== String(negocio).trim().toLowerCase())
+    // Si el título ya menciona el negocio, no se repite al final.
+    var enNegocio = (negocio && !tituloMencionaNegocio_(titulo, negocio))
       ? ' en ' + negocio : '';
     var msg = 'Hola ' + nombre + ', tu ' + minuscInicial(etiqueta) + ' "' +
       titulo + '" quedó para el ' + ((datos && datos.fecha) || '') +
