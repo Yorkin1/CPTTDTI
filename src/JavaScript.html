@@ -1822,9 +1822,13 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var nombre = (datos && datos.nombreCliente) || 'cliente';
     var etiqueta = etCita();
     var negocio = (Estado.config && Estado.config.nombreNegocio) || '';
+    var titulo = String((datos && datos.titulo) || '').trim();
+    // Si el título ya es el nombre del negocio, no se repite al final.
+    var enNegocio = (negocio && titulo.toLowerCase() !== String(negocio).trim().toLowerCase())
+      ? ' en ' + negocio : '';
     var msg = 'Hola ' + nombre + ', tu ' + minuscInicial(etiqueta) + ' "' +
-      ((datos && datos.titulo) || '') + '" quedó para el ' + ((datos && datos.fecha) || '') +
-      ' a las ' + ((datos && datos.hora) || '') + (negocio ? ' en ' + negocio : '') + '.';
+      titulo + '" quedó para el ' + ((datos && datos.fecha) || '') +
+      ' a las ' + ((datos && datos.hora) || '') + enNegocio + '.';
     if (window.confirm('Cita actualizada. ¿Enviar aviso por WhatsApp a ' + nombre + '?')) {
       abrirWA(tel, msg);
     }
