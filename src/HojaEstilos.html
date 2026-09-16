@@ -678,7 +678,7 @@
   /* Horario de atención: tarjetas por día (misma estética de la página). */
   .dias-horario {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: 10px;
     margin-top: 10px;
   }
@@ -942,12 +942,13 @@
     .tabla-servicios th:nth-child(4), .tabla-servicios td:nth-child(4),
     .tabla-servicios th:nth-child(5), .tabla-servicios td:nth-child(5),
     .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6) { display: none; }
-    /* Horario de atención: una tarjeta por fila, compacta. */
-    .dia-horario { padding: 8px 12px 10px; }
+    /* Horario de atención: una tarjeta por fila, compacta y sin desbordes. */
+    .dia-horario { padding: 8px 12px 10px; min-width: 0; }
     .dia-horario-cab strong { font-size: 14px; }
-    .campo-hora input { font-size: 13px; padding: 7px 8px; }
-    .campo-hora input[type="time"] { width: 96px; }
-    .campo-hora input[type="number"] { width: 52px; }
+    .dia-horario-horas { flex-wrap: wrap; }
+    .campo-hora { flex: 1 1 0; }
+    .campo-hora input { font-size: 13px; padding: 7px 8px; width: 100%; }
+    .campo-hora.campo-limite { flex: 0 0 60px; }
     /* Tarjetas desplegables (un clic en la fila, solo móvil, todas las tablas). */
     tr[data-cita-id], tr[data-cliente-id], tr[data-servicio-id],
     tr[data-historial-id], tr[data-usuario-id], tr[data-actividad-idx] { cursor: pointer; }
