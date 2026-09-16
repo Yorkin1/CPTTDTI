@@ -793,6 +793,12 @@
        min-content y la página se ensancha (~492px) al abrir la tarjeta. */
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; margin-bottom: 12px; }
+    /* Citas: buscador arriba y Fecha + Estado lado a lado. */
+    .barra-busqueda:has(#buscarCita) { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .barra-busqueda:has(#buscarCita) #buscarCita { grid-column: 1 / -1; }
+    .barra-busqueda:has(#buscarCita) #filtroFechaCita,
+    .barra-busqueda:has(#buscarCita) #filtroEstadoCita { width: 100%; min-width: 0; }
+    .barra-busqueda:has(#buscarCita) #btnQuitarFiltrosCita { grid-column: 1 / -1; margin-left: 0; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: none; }
     /* Cabeceras sin grupo de acciones (Clientes, Servicios…): segunda raya
        completa bajo la fila, igual que en Historial. */
