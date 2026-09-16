@@ -1691,7 +1691,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         var c = Estado.clientes[i];
         datos.emailCliente = c.Email || '';
         datos.nombreCliente = (c.Nombre + ' ' + (c.Apellido || '')).trim();
-        datos.telefonoCliente = c.Telefono || '';
         break;
       }
     }
@@ -1728,7 +1727,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         cancelarEdicionCita();
         if (id) {
           actualizarCitaLocal(id, datos);
-          ofrecerAvisoWhatsApp(datos);
         } else if (respuesta.id) {
           var srvLocal = (datos.servicios || []).map(function(s) {
             var def = (Estado.servicios || []).filter(function(x) {
@@ -1800,34 +1798,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         c.Total_Precio = srvLocal.reduce(function(a, s) { return a + (s.subtotal || 0); }, 0);
       }
     });
-  }
-
-  // Abre wa.me con mensaje pre-llenado (botón $0, sin API).
-  function abrirWA(telefonoNacional, mensaje) {
-    var digitos = String(telefonoNacional || '').replace(/\D/g, '');
-    if (!digitos) return false;
-    if (String(telefonoNacional).charAt(0) !== '+') {
-      var codigo = String((Estado.config && Estado.config.paisCodigo) || '+1').replace(/\D/g, '') || '1';
-      if (digitos.indexOf(codigo) !== 0) digitos = codigo + digitos;
-    }
-    window.open('https://wa.me/' + digitos + '?text=' + encodeURIComponent(String(mensaje || '')), '_blank');
-    return true;
-  }
-
-  // Tras actualizar una cita con éxito, ofrece enviar el aviso por WhatsApp.
-  // Sin teléfono válido no pregunta (no rompe el flujo).
-  function ofrecerAvisoWhatsApp(datos) {
-    var tel = String((datos && datos.telefonoCliente) || '').trim();
-    if (!tel) return;
-    var nombre = (datos && datos.nombreCliente) || 'cliente';
-    var etiqueta = etCita();
-    var negocio = (Estado.config && Estado.config.nombreNegocio) || '';
-    var msg = 'Hola ' + nombre + ', tu ' + minuscInicial(etiqueta) + ' "' +
-      ((datos && datos.titulo) || '') + '" quedó para el ' + ((datos && datos.fecha) || '') +
-      ' a las ' + ((datos && datos.hora) || '') + (negocio ? ' en ' + negocio : '') + '.';
-    if (window.confirm('Cita actualizada. ¿Enviar aviso por WhatsApp a ' + nombre + '?')) {
-      abrirWA(tel, msg);
-    }
   }
 
   function editarCita(id) {
@@ -2447,8 +2417,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('cfg2_nombre_negocio', c.nombreNegocio || '');
     setVal('cfg2_mensaje_bienvenida', c.mensajeBienvenida || '');
     setVal('cfg2_etiqueta_cita', c.etiquetaCita || '');
-    setVal('cfg2_tel_negocio', c.telNegocio || '');
-    setVal('cfg2_pais_codigo', c.paisCodigo || '+1');
     setVal('cfg2_color_primario', c.colorPrimario || '#4285F4');
     setVal('cfg2_color_secundario', c.colorSecundario || '#16a34a');
     setVal('cfg2_tema', c.tema || 'claro');
@@ -2729,8 +2697,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       NOMBRE_NEGOCIO: nombreNegocio,
       MENSAJE_BIENVENIDA: document.getElementById('cfg2_mensaje_bienvenida').value.trim() || 'Bienvenido a nuestro sistema de gestión',
       ETIQUETA_CITA: document.getElementById('cfg2_etiqueta_cita').value.trim() || 'Cita',
-      TEL_NEGOCIO: document.getElementById('cfg2_tel_negocio').value.trim(),
-      PAIS_CODIGO: document.getElementById('cfg2_pais_codigo').value.trim() || '+1',
       COLOR_PRIMARIO: document.getElementById('cfg2_color_primario').value || '#4285F4',
       COLOR_SECUNDARIO: document.getElementById('cfg2_color_secundario').value || '#16a34a',
       TEMA: document.getElementById('cfg2_tema').value || 'claro',
@@ -3251,8 +3217,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('cfg_nombre_negocio', c.nombreNegocio && c.nombreNegocio !== 'Mi Negocio' ? c.nombreNegocio : '');
     setVal('cfg_mensaje_bienvenida', c.mensajeBienvenida || '');
     setVal('cfg_etiqueta_cita', c.etiquetaCita || '');
-    setVal('cfg_tel_negocio', c.telNegocio || '');
-    setVal('cfg_pais_codigo', c.paisCodigo || '+1');
     setVal('cfg_paso_reserva', c.pasoReserva || 30);
     setVal('cfg_color_primario', c.colorPrimario || '#4285F4');
     setVal('cfg_color_secundario', c.colorSecundario || '#16a34a');
@@ -3334,8 +3298,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       MENSAJE_BIENVENIDA: document.getElementById('cfg_mensaje_bienvenida').value.trim() ||
         'Bienvenido a nuestro sistema de gestión',
       ETIQUETA_CITA: document.getElementById('cfg_etiqueta_cita').value.trim() || 'Cita',
-      TEL_NEGOCIO: document.getElementById('cfg_tel_negocio').value.trim(),
-      PAIS_CODIGO: document.getElementById('cfg_pais_codigo').value.trim() || '+1',
       PASO_RESERVA_MIN: document.getElementById('cfg_paso_reserva').value || '30',
       COLOR_PRIMARIO: document.getElementById('cfg_color_primario').value || '#4285F4',
       COLOR_SECUNDARIO: document.getElementById('cfg_color_secundario').value || '#16a34a',
