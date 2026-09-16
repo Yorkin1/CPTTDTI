@@ -1123,6 +1123,16 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   function initCitas() {
     document.getElementById('formCita').addEventListener('submit', guardarCita);
     document.getElementById('btnCancelarCita').addEventListener('click', cancelarEdicionCita);
+    var btnCerrarWA = document.getElementById('btnCerrarModalWhatsApp');
+    if (btnCerrarWA) btnCerrarWA.addEventListener('click', cerrarModalWhatsApp);
+    var btnOmitirWA = document.getElementById('btnOmitirWhatsApp');
+    if (btnOmitirWA) btnOmitirWA.addEventListener('click', cerrarModalWhatsApp);
+    var btnEnviarWA = document.getElementById('btnEnviarWhatsApp');
+    if (btnEnviarWA) btnEnviarWA.addEventListener('click', enviarWhatsAppPendiente);
+    var fondoWA = document.getElementById('modalAvisoWhatsApp');
+    if (fondoWA) fondoWA.addEventListener('click', function(e) {
+      if (e.target === fondoWA) cerrarModalWhatsApp();
+    });
     var btnTglSvc = document.getElementById('btnToggleServiciosCita');
     if (btnTglSvc) btnTglSvc.addEventListener('click', alternarServiciosCita);
     var contSvcInit = document.getElementById('cita_servicios');
@@ -1814,8 +1824,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     return true;
   }
 
-  // Tras actualizar una cita con éxito, ofrece enviar el aviso por WhatsApp.
-  // Sin teléfono válido no pregunta (no rompe el flujo).
+  // Tras actualizar una cita con éxito, ofrece enviar el aviso por WhatsApp
+  // en un modal propio (con vista previa). Sin teléfono válido no pregunta.
+  var waPendiente = null;
   function ofrecerAvisoWhatsApp(datos) {
     var tel = String((datos && datos.telefonoCliente) || '').trim();
     if (!tel) return;
@@ -1829,9 +1840,30 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var msg = 'Hola ' + nombre + ', tu ' + minuscInicial(etiqueta) + ' "' +
       titulo + '" quedó para el ' + ((datos && datos.fecha) || '') +
       ' a las ' + ((datos && datos.hora) || '') + enNegocio + '.';
-    if (window.confirm('Cita actualizada. ¿Enviar aviso por WhatsApp a ' + nombre + '?')) {
-      abrirWA(tel, msg);
+    waPendiente = { tel: tel, msg: msg };
+    var modal = document.getElementById('modalAvisoWhatsApp');
+    if (!modal) {
+      if (window.confirm('Cita actualizada. ¿Enviar aviso por WhatsApp a ' + nombre + '?')) {
+        abrirWA(tel, msg);
+      }
+      return;
     }
+    var texto = document.getElementById('textoModalWhatsApp');
+    if (texto) texto.textContent = '¿Enviar este aviso por WhatsApp a ' + nombre + '?';
+    var previa = document.getElementById('vistaPreviaWhatsApp');
+    if (previa) previa.textContent = msg;
+    modal.style.display = 'flex';
+  }
+
+  function cerrarModalWhatsApp() {
+    var modal = document.getElementById('modalAvisoWhatsApp');
+    if (modal) modal.style.display = 'none';
+    waPendiente = null;
+  }
+
+  function enviarWhatsAppPendiente() {
+    if (waPendiente) abrirWA(waPendiente.tel, waPendiente.msg);
+    cerrarModalWhatsApp();
   }
 
   function editarCita(id) {
