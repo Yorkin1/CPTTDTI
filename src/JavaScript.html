@@ -1830,7 +1830,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     var digitos = String(telefonoNacional || '').replace(/\D/g, '');
     if (!digitos) return false;
     if (String(telefonoNacional).charAt(0) !== '+') {
-      var codigo = String((Estado.config && Estado.config.paisCodigo) || '+1').replace(/\D/g, '') || '1';
+      // Código de país fijo: República Dominicana (+1).
+      var codigo = '1';
       if (digitos.indexOf(codigo) !== 0) digitos = codigo + digitos;
     }
     window.open('https://wa.me/' + digitos + '?text=' + encodeURIComponent(String(mensaje || '')), '_blank');
@@ -2503,7 +2504,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('cfg2_mensaje_bienvenida', c.mensajeBienvenida || '');
     setVal('cfg2_etiqueta_cita', c.etiquetaCita || '');
     setVal('cfg2_tel_negocio', c.telNegocio || '');
-    setVal('cfg2_pais_codigo', c.paisCodigo || '+1');
     setVal('cfg2_color_primario', c.colorPrimario || '#4285F4');
     setVal('cfg2_color_secundario', c.colorSecundario || '#16a34a');
     setVal('cfg2_tema', c.tema || 'claro');
@@ -2795,7 +2795,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       MENSAJE_BIENVENIDA: document.getElementById('cfg2_mensaje_bienvenida').value.trim() || 'Bienvenido a nuestro sistema de gestión',
       ETIQUETA_CITA: document.getElementById('cfg2_etiqueta_cita').value.trim() || 'Cita',
       TEL_NEGOCIO: document.getElementById('cfg2_tel_negocio').value.trim(),
-      PAIS_CODIGO: document.getElementById('cfg2_pais_codigo').value.trim() || '+1',
       COLOR_PRIMARIO: document.getElementById('cfg2_color_primario').value || '#4285F4',
       COLOR_SECUNDARIO: document.getElementById('cfg2_color_secundario').value || '#16a34a',
       TEMA: document.getElementById('cfg2_tema').value || 'claro',
@@ -3317,7 +3316,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('cfg_mensaje_bienvenida', c.mensajeBienvenida || '');
     setVal('cfg_etiqueta_cita', c.etiquetaCita || '');
     setVal('cfg_tel_negocio', c.telNegocio || '');
-    setVal('cfg_pais_codigo', c.paisCodigo || '+1');
     setVal('cfg_paso_reserva', c.pasoReserva || 30);
     setVal('cfg_color_primario', c.colorPrimario || '#4285F4');
     setVal('cfg_color_secundario', c.colorSecundario || '#16a34a');
@@ -3400,7 +3398,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         'Bienvenido a nuestro sistema de gestión',
       ETIQUETA_CITA: document.getElementById('cfg_etiqueta_cita').value.trim() || 'Cita',
       TEL_NEGOCIO: document.getElementById('cfg_tel_negocio').value.trim(),
-      PAIS_CODIGO: document.getElementById('cfg_pais_codigo').value.trim() || '+1',
       PASO_RESERVA_MIN: document.getElementById('cfg_paso_reserva').value || '30',
       COLOR_PRIMARIO: document.getElementById('cfg_color_primario').value || '#4285F4',
       COLOR_SECUNDARIO: document.getElementById('cfg_color_secundario').value || '#16a34a',

@@ -72,8 +72,7 @@ var CONFIGURACION_PREDETERMINADA = {
   CITAS_MAX_POR_DIA_POR_SEMANA:   '{}',
   // WhatsApp del negocio (botones wa.me, $0). Se guarda en formato nacional
   // (ej. 809-555-1234); la conversión a internacional se hace solo en memoria.
-  TEL_NEGOCIO:                    '',
-  PAIS_CODIGO:                    '+1'
+  TEL_NEGOCIO:                    ''
 };
 
 var CLAVES_CONFIGURACION = [
@@ -92,8 +91,7 @@ var CLAVES_CONFIGURACION = [
   'PASO_RESERVA_MIN',
   'CITAS_MAX_POR_DIA',
   'CITAS_MAX_POR_DIA_POR_SEMANA',
-  'TEL_NEGOCIO',
-  'PAIS_CODIGO'
+  'TEL_NEGOCIO'
 ];
 
 /**
@@ -817,8 +815,7 @@ function obtenerEstadoAplicacion() {
       citasMaxPorDia:               parseInt(cfg.CITAS_MAX_POR_DIA, 10) || 0,
       citasMaxPorDiaPorSemana:      cfg.CITAS_MAX_POR_DIA_POR_SEMANA || '{}',
       telNegocio:                   cfg.TEL_NEGOCIO || '',
-      telNegocioWa:                 _telefonoWA_(cfg.TEL_NEGOCIO || ''),
-      paisCodigo:                   cfg.PAIS_CODIGO || CONFIGURACION_PREDETERMINADA.PAIS_CODIGO
+      telNegocioWa:                 _telefonoWA_(cfg.TEL_NEGOCIO || '')
     };
   } catch (err) {
     // Sin hoja de cálculo vinculada (no se ejecutó "Iniciar configuración"):
@@ -1306,7 +1303,7 @@ function esTelefonoValido_(telefono) {
 /**
  * Normaliza un teléfono en formato nacional a dígitos internacionales para
  * wa.me, sin modificar lo guardado en la hoja. Respeta si ya trae código.
- * Ej. "809-555-1234" + PAIS_CODIGO "+1" -> "18095551234".
+ * Ej. "809-555-1234" -> "18095551234" (código fijo RD +1).
  * @param {string} telefono Teléfono nacional (como está guardado).
  * @return {string} Dígitos para wa.me ('' si no válido).
  */
@@ -1317,14 +1314,8 @@ function _telefonoWA_(telefono) {
   if (!soloDigitos) return '';
   // Si ya trae "+" se asume internacional completo.
   if (crudo.charAt(0) === '+') return soloDigitos;
-  var cfg = null;
-  try {
-    cfg = obtenerConfiguracion();
-  } catch (err) {
-    cfg = null;
-  }
-  var codigo = String((cfg && cfg.PAIS_CODIGO) || CONFIGURACION_PREDETERMINADA.PAIS_CODIGO || '+1').replace(/\D/g, '');
-  if (!codigo) codigo = '1';
+  // Código de país fijo: República Dominicana (+1).
+  var codigo = '1';
   // Si ya empieza con el código del país, no duplicarlo.
   if (soloDigitos.indexOf(codigo) === 0) return soloDigitos;
   return codigo + soloDigitos;
