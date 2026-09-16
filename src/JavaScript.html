@@ -808,7 +808,12 @@
   }
 
   function confirmarEliminarCliente(id) {
-    if (!confirm('¿Está seguro de eliminar este cliente? Esta acción no se puede deshacer.')) return;
+    pedirConfirmarEliminar('Eliminar cliente',
+      '¿Está seguro de eliminar este cliente? Esta acción no se puede deshacer.',
+      function() { ejecutarEliminarCliente(id); });
+  }
+
+  function ejecutarEliminarCliente(id) {
     mostrarCargaZona('tablaClientes', 'Eliminando cliente…');
     google.script.run
       .withSuccessHandler(function(respuesta) {
@@ -1102,7 +1107,12 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   }
 
   function confirmarEliminarServicio(id) {
-    if (!confirm('¿Está seguro de eliminar este servicio? Esta acción no se puede deshacer.')) return;
+    pedirConfirmarEliminar('Eliminar servicio',
+      '¿Está seguro de eliminar este servicio? Esta acción no se puede deshacer.',
+      function() { ejecutarEliminarServicio(id); });
+  }
+
+  function ejecutarEliminarServicio(id) {
     mostrarCargaZona('tablaServicios', 'Eliminando servicio…');
     google.script.run
       .withSuccessHandler(function(respuesta) {
@@ -1958,7 +1968,12 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   }
 
   function confirmarEliminarCita(id) {
-    if (!confirm('¿Está seguro de eliminar esta cita? El evento de Google Calendar también se eliminará.')) return;
+    pedirConfirmarEliminar('Eliminar ' + minuscInicial(etCita()),
+      '¿Está seguro de eliminar esta ' + minuscInicial(etCita()) + '? El evento de Google Calendar también se eliminará.',
+      function() { ejecutarEliminarCita(id); });
+  }
+
+  function ejecutarEliminarCita(id) {
     mostrarCargaZona('tablaCitas', 'Eliminando ' + minuscInicial(etCita()) + '…');
     google.script.run
       .withSuccessHandler(function(respuesta) {
@@ -2279,7 +2294,12 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   }
 
   function confirmarEliminarRegistroHistorial(id) {
-    if (!confirm('¿Está seguro de eliminar este registro del historial? Esta acción no se puede deshacer.')) return;
+    pedirConfirmarEliminar('Eliminar registro',
+      '¿Está seguro de eliminar este registro del historial? Esta acción no se puede deshacer.',
+      function() { ejecutarEliminarRegistroHistorial(id); });
+  }
+
+  function ejecutarEliminarRegistroHistorial(id) {
     mostrarCargaZona('tablaHistorial', 'Eliminando registro…');
     google.script.run
       .withSuccessHandler(function(respuesta) {
@@ -3933,7 +3953,12 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   }
 
   function confirmarEliminarUsuario(usuario) {
-    if (!confirm('¿Eliminar al usuario "' + usuario + '"? Esta acción no se puede deshacer.')) return;
+    pedirConfirmarEliminar('Eliminar usuario',
+      '¿Eliminar al usuario "' + usuario + '"? Esta acción no se puede deshacer.',
+      function() { ejecutarEliminarUsuario(usuario); });
+  }
+
+  function ejecutarEliminarUsuario(usuario) {
     mostrarCargaZona('tablaUsuarios', 'Eliminando usuario…');
     google.script.run
       .withSuccessHandler(function(resp) {
@@ -3948,6 +3973,46 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       })
       .withFailureHandler(function(err) { ocultarCargaZona('tablaUsuarios'); mostrarToast('Error: ' + err.message, 'error'); })
       .eliminarUsuario(tokenSesion(), usuario);
+  }
+
+  /* ==========================================================
+     CONFIRMAR ELIMINACIÓN (modal global con diseño propio)
+     ========================================================== */
+
+  // Acción pendiente de eliminar (la pone quien pide la confirmación).
+  var eliminarPendiente = null;
+
+  // Muestra el modal de eliminar. Si el modal no existe, usa confirm nativo.
+  function pedirConfirmarEliminar(titulo, texto, accion) {
+    eliminarPendiente = { accion: accion };
+    var modal = document.getElementById('modalEliminar');
+    if (!modal) {
+      if (window.confirm(texto)) {
+        var a = eliminarPendiente && eliminarPendiente.accion;
+        eliminarPendiente = null;
+        if (a) a();
+      }
+      return;
+    }
+    document.getElementById('tituloModalEliminar').textContent = titulo;
+    document.getElementById('textoModalEliminar').textContent = texto;
+    document.getElementById('btnConfirmarEliminar').onclick = ejecutarEliminarPendiente;
+    document.getElementById('btnCancelarEliminar').onclick = cerrarModalEliminar;
+    document.getElementById('btnCerrarModalEliminar').onclick = cerrarModalEliminar;
+    modal.onclick = function(e) { if (e.target === modal) cerrarModalEliminar(); };
+    modal.style.display = 'flex';
+  }
+
+  function cerrarModalEliminar() {
+    var modal = document.getElementById('modalEliminar');
+    if (modal) modal.style.display = 'none';
+    eliminarPendiente = null;
+  }
+
+  function ejecutarEliminarPendiente() {
+    var a = eliminarPendiente && eliminarPendiente.accion;
+    cerrarModalEliminar();
+    if (a) a();
   }
 
   /* ==========================================================

@@ -282,6 +282,21 @@
       </div>
     </div>
 
+    <!-- Modal: confirmar eliminación (diseño propio, global). -->
+    <div id="modalEliminar" class="modal-fondo" style="display:none;">
+      <div class="modal modal-peligro">
+        <div class="modal-cabecera">
+          <h2 id="tituloModalEliminar">Eliminar</h2>
+          <button type="button" class="modal-cerrar" id="btnCerrarModalEliminar" aria-label="Cerrar">&times;</button>
+        </div>
+        <p id="textoModalEliminar" class="texto-modal"></p>
+        <div class="acciones-form">
+          <button type="button" class="btn btn-peligro" id="btnConfirmarEliminar">Sí, eliminar</button>
+          <button type="button" class="btn btn-secundario" id="btnCancelarEliminar">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Vistas precargadas: se inyectan localmente sin llamar al servidor. -->
     <script type="text/plain" id="tpl-Clientes"><?!= include('Clientes') ?></script>
     <script type="text/plain" id="tpl-Servicios"><?!= include('Servicios') ?></script>
