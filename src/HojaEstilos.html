@@ -808,8 +808,9 @@
     /* Cabeceras sin grupo de acciones (Clientes, Servicios…): segunda raya
        completa bajo la fila, igual que en Historial. */
     .cabecera-lista:not(:has(.acciones-lista)) { border-bottom: 2px solid var(--azul-muy-claro); }
-    /* Citas: solo la raya del título (el título largo con contador no admite doble raya). */
-    .cabecera-lista:has(#contadorHoy) { border-bottom: none; }
+    /* Citas: solo la raya del título (el título largo con contador no admite doble raya)
+       y Refrescar nunca baja de fila (el título cede el espacio). */
+    .cabecera-lista:has(#contadorHoy) { border-bottom: none; flex-wrap: nowrap; }
     .cabecera-lista h2 { flex: 0 1 auto; min-width: 0; }
     .cabecera-lista .btn-refrescar { order: 0; margin-left: auto; flex-shrink: 0; }
     .cabecera-lista .acciones-lista { order: 0; display: flex; flex: 1 1 100%; align-items: center; gap: 8px; margin-left: 0; border-top: 2px solid var(--azul-muy-claro); padding-top: 8px; }
