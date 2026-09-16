@@ -799,12 +799,6 @@
     .cabecera-lista:not(:has(.acciones-lista)) { border-bottom: 2px solid var(--azul-muy-claro); }
     /* Citas: solo la raya del título (el título largo con contador no admite doble raya). */
     .cabecera-lista:has(#contadorHoy) { border-bottom: none; }
-    /* Citas: Refrescar debajo del título, a todo el ancho. */
-    .cabecera-lista:has(#contadorHoy) .btn-refrescar {
-      order: 3;
-      flex: 1 1 100%;
-      margin-left: 0;
-    }
     .cabecera-lista h2 { flex: 0 1 auto; min-width: 0; }
     .cabecera-lista .btn-refrescar { order: 0; margin-left: auto; flex-shrink: 0; }
     .cabecera-lista .acciones-lista { order: 0; display: flex; flex: 1 1 100%; align-items: center; gap: 8px; margin-left: 0; border-top: 2px solid var(--azul-muy-claro); padding-top: 8px; }
