@@ -995,7 +995,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       precio: document.getElementById('ser_precio').value,
       duracionMins: parsearDuracion(document.getElementById('ser_duracion').value),
       descripcion: document.getElementById('ser_descripcion').value.trim(),
-      activo: document.getElementById('ser_activo').value
+      // Al crear no se muestra Estado: el servicio nace activo.
+      activo: id ? document.getElementById('ser_activo').value : 'SI'
     };
     if (!datos.nombre) {
       mostrarToast('El nombre del servicio es obligatorio.', 'error');
@@ -1077,6 +1078,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('ser_duracion', duracionLegible(s.Duracion_Mins || 60));
     setVal('ser_descripcion', s.Descripcion || '');
     setVal('ser_activo', String(s.Activo || 'SI').toUpperCase() === 'NO' ? 'NO' : 'SI');
+    // El Estado solo se muestra al actualizar, no al crear.
+    var campoEstado = document.getElementById('campoEstadoServicio');
+    if (campoEstado) campoEstado.style.display = '';
     document.getElementById('tituloFormServicio').textContent = 'Editar servicio';
     document.getElementById('btnGuardarServicio').textContent = 'Actualizar servicio';
     document.getElementById('btnCancelarServicio').style.display = 'inline-block';
@@ -1090,6 +1094,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (idField) idField.value = '';
     setVal('ser_duracion', duracionLegible(60));
     setVal('ser_activo', 'SI');
+    var campoEstado = document.getElementById('campoEstadoServicio');
+    if (campoEstado) campoEstado.style.display = 'none';
     document.getElementById('tituloFormServicio').textContent = 'Nuevo servicio';
     document.getElementById('btnGuardarServicio').textContent = 'Guardar servicio';
     document.getElementById('btnCancelarServicio').style.display = 'none';
