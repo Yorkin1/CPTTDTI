@@ -1844,6 +1844,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   function ofrecerAvisoWhatsApp(datos) {
     var tel = String((datos && datos.telefonoCliente) || '').trim();
     if (!tel) return;
+    // Sin teléfono del negocio no se ofrece el aviso.
+    var telNegocio = String((Estado.config && Estado.config.telNegocio) || '').trim();
+    if (!telNegocio) return;
     var nombre = (datos && datos.nombreCliente) || 'cliente';
     var etiqueta = etCita();
     var negocio = (Estado.config && Estado.config.nombreNegocio) || '';
