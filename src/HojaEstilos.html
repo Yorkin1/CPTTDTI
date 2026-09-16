@@ -675,6 +675,80 @@
     min-height: 100vh;
   }
 
+  /* Horario de atención: tarjetas por día (misma estética de la página). */
+  .dias-horario {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .dia-horario {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: 10px;
+    box-shadow: var(--sombra);
+    padding: 10px 14px 12px;
+  }
+  .dia-horario-cab { display: flex; align-items: center; gap: 10px; }
+  .dia-horario-cab strong { flex: 1; font-size: 15px; color: var(--azul-oscuro); }
+  .dia-horario-cerrado-txt { font-size: 12px; color: var(--gris-texto); }
+  .dia-horario-horas { display: flex; align-items: flex-end; gap: 8px; margin-top: 8px; }
+  .campo-hora { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .campo-hora > span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+  }
+  .campo-hora input {
+    padding: 8px 10px;
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--texto);
+    background: #fff;
+    max-width: 100%;
+  }
+  .campo-hora input[type="time"] { width: 110px; }
+  .campo-hora input[type="number"] { width: 64px; text-align: center; }
+  .campo-hora input:focus {
+    outline: none;
+    border-color: var(--color-primario);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  .dia-horario-guion { color: var(--gris-texto); padding-bottom: 8px; }
+  /* Día cerrado: tarjeta atenuada. */
+  .dia-horario.cerrado { background: var(--gris-fondo); }
+  .dia-horario.cerrado .dia-horario-horas { opacity: 0.45; }
+  /* Interruptor de cerrado (puro CSS, usa el checkbox original). */
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider {
+    position: absolute;
+    inset: 0;
+    background: #cbd5e1;
+    border-radius: 999px;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .switch .slider:before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .switch input:checked + .slider { background: var(--color-primario); }
+  .switch input:checked + .slider:before { transform: translateX(20px); }
+  body.tema-oscuro .campo-hora input { background: var(--blanco); color: var(--texto); }
+  body.tema-oscuro .switch .slider { background: #475569; }
+
   /* Responsivo */
   body { overflow-x: hidden; }
   @media (max-width: 720px) {
@@ -868,11 +942,12 @@
     .tabla-servicios th:nth-child(4), .tabla-servicios td:nth-child(4),
     .tabla-servicios th:nth-child(5), .tabla-servicios td:nth-child(5),
     .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6) { display: none; }
-    /* Horario de atención compacto (conserva su scroll solo en pantallas muy angostas). */
-    .tabla-horario { min-width: 0; }
-    .tabla-horario th, .tabla-horario td { padding: 6px 4px; font-size: 12px; }
-    .tabla-horario input[type="time"] { width: 78px !important; }
-    .tabla-horario input[type="number"] { width: 44px !important; }
+    /* Horario de atención: una tarjeta por fila, compacta. */
+    .dia-horario { padding: 8px 12px 10px; }
+    .dia-horario-cab strong { font-size: 14px; }
+    .campo-hora input { font-size: 13px; padding: 7px 8px; }
+    .campo-hora input[type="time"] { width: 96px; }
+    .campo-hora input[type="number"] { width: 52px; }
     /* Tarjetas desplegables (un clic en la fila, solo móvil, todas las tablas). */
     tr[data-cita-id], tr[data-cliente-id], tr[data-servicio-id],
     tr[data-historial-id], tr[data-usuario-id], tr[data-actividad-idx] { cursor: pointer; }
