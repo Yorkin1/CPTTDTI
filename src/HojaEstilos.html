@@ -464,6 +464,11 @@
     background: #fff;
   }
 
+  /* Los input date no aceptan placeholder: se simula con ::before
+     (se oculta al enfocar o cuando ya tiene fecha). */
+  #filtroFechaCita::before { content: 'Fecha'; color: #94a3b8; margin-right: 6px; }
+  #filtroFechaCita:focus::before, #filtroFechaCita:valid::before { content: none; }
+
   /* Buscador / filtros */
   .barra-busqueda {
     display: flex;
