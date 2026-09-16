@@ -259,6 +259,22 @@
       </div>
     </div>
 
+    <!-- Modal: avisar por WhatsApp tras confirmar la reserva (con vista previa) -->
+    <div class="modal-fondo" id="modalAvisoWhatsApp" style="display:none;">
+      <div class="modal">
+        <div class="modal-cabecera">
+          <h2>Reserva confirmada</h2>
+          <button type="button" class="modal-cerrar" id="btnCerrarModalWA" aria-label="Cerrar">&times;</button>
+        </div>
+        <p class="asistente-nota" id="textoModalWA"></p>
+        <div class="resumen-reserva" id="vistaPreviaWA"></div>
+        <div class="acciones-form">
+          <button type="button" class="btn btn-primario" id="btnEnviarWA">Enviar por WhatsApp</button>
+          <button type="button" class="btn btn-secundario" id="btnOmitirWA">Ahora no</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       /* ============================================================
          Página pública de reservas — lógica
@@ -1067,8 +1083,9 @@
         pasarAPaso('pasoConfirmacion');
       }
 
-      // Botón "Avisar por WhatsApp" ($0, wa.me): abre el chat del negocio con
-      // el resumen de la reserva. Solo visible si TEL_NEGOCIO está configurado.
+      // Botón "Avisar por WhatsApp" ($0, wa.me): pregunta en un modal propio
+      // (con vista previa) en vez de abrir el chat directamente.
+      // Solo visible si TEL_NEGOCIO está configurado.
       function configurarBotonWhatsAppReserva(resp) {
         var btn = document.getElementById('btnAvisarWhatsApp');
         if (!btn) return;
@@ -1085,11 +1102,41 @@
           var msg = 'Hola' + (negocio ? ' ' + negocio : '') + ', reservé ' + articuloReserva(etiqueta) + ' ' +
             String(etiqueta).charAt(0).toLowerCase() + String(etiqueta).slice(1) +
             ' para el ' + fechaDMYReserva(resp.fecha) + ' a las ' + hora12Reserva(resp.hora) + '.';
-          window.open('https://wa.me/' + wa + '?text=' + encodeURIComponent(msg), '_blank');
+          Reserva._waPendiente = { wa: wa, msg: msg };
+          var texto = document.getElementById('textoModalWA');
+          if (texto) texto.textContent = '¿Enviar este aviso por WhatsApp al negocio?';
+          var previa = document.getElementById('vistaPreviaWA');
+          if (previa) previa.textContent = msg;
+          var modal = document.getElementById('modalAvisoWhatsApp');
+          if (modal) modal.style.display = 'flex';
         };
       }
 
+      function cerrarModalWA() {
+        var modal = document.getElementById('modalAvisoWhatsApp');
+        if (modal) modal.style.display = 'none';
+        Reserva._waPendiente = null;
+      }
+
+      function enviarWAPendiente() {
+        if (Reserva._waPendiente) {
+          window.open('https://wa.me/' + Reserva._waPendiente.wa +
+            '?text=' + encodeURIComponent(Reserva._waPendiente.msg), '_blank');
+        }
+        cerrarModalWA();
+      }
+
       document.addEventListener('DOMContentLoaded', function() {
+        var btnCerrarWA = document.getElementById('btnCerrarModalWA');
+        if (btnCerrarWA) btnCerrarWA.addEventListener('click', cerrarModalWA);
+        var btnOmitirWA = document.getElementById('btnOmitirWA');
+        if (btnOmitirWA) btnOmitirWA.addEventListener('click', cerrarModalWA);
+        var btnEnviarWA = document.getElementById('btnEnviarWA');
+        if (btnEnviarWA) btnEnviarWA.addEventListener('click', enviarWAPendiente);
+        var fondoWA = document.getElementById('modalAvisoWhatsApp');
+        if (fondoWA) fondoWA.addEventListener('click', function(e) {
+          if (e.target === fondoWA) cerrarModalWA();
+        });
         google.script.run
           .withSuccessHandler(function(estado) {
             Reserva.config = estado;
