@@ -914,7 +914,14 @@
     }
     /* Ancho por columna en móvil: la clave respira y las filas no se estiran. */
     .tabla-clientes th:nth-child(3), .tabla-clientes td:nth-child(3) { width: 112px; }
-    .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) { width: 82px; }
+    /* Historial: Cliente absorbe el espacio y Fecha queda compacta y fija. */
+    .tabla-historial th:nth-child(1), .tabla-historial td:nth-child(1) { width: 100%; }
+    .tabla-historial th:nth-child(3), .tabla-historial td:nth-child(3) {
+      width: 76px;
+      max-width: 76px;
+      padding-left: 4px;
+      padding-right: 4px;
+    }
     .tabla-historial th, .tabla-historial td { padding: 6px; }
     .tabla-actividad th:nth-child(1), .tabla-actividad td:nth-child(1) { width: 86px; }
     .tabla-actividad th:nth-child(6), .tabla-actividad td:nth-child(6) { width: 112px; }
