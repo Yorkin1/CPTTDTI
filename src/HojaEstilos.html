@@ -841,6 +841,7 @@
     .asistente-cabecera h1 { font-size: 21px; }
     .asistente-cabecera p { font-size: 13px; }
     .modal-cabecera h2 { font-size: 17px; }
+    .texto-modal { font-size: 13px; }
     /* Citas con layout fijo: la fila colapsada muestra Cliente+Fecha+Hora+Estado en una línea. */
     .tabla-citas {
       min-width: 0;
@@ -1123,6 +1124,11 @@
     padding: 0 4px;
   }
   .modal-cerrar:hover { color: var(--rojo); }
+
+  /* Modal de eliminar: acento rojo de peligro. */
+  .modal-peligro { border-top: 4px solid var(--rojo); }
+  .modal-peligro .modal-cabecera h2 { color: var(--rojo); }
+  .texto-modal { color: var(--gris-texto); font-size: 15px; margin-bottom: 4px; }
 
   /* Color secundario configurable */
   .etiqueta-completada { color: var(--color-secundario); }
