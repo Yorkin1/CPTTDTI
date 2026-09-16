@@ -2671,7 +2671,16 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       setVal('cfg2_res_d' + d + '_cierra', dia.cierra || '');
       var chkCerrado = document.getElementById('cfg2_res_d' + d + '_cerrado');
       if (chkCerrado) chkCerrado.checked = !(dia.abre && dia.cierra);
+      pintarEstadoDia_(d);
     }
+  }
+
+  // Atenúa la tarjeta del día cuando está marcado como cerrado.
+  function pintarEstadoDia_(d) {
+    var tarjeta = document.getElementById('diaHorario_' + d);
+    if (!tarjeta) return;
+    var chk = document.getElementById('cfg2_res_d' + d + '_cerrado');
+    tarjeta.classList.toggle('cerrado', !!(chk && chk.checked));
   }
 
   // Marcar "Cerrado" limpia el horario del día; desmarcar restaura el predeterminado.
@@ -2693,6 +2702,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
           setVal('cfg2_res_d' + idx + '_abre', abre);
           setVal('cfg2_res_d' + idx + '_cierra', cierra);
         }
+        pintarEstadoDia_(idx);
       });
     }
   }

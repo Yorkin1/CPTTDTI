@@ -99,55 +99,98 @@
 
   <h3 style="margin:22px 0 8px; font-size:15px; color:var(--color-primario);">Horario de atención</h3>
   <p class="ayuda">Los días sin hora quedan cerrados.</p>
-  <div class="tabla-contenedor">
-    <table class="tabla-horario">
-      <thead>
-        <tr>
-          <th>Día</th>
-          <th>Apertura</th>
-          <th>Cierre</th>
-          <th>Límite</th>
-          <th>Cerrado</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Domingo</td>
-          <td><input type="time" id="cfg2_res_d0_abre" style="width:110px;"></td>
-          <td><input type="time" id="cfg2_res_d0_cierra" style="width:110px;"></td>
-          <td><input type="number" id="cfg2_res_limite_d0" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
-          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d0_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
-        <tr><td>Lunes</td>
-          <td><input type="time" id="cfg2_res_d1_abre" style="width:110px;"></td>
-          <td><input type="time" id="cfg2_res_d1_cierra" style="width:110px;"></td>
-          <td><input type="number" id="cfg2_res_limite_d1" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
-          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d1_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
-        <tr><td>Martes</td>
-          <td><input type="time" id="cfg2_res_d2_abre" style="width:110px;"></td>
-          <td><input type="time" id="cfg2_res_d2_cierra" style="width:110px;"></td>
-          <td><input type="number" id="cfg2_res_limite_d2" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
-          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d2_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
-        <tr><td>Miércoles</td>
-          <td><input type="time" id="cfg2_res_d3_abre" style="width:110px;"></td>
-          <td><input type="time" id="cfg2_res_d3_cierra" style="width:110px;"></td>
-          <td><input type="number" id="cfg2_res_limite_d3" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
-          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d3_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
-        <tr><td>Jueves</td>
-          <td><input type="time" id="cfg2_res_d4_abre" style="width:110px;"></td>
-          <td><input type="time" id="cfg2_res_d4_cierra" style="width:110px;"></td>
-          <td><input type="number" id="cfg2_res_limite_d4" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
-          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d4_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
-        <tr><td>Viernes</td>
-          <td><input type="time" id="cfg2_res_d5_abre" style="width:110px;"></td>
-          <td><input type="time" id="cfg2_res_d5_cierra" style="width:110px;"></td>
-          <td><input type="number" id="cfg2_res_limite_d5" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
-          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d5_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
-        <tr><td>Sábado</td>
-          <td><input type="time" id="cfg2_res_d6_abre" style="width:110px;"></td>
-          <td><input type="time" id="cfg2_res_d6_cierra" style="width:110px;"></td>
-          <td><input type="number" id="cfg2_res_limite_d6" min="0" step="1" placeholder="—" title="Vacío = usa el general" style="width:64px; text-align:center;"></td>
-          <td style="text-align:center;"><input type="checkbox" id="cfg2_res_d6_cerrado" style="width:auto; accent-color:var(--color-primario);" title="Día cerrado (sin horario)"></td></tr>
-      </tbody>
-    </table>
+  <div class="dias-horario">
+    <div class="dia-horario" id="diaHorario_0">
+      <div class="dia-horario-cab">
+        <strong>Domingo</strong>
+        <span class="dia-horario-cerrado-txt">Cerrado</span>
+        <label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d0_cerrado"><span class="slider"></span></label>
+      </div>
+      <div class="dia-horario-horas">
+        <label class="campo-hora"><span>Apertura</span><input type="time" id="cfg2_res_d0_abre"></label>
+        <span class="dia-horario-guion">–</span>
+        <label class="campo-hora"><span>Cierre</span><input type="time" id="cfg2_res_d0_cierra"></label>
+        <label class="campo-hora campo-limite"><span>Límite</span><input type="number" id="cfg2_res_limite_d0" min="0" step="1" placeholder="—" title="Vacío = usa el general"></label>
+      </div>
+    </div>
+    <div class="dia-horario" id="diaHorario_1">
+      <div class="dia-horario-cab">
+        <strong>Lunes</strong>
+        <span class="dia-horario-cerrado-txt">Cerrado</span>
+        <label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d1_cerrado"><span class="slider"></span></label>
+      </div>
+      <div class="dia-horario-horas">
+        <label class="campo-hora"><span>Apertura</span><input type="time" id="cfg2_res_d1_abre"></label>
+        <span class="dia-horario-guion">–</span>
+        <label class="campo-hora"><span>Cierre</span><input type="time" id="cfg2_res_d1_cierra"></label>
+        <label class="campo-hora campo-limite"><span>Límite</span><input type="number" id="cfg2_res_limite_d1" min="0" step="1" placeholder="—" title="Vacío = usa el general"></label>
+      </div>
+    </div>
+    <div class="dia-horario" id="diaHorario_2">
+      <div class="dia-horario-cab">
+        <strong>Martes</strong>
+        <span class="dia-horario-cerrado-txt">Cerrado</span>
+        <label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d2_cerrado"><span class="slider"></span></label>
+      </div>
+      <div class="dia-horario-horas">
+        <label class="campo-hora"><span>Apertura</span><input type="time" id="cfg2_res_d2_abre"></label>
+        <span class="dia-horario-guion">–</span>
+        <label class="campo-hora"><span>Cierre</span><input type="time" id="cfg2_res_d2_cierra"></label>
+        <label class="campo-hora campo-limite"><span>Límite</span><input type="number" id="cfg2_res_limite_d2" min="0" step="1" placeholder="—" title="Vacío = usa el general"></label>
+      </div>
+    </div>
+    <div class="dia-horario" id="diaHorario_3">
+      <div class="dia-horario-cab">
+        <strong>Miércoles</strong>
+        <span class="dia-horario-cerrado-txt">Cerrado</span>
+        <label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d3_cerrado"><span class="slider"></span></label>
+      </div>
+      <div class="dia-horario-horas">
+        <label class="campo-hora"><span>Apertura</span><input type="time" id="cfg2_res_d3_abre"></label>
+        <span class="dia-horario-guion">–</span>
+        <label class="campo-hora"><span>Cierre</span><input type="time" id="cfg2_res_d3_cierra"></label>
+        <label class="campo-hora campo-limite"><span>Límite</span><input type="number" id="cfg2_res_limite_d3" min="0" step="1" placeholder="—" title="Vacío = usa el general"></label>
+      </div>
+    </div>
+    <div class="dia-horario" id="diaHorario_4">
+      <div class="dia-horario-cab">
+        <strong>Jueves</strong>
+        <span class="dia-horario-cerrado-txt">Cerrado</span>
+        <label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d4_cerrado"><span class="slider"></span></label>
+      </div>
+      <div class="dia-horario-horas">
+        <label class="campo-hora"><span>Apertura</span><input type="time" id="cfg2_res_d4_abre"></label>
+        <span class="dia-horario-guion">–</span>
+        <label class="campo-hora"><span>Cierre</span><input type="time" id="cfg2_res_d4_cierra"></label>
+        <label class="campo-hora campo-limite"><span>Límite</span><input type="number" id="cfg2_res_limite_d4" min="0" step="1" placeholder="—" title="Vacío = usa el general"></label>
+      </div>
+    </div>
+    <div class="dia-horario" id="diaHorario_5">
+      <div class="dia-horario-cab">
+        <strong>Viernes</strong>
+        <span class="dia-horario-cerrado-txt">Cerrado</span>
+        <label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d5_cerrado"><span class="slider"></span></label>
+      </div>
+      <div class="dia-horario-horas">
+        <label class="campo-hora"><span>Apertura</span><input type="time" id="cfg2_res_d5_abre"></label>
+        <span class="dia-horario-guion">–</span>
+        <label class="campo-hora"><span>Cierre</span><input type="time" id="cfg2_res_d5_cierra"></label>
+        <label class="campo-hora campo-limite"><span>Límite</span><input type="number" id="cfg2_res_limite_d5" min="0" step="1" placeholder="—" title="Vacío = usa el general"></label>
+      </div>
+    </div>
+    <div class="dia-horario" id="diaHorario_6">
+      <div class="dia-horario-cab">
+        <strong>Sábado</strong>
+        <span class="dia-horario-cerrado-txt">Cerrado</span>
+        <label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d6_cerrado"><span class="slider"></span></label>
+      </div>
+      <div class="dia-horario-horas">
+        <label class="campo-hora"><span>Apertura</span><input type="time" id="cfg2_res_d6_abre"></label>
+        <span class="dia-horario-guion">–</span>
+        <label class="campo-hora"><span>Cierre</span><input type="time" id="cfg2_res_d6_cierra"></label>
+        <label class="campo-hora campo-limite"><span>Límite</span><input type="number" id="cfg2_res_limite_d6" min="0" step="1" placeholder="—" title="Vacío = usa el general"></label>
+      </div>
+    </div>
   </div>
   </div>
 
