@@ -1538,7 +1538,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
           var nomCli = nombreCliente(c.ID_Cliente);
           return '<td class="col-cliente" title="' + esc(nomCli) + '">' + esc(nomCli) + '</td>';
         })() +
-        '<td>' + esc(c.Agendado_Por || (c.Descripcion && c.Descripcion.indexOf('Reservada') === 0 ? 'Cliente (en línea)' : '')) + '</td>' +
+        '<td title="' + esc(c.Agendado_Por || '') + '">' + esc(c.Agendado_Por || (c.Descripcion && c.Descripcion.indexOf('Reservada') === 0 ? 'Cliente (en línea)' : '')) + '</td>' +
         '<td>' + esc(fechaDMY(fechaLegible(c.Fecha))) + '</td>' +
         '<td>' + esc(hora12(c.Hora)) + '</td>' +
         '<td>' + esc(duracionLegible(c.Duracion_Mins)) + '</td>' +
