@@ -32,7 +32,7 @@
         <form id="formConfiguracionInicial" novalidate>
           <div class="grid-form">
             <div class="campo ancho-completo">
-              <label for="cfg_plantilla">Plantilla de ejemplo (opcional)</label>
+              <label for="cfg_plantilla">Plantilla de ejemplo</label>
               <select id="cfg_plantilla">
                 <option value="">— Personalizar desde cero —</option>
                 <option value="gasolinera">Estación de Combustible</option>
@@ -47,7 +47,7 @@
               <p class="asistente-nota">Al elegir una plantilla se rellenan los campos de abajo; puede ajustarlos antes de guardar.</p>
             </div>
             <div class="campo ancho-completo">
-              <label for="cfg_nombre_negocio">Nombre del negocio *</label>
+              <label for="cfg_nombre_negocio">Nombre del negocio <span class="req">*</span></label>
               <input type="text" id="cfg_nombre_negocio" required placeholder="Ej. Estación de Combustible">
             </div>
             <div class="campo ancho-completo">
@@ -81,7 +81,7 @@
               </div>
             </div>
             <div class="campo ancho-completo">
-              <label for="cfg_logo_archivo">Logo del negocio (opcional)</label>
+              <label for="cfg_logo_archivo">Logo del negocio</label>
               <input type="file" id="cfg_logo_archivo" accept="image/png,image/jpeg,image/gif,image/webp">
               <img id="cfg_logo_preview" class="foto-preview logo-preview" alt="Vista previa del logo" style="display:none;">
               <button type="button" class="btn btn-secundario btn-pequeno" id="cfg_logo_quitar" style="display:none;">Quitar logo</button>
@@ -133,11 +133,11 @@
         <form id="formLogin">
           <div class="grid-form">
             <div class="campo ancho-completo">
-              <label for="login_usuario">Correo electrónico *</label>
+              <label for="login_usuario">Correo electrónico <span class="req">*</span></label>
               <input type="email" id="login_usuario" required placeholder="Ej. nombre@correo.com" autocomplete="email">
             </div>
             <div class="campo ancho-completo">
-              <label for="login_contrasena">Contraseña *</label>
+              <label for="login_contrasena">Contraseña <span class="req">*</span></label>
               <div class="campo-contrasena">
                 <input type="password" id="login_contrasena" required placeholder="••••••••" autocomplete="current-password">
                 <button type="button" class="btn-ojo" data-para="login_contrasena" title="Mostrar contraseña" aria-label="Mostrar contraseña"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -153,7 +153,7 @@
         <form id="formRecuperar" style="display:none;">
           <div class="grid-form">
             <div class="campo ancho-completo">
-              <label for="rec_correo">Correo electrónico *</label>
+              <label for="rec_correo">Correo electrónico <span class="req">*</span></label>
               <input type="email" id="rec_correo" required placeholder="tu@correo.com" autocomplete="email">
             </div>
           </div>
@@ -166,22 +166,22 @@
         <form id="formRegistro" style="display:none;">
           <div class="grid-form">
             <div class="campo ancho-completo">
-              <label for="reg_nombre">Nombre *</label>
+              <label for="reg_nombre">Nombre <span class="req">*</span></label>
               <input type="text" id="reg_nombre" required placeholder="Ej. Juan Pérez" autocomplete="name">
             </div>
             <div class="campo ancho-completo">
-              <label for="reg_correo">Correo electrónico *</label>
+              <label for="reg_correo">Correo electrónico <span class="req">*</span></label>
               <input type="email" id="reg_correo" required placeholder="Ej. nombre@correo.com" autocomplete="email">
             </div>
             <div class="campo ancho-completo">
-              <label for="reg_contrasena">Contraseña *</label>
+              <label for="reg_contrasena">Contraseña <span class="req">*</span></label>
               <div class="campo-contrasena">
                 <input type="password" id="reg_contrasena" required minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
                 <button type="button" class="btn-ojo" data-para="reg_contrasena" title="Mostrar contraseña" aria-label="Mostrar contraseña"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
               </div>
             </div>
             <div class="campo ancho-completo">
-              <label for="reg_contrasena_confirmar">Confirmar contraseña *</label>
+              <label for="reg_contrasena_confirmar">Confirmar contraseña <span class="req">*</span></label>
               <input type="password" id="reg_contrasena_confirmar" required minlength="8" placeholder="Repita la contraseña" autocomplete="new-password">
             </div>
           </div>
@@ -258,11 +258,11 @@
         <form id="formContrasenaGlobal">
           <div class="grid-form">
             <div class="campo ancho-completo">
-              <label for="g_contrasena_actual">Contraseña actual *</label>
+              <label for="g_contrasena_actual">Contraseña actual <span class="req">*</span></label>
               <input type="password" id="g_contrasena_actual" required autocomplete="current-password">
             </div>
             <div class="campo ancho-completo">
-              <label for="g_contrasena_nueva">Nueva contraseña *</label>
+              <label for="g_contrasena_nueva">Nueva contraseña <span class="req">*</span></label>
               <input type="password" id="g_contrasena_nueva" required minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
             </div>
           </div>
@@ -273,7 +273,6 @@
       </div>
     </div>
 
-    <!-- Modal: confirmar eliminación (diseño propio, global). -->
     <div id="modalEliminar" class="modal-fondo" style="display:none;">
       <div class="modal modal-peligro">
         <div class="modal-cabecera">

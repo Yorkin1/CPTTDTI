@@ -997,7 +997,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       precio: document.getElementById('ser_precio').value,
       duracionMins: parsearDuracion(document.getElementById('ser_duracion').value),
       descripcion: document.getElementById('ser_descripcion').value.trim(),
-      // Al crear no se muestra Estado: el servicio nace activo.
       activo: id ? document.getElementById('ser_activo').value : 'SI'
     };
     if (!datos.nombre) {
@@ -1080,7 +1079,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     setVal('ser_duracion', duracionLegible(s.Duracion_Mins || 60));
     setVal('ser_descripcion', s.Descripcion || '');
     setVal('ser_activo', String(s.Activo || 'SI').toUpperCase() === 'NO' ? 'NO' : 'SI');
-    // El Estado solo se muestra al actualizar, no al crear.
     var campoEstado = document.getElementById('campoEstadoServicio');
     if (campoEstado) campoEstado.style.display = '';
     document.getElementById('tituloFormServicio').textContent = 'Editar servicio';
@@ -2609,7 +2607,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
   }
 
-  // Atenúa la tarjeta del día cuando está marcado como cerrado.
   function pintarEstadoDia_(d) {
     var tarjeta = document.getElementById('diaHorario_' + d);
     if (!tarjeta) return;
@@ -3778,7 +3775,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('campoUsuarioContrasenaConfirmar').style.display = 'none';
     document.getElementById('usu_rol').value = u.rol === 'administrador' ? 'administrador' : 'editor';
     document.getElementById('usu_activo').value = u.activo ? 'SI' : 'NO';
-    // El Estado solo se muestra al editar, no al crear.
     document.getElementById('campoUsuarioEstado').style.display = '';
     document.getElementById('tituloFormUsuario').textContent = 'Editar usuario';
     document.getElementById('btnGuardarUsuario').textContent = 'Actualizar usuario';
@@ -3810,7 +3806,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       nombre: document.getElementById('usu_nombre').value.trim(),
       contrasena: original ? '' : document.getElementById('usu_contrasena').value,
       rol: document.getElementById('usu_rol').value,
-      // Al crear no se muestra Estado: el usuario nace activo.
       activo: original ? document.getElementById('usu_activo').value : 'SI'
     };
     if (!usuario) {
@@ -3887,14 +3882,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       .eliminarUsuario(tokenSesion(), usuario);
   }
 
-  /* ==========================================================
-     CONFIRMAR ELIMINACIÓN (modal global con diseño propio)
-     ========================================================== */
-
-  // Acción pendiente de eliminar (la pone quien pide la confirmación).
   var eliminarPendiente = null;
 
-  // Muestra el modal de eliminar. Si el modal no existe, usa confirm nativo.
   function pedirConfirmarEliminar(titulo, texto, accion) {
     eliminarPendiente = { accion: accion };
     var modal = document.getElementById('modalEliminar');
