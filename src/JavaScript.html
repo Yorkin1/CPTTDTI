@@ -198,7 +198,6 @@
                   (tipo === 'monitor' ? 'tablaActividad' : 'tablaUsuarios'))));
     var terminar = function() {
       ocultarCargaZona(tbodyId);
-      mostrarToast('Listas actualizadas.', 'exito');
     };
     mostrarCargaZona(tbodyId, 'Refrescando datos…');
     refrescarTodasLasListas(terminar);
