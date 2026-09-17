@@ -942,17 +942,19 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     tbody.innerHTML = lista.map(function(s) {
       var estado = String(s.Activo || 'SI').toUpperCase() === 'NO' ? 'Inactivo' : 'Activo';
       var claseEt = estado === 'Activo' ? 'etiqueta-programada' : 'etiqueta-expirada';
-      var acciones = esAdmin
-        ? '<button class="btn btn-secundario btn-pequeno" onclick="editarServicio(\'' + esc(s.ID_Servicio) + '\')">Editar</button>' +
-          '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarServicio(\'' + esc(s.ID_Servicio) + '\')">Eliminar</button>'
-        : '<span class="vacio-accion">—</span>';
+      var accionesTd = esAdmin
+        ? '<td class="acciones-fila">' +
+          '<button class="btn btn-secundario btn-pequeno" onclick="editarServicio(\'' + esc(s.ID_Servicio) + '\')">Editar</button>' +
+          '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarServicio(\'' + esc(s.ID_Servicio) + '\')">Eliminar</button>' +
+          '</td>'
+        : '';
       return '<tr data-servicio-id="' + esc(s.ID_Servicio) + '">' +
         '<td>' + esc(s.Nombre) + '</td>' +
         '<td>' + formatoMoneda(s.Precio) + '</td>' +
         '<td>' + esc(duracionLegible(s.Duracion_Mins)) + '</td>' +
         '<td class="col-wrap">' + esc(s.Descripcion) + '</td>' +
         '<td><span class="etiqueta ' + claseEt + '">' + esc(estado) + '</span></td>' +
-        '<td class="acciones-fila">' + acciones + '</td>' +
+        accionesTd +
       '</tr>';
     }).join('');
   }
@@ -986,7 +988,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
             '</div>'
           : '') +
       '</div>';
-    _insertarTarjeta(tbody, filaOrigen, id, html, 6);
+      _insertarTarjeta(tbody, filaOrigen, id, html, esAdmin ? 6 : 5);
   }
 
   function guardarServicio(e) {
