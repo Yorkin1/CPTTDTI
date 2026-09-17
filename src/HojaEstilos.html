@@ -179,7 +179,6 @@
   /* Reservas en línea: Paso y Límite alineados aunque una etiqueta ocupe 2 líneas. */
   #bloqueConfigReservas .campo input[type="number"] { margin-top: auto; }
   .ayuda { font-size: 12px; color: var(--gris-texto); margin-top: 4px; }
-  /* Asterisco rojo de campo obligatorio (los opcionales no llevan marca). */
   .req { color: var(--rojo); font-weight: 700; }
   .duracion-stepper { position: relative; }
   .duracion-stepper input { padding-right: 30px; width: 100%; }
@@ -466,8 +465,6 @@
     background: #fff;
   }
 
-  /* Los input date no aceptan placeholder: se simula con ::before
-     (se oculta al enfocar o cuando ya tiene fecha). */
   #filtroFechaCita::before { content: 'Fecha'; color: #94a3b8; margin-right: 6px; }
   #filtroFechaCita:focus::before, #filtroFechaCita:valid::before { content: none; }
 
@@ -682,7 +679,6 @@
     min-height: 100vh;
   }
 
-  /* Horario de atención: tarjetas por día (misma estética de la página). */
   .dias-horario {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
@@ -726,10 +722,8 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
   .dia-horario-guion { color: var(--gris-texto); padding-bottom: 8px; }
-  /* Día cerrado: tarjeta atenuada. */
   .dia-horario.cerrado { background: var(--gris-fondo); }
   .dia-horario.cerrado .dia-horario-horas { opacity: 0.45; }
-  /* Interruptor de cerrado (puro CSS, usa el checkbox original). */
   .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
   .switch input { opacity: 0; width: 0; height: 0; }
   .switch .slider {
@@ -760,14 +754,12 @@
   body { overflow-x: hidden; }
   @media (max-width: 720px) {
     .grid-form { grid-template-columns: 1fr; }
-    /* Cita: Fecha y Hora lado a lado (el resto del formulario sigue a una columna). */
     #formCita .grid-form { grid-template-columns: 1fr 1fr; }
     #formCita .grid-form .campo.ancho-completo { grid-column: 1 / -1; }
     #formCita .grid-form > .campo:has(#cita_cliente) { grid-column: 1 / -1; }
     #bloqueConfigReservas .grid-form { grid-template-columns: 1fr 1fr; }
     #bloqueConfigReservas .campo { min-width: 0; }
     #bloqueConfigReservas .campo input { width: 100%; min-width: 0; }
-    /* Paso y Límite pegados a su campo y sin "(minutos)" en móvil. */
     #bloqueConfigReservas .campo-compacto > label { margin-bottom: 2px; }
     #bloqueConfigReservas .aclaracion-unidad { display: none; }
     .titulo-app { font-size: 17px; }
@@ -800,7 +792,6 @@
        min-content y la página se ensancha (~492px) al abrir la tarjeta. */
     .tarjeta { padding: 14px; }
     .barra-busqueda { flex-direction: column; align-items: stretch; margin-bottom: 12px; }
-    /* Citas: buscador arriba y Fecha + Estado lado a lado. */
     .barra-busqueda:has(#buscarCita) { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .barra-busqueda:has(#buscarCita) #buscarCita { grid-column: 1 / -1; }
     .barra-busqueda:has(#buscarCita) #filtroFechaCita,
@@ -810,8 +801,7 @@
     /* Cabeceras sin grupo de acciones (Clientes, Servicios…): segunda raya
        completa bajo la fila, igual que en Historial. */
     .cabecera-lista:not(:has(.acciones-lista)) { border-bottom: 2px solid var(--azul-muy-claro); }
-    /* Citas: solo la raya del título (el título largo con contador no admite doble raya)
-       y Refrescar nunca baja de fila (el título cede el espacio). */
+    /* Citas: solo la raya del título (el título largo con contador no admite doble raya). */
     .cabecera-lista:has(#contadorHoy) { border-bottom: none; flex-wrap: nowrap; }
     .cabecera-lista h2 { flex: 0 1 auto; min-width: 0; }
     .cabecera-lista .btn-refrescar { order: 0; margin-left: auto; flex-shrink: 0; }
@@ -823,7 +813,6 @@
     .tabla-contenedor thead th { position: sticky; top: 0; z-index: 2; }
     /* Tablas al ancho de la pantalla, sin scroll lateral. */
     table { font-size: 12px; }
-    /* Tipografía general compacta en móvil (todas las letras). */
     .cabecera-vista h1 { font-size: 22px; }
     .cabecera-vista p { font-size: 13px; }
     .tarjeta h2 { font-size: 16px; }
@@ -897,7 +886,6 @@
       overflow-wrap: normal;
       overflow: hidden;
     }
-    /* Columnas fijas bien pegadas para que Cliente respire. */
     .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5) { width: 78px; font-size: 12px; }
     .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6) { width: 64px; font-size: 12px; }
     .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) { width: 78px; text-align: center; }
@@ -917,7 +905,6 @@
     }
     /* Ancho por columna en móvil: la clave respira y las filas no se estiran. */
     .tabla-clientes th:nth-child(3), .tabla-clientes td:nth-child(3) { width: 112px; }
-    /* Historial: Fecha compacta y fija (Cliente toma el sobrante solo). */
     .tabla-historial th:nth-child(2), .tabla-historial td:nth-child(2) {
       max-width: 110px;
       overflow: hidden;
@@ -967,7 +954,6 @@
     .tabla-servicios th:nth-child(4), .tabla-servicios td:nth-child(4),
     .tabla-servicios th:nth-child(5), .tabla-servicios td:nth-child(5),
     .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6) { display: none; }
-    /* Horario de atención: una tarjeta por fila, compacta y sin desbordes. */
     .dia-horario { padding: 8px 12px 10px; min-width: 0; }
     .dia-horario-cab strong { font-size: 14px; }
     .dia-horario-horas { flex-wrap: wrap; }
@@ -1149,7 +1135,6 @@
   }
   .modal-cerrar:hover { color: var(--rojo); }
 
-  /* Modal de eliminar: acento rojo de peligro. */
   .modal-peligro { border-top: 4px solid var(--rojo); }
   .modal-peligro .modal-cabecera h2 { color: var(--rojo); }
   .texto-modal { color: var(--gris-texto); font-size: 15px; margin-bottom: 4px; }

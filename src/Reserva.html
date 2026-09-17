@@ -258,7 +258,6 @@
       </div>
     </div>
 
-    <!-- Modal: avisar por WhatsApp al crear la reserva (con vista previa) -->
     <div class="modal-fondo" id="modalAvisoWhatsApp" style="display:none;">
       <div class="modal">
         <div class="modal-cabecera">
@@ -1082,8 +1081,6 @@
         mostrarAvisoWhatsAppReserva(resp);
       }
 
-      // Al crear la reserva sale sola la ventana de WhatsApp ($0, wa.me),
-      // con vista previa. Solo si TEL_NEGOCIO está configurado.
       function mostrarAvisoWhatsAppReserva(resp) {
         var wa = Reserva.config && Reserva.config.telNegocioWa;
         if (!wa) return;

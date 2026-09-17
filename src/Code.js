@@ -956,8 +956,6 @@ function guardarConfiguracion(token, datos) {
       if (clave === 'CONFIGURADA') return; // se fuerza más abajo
       if (clave === 'LOGO_URL') return;    // se maneja explícitamente (permite limpiarla)
       if (datos[clave] !== undefined && datos[clave] !== null) {
-        // '' es un vaciado explícito (p. ej. quitar el teléfono) y SÍ se guarda.
-        // undefined (p. ej. HABILITAR_MONITOR para no dueños) no se toca.
         aGuardar[clave] = String(datos[clave]);
       }
     });
@@ -1316,7 +1314,6 @@ function _telefonoWA_(telefono) {
   if (!soloDigitos) return '';
   // Si ya trae "+" se asume internacional completo.
   if (crudo.charAt(0) === '+') return soloDigitos;
-  // Código de país fijo: República Dominicana (+1).
   var codigo = '1';
   // Si ya empieza con el código del país, no duplicarlo.
   if (soloDigitos.indexOf(codigo) === 0) return soloDigitos;
