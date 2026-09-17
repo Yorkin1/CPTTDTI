@@ -904,7 +904,7 @@
     }
     .col-wrap, .col-cliente, .col-servicios { min-width: 0; max-width: none; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 34px; }
-    /* Fila colapsada en una línea: Cliente + Fecha + Hora + Estado (el título vive en la tarjeta). */
+    /* Fila colapsada: Cliente + Fecha + Hora + Estado (en muy angostas, sin Hora). */
     .tabla-citas th, .tabla-citas td { padding: 6px; }
     .tabla-citas th:first-child, .tabla-citas td:first-child { width: 30px; }
     .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3) {
@@ -914,7 +914,7 @@
     }
     /* La columna flexible absorbe el sobrante: con la tabla vacía el layout
        fijo la colapsaba y el encabezado se angostaba. */
-    .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3) { width: 100%; }
+    .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3) { width: 140px; max-width: 140px; }
     .tabla-citas th:nth-child(5), .tabla-citas td:nth-child(5),
     .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6),
     .tabla-citas th:nth-child(10), .tabla-citas td:nth-child(10) {
@@ -1056,6 +1056,15 @@
     .tarjeta-cita-acciones { display: flex; gap: 8px; margin-top: 8px; }
     thead th, tbody td { padding: 6px 8px; }
     .tabla-contenedor input[type="time"] { width: 100px !important; }
+  }
+  @media (max-width: 480px) {
+    .tabla-citas th:nth-child(3), .tabla-citas td:nth-child(3) { width: 110px; max-width: 110px; }
+    .tabla-citas th:nth-child(6), .tabla-citas td:nth-child(6),
+    .tabla-clientes th:nth-child(5), .tabla-clientes td:nth-child(5),
+    .tabla-historial th:nth-child(2), .tabla-historial td:nth-child(2),
+    .tabla-usuarios th:nth-child(2), .tabla-usuarios td:nth-child(2),
+    .tabla-servicios th:nth-child(3), .tabla-servicios td:nth-child(3),
+    .tabla-actividad th:nth-child(2), .tabla-actividad td:nth-child(2) { display: none; }
   }
   @media (max-width: 360px) {
     thead th, tbody td { padding: 5px 6px; font-size: 12px; }
