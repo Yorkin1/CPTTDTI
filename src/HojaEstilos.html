@@ -750,6 +750,29 @@
   body.tema-oscuro .campo-hora input { background: var(--blanco); color: var(--texto); }
   body.tema-oscuro .switch .slider { background: #475569; }
 
+  /* Horario de atención en escritorio: tabla con la estética de la página. */
+  .tabla-horario { width: 100%; min-width: 0; }
+  .tabla-horario td strong { color: var(--azul-oscuro); }
+  .tabla-horario input {
+    padding: 8px 10px;
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--texto);
+    background: #fff;
+    max-width: 100%;
+  }
+  .tabla-horario input[type="time"] { width: 110px; }
+  .tabla-horario input[type="number"] { width: 64px; text-align: center; }
+  .tabla-horario input:focus {
+    outline: none;
+    border-color: var(--color-primario);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  .tabla-horario tr.cerrado td { opacity: 0.45; }
+  body.tema-oscuro .tabla-horario input { background: var(--blanco); color: var(--texto); }
+
   /* Responsivo */
   body { overflow-x: hidden; }
   @media (max-width: 720px) {
