@@ -2658,9 +2658,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
   }
 
-  // Dibuja el horario como tarjetas (móvil) o tabla (escritorio). Solo una
-  // plantilla vive en el DOM, así los IDs nunca se duplican. Si ya hay
-  // valores escritos y cambia el modo, se conservan.
   var horarioModo_ = '';
   function dibujarHorario_(preservar) {
     var cont = document.getElementById('contenedorHorario');
