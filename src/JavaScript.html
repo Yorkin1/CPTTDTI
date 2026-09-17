@@ -370,9 +370,9 @@
     chk.checked = !!c.habilitarReservas;
     setVal('cfg2_reservas_paso', c.pasoReserva || 30);
     setVal('cfg2_reservas_citas_max_dia', c.citasMaxPorDia || 0);
+    dibujarHorario_(false);
     rellenarHorarioAtencion(c.horarioAtencion || _horarioAtencionDefault());
     rellenarLimitesPorDia(c.citasMaxPorDiaPorSemana || {});
-    iniciarDiasCerrados();
 
     document.getElementById('btnGuardarReservas').addEventListener('click', guardarReservas);
     document.getElementById('btnCopiarEnlaceReservas').addEventListener('click', copiarEnlaceReservas);
@@ -2673,10 +2673,85 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
   }
 
   function pintarEstadoDia_(d) {
-    var tarjeta = document.getElementById('diaHorario_' + d);
-    if (!tarjeta) return;
     var chk = document.getElementById('cfg2_res_d' + d + '_cerrado');
-    tarjeta.classList.toggle('cerrado', !!(chk && chk.checked));
+    var apagado = !!(chk && chk.checked);
+    var tarjeta = document.getElementById('diaHorario_' + d);
+    if (tarjeta) tarjeta.classList.toggle('cerrado', apagado);
+    var fila = document.getElementById('filaHorario_' + d);
+    if (fila) fila.classList.toggle('cerrado', apagado);
+  }
+
+  function _nombresDias_() {
+    return ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  }
+
+  function _htmlTarjetaDia_(d, nombre) {
+    return '<div class="dia-horario" id="diaHorario_' + d + '">' +
+      '<div class="dia-horario-cab">' +
+        '<strong>' + nombre + '</strong>' +
+        '<span class="dia-horario-cerrado-txt">Cerrado</span>' +
+        '<label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d' + d + '_cerrado"><span class="slider"></span></label>' +
+      '</div>' +
+      '<div class="dia-horario-horas">' +
+        '<label class="campo-hora"><span>Apertura</span><input type="time" id="cfg2_res_d' + d + '_abre"></label>' +
+        '<span class="dia-horario-guion">–</span>' +
+        '<label class="campo-hora"><span>Cierre</span><input type="time" id="cfg2_res_d' + d + '_cierra"></label>' +
+        '<label class="campo-hora campo-limite"><span>Límite</span><input type="number" id="cfg2_res_limite_d' + d + '" min="0" step="1" placeholder="—" title="Vacío = usa el general"></label>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function _htmlFilaDia_(d, nombre) {
+    return '<tr id="filaHorario_' + d + '">' +
+      '<td><strong>' + nombre + '</strong></td>' +
+      '<td><input type="time" id="cfg2_res_d' + d + '_abre"></td>' +
+      '<td><input type="time" id="cfg2_res_d' + d + '_cierra"></td>' +
+      '<td><input type="number" id="cfg2_res_limite_d' + d + '" min="0" step="1" placeholder="—" title="Vacío = usa el general"></td>' +
+      '<td style="text-align:center;"><label class="switch" title="Día cerrado (sin horario)"><input type="checkbox" id="cfg2_res_d' + d + '_cerrado"><span class="slider"></span></label></td>' +
+    '</tr>';
+  }
+
+  function _esMovilHorario_() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+  }
+
+  // Dibuja el horario como tarjetas (móvil) o tabla (escritorio). Solo una
+  // plantilla vive en el DOM, así los IDs nunca se duplican. Si ya hay
+  // valores escritos y cambia el modo, se conservan.
+  var horarioModo_ = '';
+  function dibujarHorario_(preservar) {
+    var cont = document.getElementById('contenedorHorario');
+    if (!cont) return;
+    var movil = _esMovilHorario_();
+    var modo = movil ? 'tarjetas' : 'tabla';
+    var est = null;
+    var lim = null;
+    if (preservar && cont.children.length) {
+      try { est = leerHorarioAtencionFormulario(); } catch (eHor) { est = null; }
+      try { lim = leerLimitesPorDiaFormulario(); } catch (eLim) { lim = null; }
+    }
+    if (modo === horarioModo_ && cont.children.length) return;
+    horarioModo_ = modo;
+    var dias = _nombresDias_();
+    var html = '';
+    if (movil) {
+      for (var d = 0; d < 7; d++) html += _htmlTarjetaDia_(d, dias[d]);
+    } else {
+      html = '<div class="tabla-contenedor"><table class="tabla-horario">' +
+        '<thead><tr><th>Día</th><th>Apertura</th><th>Cierre</th><th>Límite</th><th>Cerrado</th></tr></thead><tbody>';
+      for (var t = 0; t < 7; t++) html += _htmlFilaDia_(t, dias[t]);
+      html += '</tbody></table></div>';
+    }
+    cont.innerHTML = html;
+    if (est) {
+      rellenarHorarioAtencion(est);
+      rellenarLimitesPorDia(lim || {});
+    }
+    iniciarDiasCerrados();
+    if (!window._horarioResizeListo) {
+      window._horarioResizeListo = true;
+      window.addEventListener('resize', debounce(function() { dibujarHorario_(true); }, 250));
+    }
   }
 
   // Marcar "Cerrado" limpia el horario del día; desmarcar restaura el predeterminado.
