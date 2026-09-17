@@ -541,6 +541,28 @@
     .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6) { text-align: right; }
     .tabla-servicios .acciones-fila { justify-content: flex-end; }
   }
+  @media (min-width: 721px) and (max-width: 1036px) {
+    table { min-width: 0; }
+    .tabla-citas th:nth-child(2), .tabla-citas td:nth-child(2),
+    .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4),
+    .tabla-citas th:nth-child(7), .tabla-citas td:nth-child(7),
+    .tabla-citas th:nth-child(8), .tabla-citas td:nth-child(8),
+    .tabla-citas th:nth-child(9), .tabla-citas td:nth-child(9),
+    .tabla-clientes th:nth-child(5), .tabla-clientes td:nth-child(5),
+    .tabla-historial th:nth-child(4), .tabla-historial td:nth-child(4),
+    .tabla-historial th:nth-child(6), .tabla-historial td:nth-child(6),
+    .tabla-historial th:nth-child(7), .tabla-historial td:nth-child(7),
+    .tabla-historial th:nth-child(8), .tabla-historial td:nth-child(8) { display: none; }
+    .tabla-clientes tbody td:nth-child(2), .tabla-clientes tbody td:nth-child(4),
+    .tabla-historial tbody td:nth-child(1),
+    .tabla-usuarios tbody td:nth-child(1), .tabla-usuarios tbody td:nth-child(2),
+    .tabla-actividad tbody td:nth-child(2), .tabla-actividad tbody td:nth-child(3),
+    .tabla-actividad tbody td:nth-child(7) {
+      white-space: normal;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+  }
   .barra-busqueda input:focus {
     outline: none;
     border-color: var(--azul-claro);
