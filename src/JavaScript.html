@@ -2737,10 +2737,10 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (movil) {
       for (var d = 0; d < 7; d++) html += _htmlTarjetaDia_(d, dias[d]);
     } else {
-      html = '<div class="tabla-contenedor"><table class="tabla-horario">' +
+      html = '<table class="tabla-horario">' +
         '<thead><tr><th>Día</th><th>Apertura</th><th>Cierre</th><th>Límite</th><th>Cerrado</th></tr></thead><tbody>';
       for (var t = 0; t < 7; t++) html += _htmlFilaDia_(t, dias[t]);
-      html += '</tbody></table></div>';
+      html += '</tbody></table>';
     }
     cont.innerHTML = html;
     if (est) {
