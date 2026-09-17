@@ -579,11 +579,18 @@
       .obtenerClientes(tokenSesion());
   }
 
+  function hayFotoClientes_() {
+    return (Estado.clientes || []).some(function(c) { return String(c.Foto || '').trim() !== ''; });
+  }
+
   function renderTablaClientes(filtro) {
     var tbody = document.getElementById('tablaClientes');
     if (!tbody) return;
     var esAdmin = esAdminSesion();
     filtro = (filtro || '').toLowerCase();
+    var hayFoto = hayFotoClientes_();
+    var tabla = tbody.closest ? tbody.closest('table') : null;
+    if (tabla) tabla.classList.toggle('sin-foto', !hayFoto);
 
     var lista = Estado.clientes.filter(function(c) {
       if (!filtro) return true;
@@ -592,13 +599,13 @@
     });
 
     if (lista.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="vacio">No hay clientes registrados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="' + (hayFoto ? 7 : 6) + '" class="vacio">No hay clientes registrados.</td></tr>';
       return;
     }
 
     tbody.innerHTML = lista.map(function(c) {
       return '<tr data-cliente-id="' + esc(c.ID_Cliente) + '">' +
-        '<td>' + (c.Foto ? '<img class="foto-mini" src="' + esc(c.Foto) + '" alt="Foto">' : '<span class="vacio-accion">&mdash;</span>') + '</td>' +
+        '<td class="col-foto">' + (c.Foto ? '<img class="foto-mini" src="' + esc(c.Foto) + '" alt="Foto">' : '<span class="vacio-accion">&mdash;</span>') + '</td>' +
         '<td>' + esc((c.Nombre + ' ' + (c.Apellido || '')).trim()) + '</td>' +
         '<td>' + esc(c.Telefono) + '</td>' +
         '<td>' + esc(c.Email) + '</td>' +
@@ -640,7 +647,7 @@
           (esAdmin ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarCliente(\'' + esc(c.ID_Cliente) + '\')">Eliminar</button>' : '') +
         '</div>' +
       '</div>';
-    _insertarTarjeta(tbody, filaOrigen, id, html, 7);
+    _insertarTarjeta(tbody, filaOrigen, id, html, hayFotoClientes_() ? 7 : 6);
   }
 
   function guardarCliente(e) {
