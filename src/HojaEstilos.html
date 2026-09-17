@@ -1063,14 +1063,6 @@
     .tabla-usuarios th:nth-child(4), .tabla-usuarios td:nth-child(4),
     .tabla-servicios th:nth-child(4), .tabla-servicios td:nth-child(4),
     .tabla-actividad th:nth-child(5), .tabla-actividad td:nth-child(5) { display: table-cell; }
-    .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4) {
-      display: table-cell;
-      width: 100px;
-      max-width: 100px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
     .tabla-clientes td:nth-child(6) { white-space: nowrap; }
     .tabla-actividad th:nth-child(2), .tabla-actividad td:nth-child(2) {
       max-width: 110px;
@@ -1087,6 +1079,14 @@
     .tabla-actividad th:nth-child(7), .tabla-actividad td:nth-child(7),
     .tabla-usuarios th:nth-child(5), .tabla-usuarios td:nth-child(5) { display: table-cell; }
     .tabla-citas th:nth-child(2), .tabla-citas td:nth-child(2) { display: table-cell; }
+    .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4) {
+      display: table-cell;
+      width: 100px;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
   @media (max-width: 360px) {
     thead th, tbody td { padding: 5px 6px; font-size: 12px; }
