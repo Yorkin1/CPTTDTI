@@ -2514,12 +2514,12 @@ function _nombreClientePorId_(idCliente) {
 }
 
 /**
- * Título del evento de Calendar: "Título – Cliente" (solo título si no hay cliente).
+ * Título del evento de Calendar: "Cliente – Título" (solo título si no hay cliente).
  */
 function _tituloEvento_(titulo, nombreCliente) {
   var t = String(titulo || 'Cita').trim() || 'Cita';
   var n = String(nombreCliente || '').trim();
-  return n ? (t + ' – ' + n) : t;
+  return n ? (n + ' – ' + t) : t;
 }
 
 /**
