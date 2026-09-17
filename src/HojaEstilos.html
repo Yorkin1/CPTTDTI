@@ -466,9 +466,6 @@
     background: #fff;
   }
 
-  #filtroFechaCita::before { content: 'Fecha'; color: #94a3b8; margin-right: 6px; }
-  #filtroFechaCita:focus::before, #filtroFechaCita:valid::before { content: none; }
-
   /* Buscador / filtros */
   .barra-busqueda {
     display: flex;
@@ -832,6 +829,8 @@
     .barra-busqueda:has(#buscarCita) #filtroFechaCita,
     .barra-busqueda:has(#buscarCita) #filtroEstadoCita { width: 100%; min-width: 0; }
     .barra-busqueda:has(#buscarCita) #btnQuitarFiltrosCita { grid-column: 1 / -1; margin-left: 0; }
+    #filtroFechaCita::before { content: 'Fecha'; color: #94a3b8; margin-right: 6px; }
+    #filtroFechaCita:focus::before, #filtroFechaCita:valid::before { content: none; }
     .cabecera-lista { flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: none; }
     /* Cabeceras sin grupo de acciones (Clientes, Servicios…): segunda raya
        completa bajo la fila, igual que en Historial. */
