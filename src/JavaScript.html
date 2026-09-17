@@ -2748,9 +2748,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       rellenarLimitesPorDia(lim || {});
     }
     iniciarDiasCerrados();
-    if (!window._horarioResizeListo) {
+    if (!window._horarioResizeListo && window.matchMedia) {
       window._horarioResizeListo = true;
-      window.addEventListener('resize', debounce(function() { dibujarHorario_(true); }, 250));
+      window.matchMedia('(max-width: 720px)').addEventListener('change', function() { dibujarHorario_(true); });
     }
   }
 
