@@ -2498,6 +2498,31 @@ function eliminarUsuario(token, usuario) {
  */
 
 /**
+ * Nombre "Nombre Apellido" de un cliente por su ID ('' si no existe).
+ */
+function _nombreClientePorId_(idCliente) {
+  try {
+    if (!idCliente) return '';
+    var filas = filasAObjetos_(obtenerHoja_(HOJA_CLIENTES));
+    for (var i = 0; i < filas.length; i++) {
+      if (String(filas[i].ID_Cliente) === String(idCliente)) {
+        return String(filas[i].Nombre || '') + ' ' + String(filas[i].Apellido || '');
+      }
+    }
+  } catch (errNombre) {}
+  return '';
+}
+
+/**
+ * Título del evento de Calendar: "Título – Cliente" (solo título si no hay cliente).
+ */
+function _tituloEvento_(titulo, nombreCliente) {
+  var t = String(titulo || 'Cita').trim() || 'Cita';
+  var n = String(nombreCliente || '').trim();
+  return n ? (t + ' – ' + n) : t;
+}
+
+/**
  * Agenda una cita: crea un evento en Google Calendar y
  * registra la fila correspondiente en la hoja Citas.
  * @param {Object} datos {idCliente, titulo, fecha (yyyy-MM-dd),
@@ -2589,7 +2614,7 @@ function agendarCita(token, datos) {
         opcionesEvento.guests = invitados.join(',');
       }
       var evento = calendario.createEvent(
-        datos.titulo || 'Cita',
+        _tituloEvento_(datos.titulo, nombreCliente),
         inicio,
         fin,
         opcionesEvento
@@ -2967,7 +2992,7 @@ function actualizarCita(token, id, datos) {
         var fin = new Date(inicio.getTime() + duracion * 60000);
         var evento = CalendarApp.getDefaultCalendar().getEventById(String(idEvento));
         if (evento) {
-          evento.setTitle(datos.titulo || 'Cita');
+          evento.setTitle(_tituloEvento_(datos.titulo, _nombreClientePorId_(datos.idCliente || viejoIdCliente)));
           evento.setTime(inicio, fin);
           if (datos.descripcion) evento.setDescription(datos.descripcion);
           Logger.log('Evento de calendario actualizado: ' + idEvento);
@@ -3703,7 +3728,7 @@ function reservarCitaPublica(datos) {
         opcionesEvento.guests = email;
       }
       idEvento = CalendarApp.getDefaultCalendar()
-        .createEvent(titulo, inicio, fin, opcionesEvento).getId();
+        .createEvent(_tituloEvento_(titulo, nombre + ' ' + apellido), inicio, fin, opcionesEvento).getId();
     } catch (errCal) {
       errorCalendario = errCal.message || String(errCal);
       Logger.log('Advertencia: no se pudo crear el evento de reserva: ' + errorCalendario);
@@ -3971,13 +3996,13 @@ function editarReservaPublica(datos) {
       var finE = new Date(ini.getTime() + duracion * 60000);
       var ev = idEventoViejo ? CalendarApp.getDefaultCalendar().getEventById(String(idEventoViejo)) : null;
       if (ev) {
-        ev.setTitle(titulo);
+        ev.setTitle(_tituloEvento_(titulo, _nombreClientePorId_(idClienteFila)));
         ev.setTime(ini, finE);
         ev.setDescription(descripcion);
       } else {
         var op = { description: descripcion };
         if (email && esEmailValido_(email)) op.guests = email;
-        var nuevoEv = CalendarApp.getDefaultCalendar().createEvent(titulo, ini, finE, op);
+        var nuevoEv = CalendarApp.getDefaultCalendar().createEvent(_tituloEvento_(titulo, _nombreClientePorId_(idClienteFila)), ini, finE, op);
         var colEvE = ENCABEZADOS.Citas.indexOf('ID_Evento_Calendar') + 1;
         hoja.getRange(fila, colEvE).setValue(nuevoEv.getId());
       }
