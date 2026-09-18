@@ -2882,6 +2882,16 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         if (sesionInvalida(respuesta)) return;
         if (respuesta && respuesta.exito) {
           mostrarToast('Configuración guardada.', 'exito');
+          var cfgOp = Estado.config || {};
+          if (datos.NOMBRE_NEGOCIO !== undefined) cfgOp.nombreNegocio = datos.NOMBRE_NEGOCIO;
+          if (datos.MENSAJE_BIENVENIDA !== undefined) cfgOp.mensajeBienvenida = datos.MENSAJE_BIENVENIDA;
+          if (datos.ETIQUETA_CITA !== undefined) cfgOp.etiquetaCita = datos.ETIQUETA_CITA;
+          if (datos.COLOR_PRIMARIO !== undefined) cfgOp.colorPrimario = datos.COLOR_PRIMARIO;
+          if (datos.COLOR_SECUNDARIO !== undefined) cfgOp.colorSecundario = datos.COLOR_SECUNDARIO;
+          if (datos.TEMA !== undefined) cfgOp.tema = datos.TEMA;
+          if (datos.HABILITAR_MONITOR !== undefined) cfgOp.habilitarMonitor = (datos.HABILITAR_MONITOR === 'SI');
+          Estado.config = cfgOp;
+          aplicarConfiguracionGlobal();
           google.script.run
             .withSuccessHandler(function(estado) {
               Estado.config = estado || Estado.config;
@@ -4104,6 +4114,30 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       if (sesionInvalida(resp)) return;
       if (resp && resp.exito) {
         mostrarToast(resp.mensaje, 'exito');
+        var listaU = Estado.usuariosLista || [];
+        var idxU = -1;
+        for (var iu = 0; iu < listaU.length; iu++) {
+          if (String(listaU[iu].usuario).toLowerCase() === String(datos.usuario).toLowerCase()) { idxU = iu; break; }
+        }
+        var filaU = {
+          usuario: datos.usuario,
+          nombre: datos.nombre,
+          rol: datos.rol,
+          activo: String(datos.activo || 'SI').toUpperCase() !== 'NO',
+          serviciosIds: datos.serviciosIds || '',
+          principal: idxU >= 0 ? !!listaU[idxU].principal : false
+        };
+        if (idxU >= 0) {
+          listaU[idxU].nombre = filaU.nombre;
+          listaU[idxU].rol = filaU.rol;
+          listaU[idxU].activo = filaU.activo;
+          listaU[idxU].serviciosIds = filaU.serviciosIds;
+        } else {
+          listaU.push(filaU);
+        }
+        Estado.usuariosLista = listaU;
+        var tbodyU = document.getElementById('tablaUsuarios');
+        if (tbodyU) dibujarUsuarios(tbodyU, listaU);
         cancelarEdicionUsuario();
         cargarUsuarios(true);
         // Si el usuario editado es el de la sesión, refrescar nombre/avatar en la barra.
