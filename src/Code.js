@@ -2558,17 +2558,23 @@ function agendarCita(token, datos) {
 
     var lanesAge = _lanesEmpleados_();
     var idEmpleadoAge = '';
-    if (!lanesAge) {
+    var idsServicioAge = [];
+    for (var iAge = 0; iAge < selServicios.items.length; iAge++) {
+      idsServicioAge.push(String(selServicios.items[iAge].id || ''));
+    }
+    var solicitadoAge = String(datos.idEmpleado || '').trim();
+    if (!lanesAge && !solicitadoAge) {
       // Evitar superposiciones con otras citas del mismo día.
       var choque = _citaTieneChoque_(datos.fecha, datos.hora, duracion);
       if (choque && choque.choca) {
         return { exito: false, mensaje: choque.mensaje };
       }
-    } else {
-      var idsServicioAge = [];
-      for (var iAge = 0; iAge < selServicios.items.length; iAge++) {
-        idsServicioAge.push(String(selServicios.items[iAge].id || ''));
+    } else if (solicitadoAge) {
+      idEmpleadoAge = _validarEmpleadoElegido_(solicitadoAge, lanesAge, idsServicioAge, datos.fecha, datos.hora, duracion, '');
+      if (idEmpleadoAge === null) {
+        return { exito: false, mensaje: 'El trabajador elegido no está disponible en ese horario para los servicios elegidos.' };
       }
+    } else {
       idEmpleadoAge = _empleadoLibrePara_(datos.fecha, datos.hora, duracion, idsServicioAge, '');
       if (idEmpleadoAge === null) {
         return { exito: false, mensaje: 'No hay trabajador disponible en ese horario para los servicios elegidos.' };
@@ -2974,7 +2980,8 @@ function actualizarCita(token, id, datos) {
     if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
 
     var lanesUpd = _lanesEmpleados_();
-    if (!lanesUpd) {
+    var solicitadoUpd = String(datos.idEmpleado || '').trim();
+    if (!lanesUpd && !solicitadoUpd) {
       // Evitar superposiciones con otras citas del mismo día (ignorando la propia).
       var choque = _citaTieneChoque_(datos.fecha, datos.hora, datos.duracionMins, id);
       if (choque && choque.choca) {
@@ -3018,28 +3025,35 @@ function actualizarCita(token, id, datos) {
     }
     if (duracion < 5) duracion = 60;
     var idEmpleadoUpd = '';
-    if (lanesUpd) {
+    if (lanesUpd || solicitadoUpd) {
       var colEmpUpd = ENCABEZADOS.Citas.indexOf('ID_Empleado') + 1;
       var idEmpActual = colEmpUpd > 0 ? String(hoja.getRange(fila, colEmpUpd).getValue() || '').trim() : '';
       var idsServicioUpd = [];
       for (var iSu = 0; iSu < selServiciosUpd.items.length; iSu++) {
         idsServicioUpd.push(String(selServiciosUpd.items[iSu].id || ''));
       }
-      var aptosUpd = _empleadosAptos_(idsServicioUpd, lanesUpd);
-      var idsAptosUpd = [];
-      for (var iAu = 0; iAu < aptosUpd.length; iAu++) idsAptosUpd.push(aptosUpd[iAu].id);
-      var conservar = false;
-      if (idEmpActual && idsAptosUpd.indexOf(idEmpActual) !== -1) {
-        var ocUpd = _ocupacionPorEmpleado_(datos.fecha, id);
-        var iniUpd = _horaAMin_(String(datos.hora || ''));
-        if (iniUpd !== null && _librePara_(ocUpd.porEmpleado[idEmpActual] || [], ocUpd.legado, iniUpd, iniUpd + duracion)) conservar = true;
-      }
-      if (conservar) {
-        idEmpleadoUpd = idEmpActual;
-      } else {
-        idEmpleadoUpd = _empleadoLibrePara_(datos.fecha, datos.hora, duracion, idsServicioUpd, id);
+      if (solicitadoUpd) {
+        idEmpleadoUpd = _validarEmpleadoElegido_(solicitadoUpd, lanesUpd, idsServicioUpd, datos.fecha, datos.hora, duracion, id);
         if (idEmpleadoUpd === null) {
-          return { exito: false, mensaje: 'No hay trabajador disponible en ese horario para los servicios elegidos.' };
+          return { exito: false, mensaje: 'El trabajador elegido no está disponible en ese horario para los servicios elegidos.' };
+        }
+      } else {
+        var aptosUpd = _empleadosAptos_(idsServicioUpd, lanesUpd);
+        var idsAptosUpd = [];
+        for (var iAu = 0; iAu < aptosUpd.length; iAu++) idsAptosUpd.push(aptosUpd[iAu].id);
+        var conservar = false;
+        if (idEmpActual && idsAptosUpd.indexOf(idEmpActual) !== -1) {
+          var ocUpd = _ocupacionPorEmpleado_(datos.fecha, id);
+          var iniUpd = _horaAMin_(String(datos.hora || ''));
+          if (iniUpd !== null && _librePara_(ocUpd.porEmpleado[idEmpActual] || [], ocUpd.legado, iniUpd, iniUpd + duracion)) conservar = true;
+        }
+        if (conservar) {
+          idEmpleadoUpd = idEmpActual;
+        } else {
+          idEmpleadoUpd = _empleadoLibrePara_(datos.fecha, datos.hora, duracion, idsServicioUpd, id);
+          if (idEmpleadoUpd === null) {
+            return { exito: false, mensaje: 'No hay trabajador disponible en ese horario para los servicios elegidos.' };
+          }
         }
       }
     }
@@ -3058,7 +3072,7 @@ function actualizarCita(token, id, datos) {
     var colTotal = ENCABEZADOS.Citas.indexOf('Total_Precio') + 1;
     hoja.getRange(fila, colServicios).setValue(selServiciosUpd.items.length > 0 ? JSON.stringify(selServiciosUpd.items) : '');
     hoja.getRange(fila, colTotal).setValue(selServiciosUpd.items.length > 0 ? selServiciosUpd.total : '');
-    if (lanesUpd) {
+    if (lanesUpd || solicitadoUpd) {
       var colEmpW = ENCABEZADOS.Citas.indexOf('ID_Empleado') + 1;
       if (colEmpW > 0) hoja.getRange(fila, colEmpW).setValue(idEmpleadoUpd);
     }
@@ -3477,6 +3491,52 @@ function _empleadoLibrePara_(fecha, hora, duracionMins, idsServicio, exceptoId) 
     if (_librePara_(oc.porEmpleado[aptos[i].id] || [], oc.legado, inicioMin, finMin)) return aptos[i].id;
   }
   return null;
+}
+
+function _validarEmpleadoElegido_(idSolicitado, lanes, idsServicio, fecha, hora, duracionMins, exceptoId) {
+  var id = String(idSolicitado || '').trim();
+  if (!id) return null;
+  if (!lanes) {
+    var lista = _usuariosComoObjetos_();
+    var existe = false;
+    for (var k = 0; k < lista.length; k++) {
+      if (String(lista[k].ID_Usuario || '') === id &&
+          String(lista[k].Activo || 'SI').toUpperCase() !== 'NO') { existe = true; break; }
+    }
+    if (!existe) return null;
+    var ch = _citaTieneChoque_(fecha, hora, duracionMins, exceptoId);
+    return (ch && !ch.choca) ? id : null;
+  }
+  var aptos = _empleadosAptos_(idsServicio, lanes);
+  var esApto = false;
+  for (var i = 0; i < aptos.length; i++) {
+    if (aptos[i].id === id) { esApto = true; break; }
+  }
+  if (!esApto) return null;
+  var ini = _horaAMin_(String(hora || ''));
+  if (ini === null) return null;
+  var dur = parseInt(duracionMins, 10) || 60;
+  var oc = _ocupacionPorEmpleado_(fecha, exceptoId);
+  if (!_librePara_(oc.porEmpleado[id] || [], oc.legado, ini, ini + dur)) return null;
+  return id;
+}
+
+function obtenerEmpleados(token) {
+  if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
+  var lanes = _lanesEmpleados_();
+  var res = [];
+  if (lanes) {
+    for (var i = 0; i < lanes.length; i++) res.push({ id: lanes[i].id, nombre: lanes[i].nombre });
+  } else {
+    var lista = _usuariosComoObjetos_();
+    for (var j = 0; j < lista.length; j++) {
+      var u = lista[j] || {};
+      if (String(u.Activo || 'SI').toUpperCase() === 'NO') continue;
+      var idU = String(u.ID_Usuario || '');
+      if (idU) res.push({ id: idU, nombre: String(u.Nombre || u.Email || idU) });
+    }
+  }
+  return { exito: true, empleados: res };
 }
 
 function _idsServicioDeDatos_(servicios) {

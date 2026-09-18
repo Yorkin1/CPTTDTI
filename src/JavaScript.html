@@ -1139,9 +1139,40 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
      VISTA: CITAS
      ========================================================== */
 
+  function cargarEmpleadosCita(callback) {
+    if (Estado.empleadosCargados) {
+      pintarEmpleadosCita();
+      if (typeof callback === 'function') callback();
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        if (sesionInvalida(resp)) { if (typeof callback === 'function') callback(); return; }
+        Estado.empleados = (resp && resp.empleados) || [];
+        Estado.empleadosCargados = true;
+        pintarEmpleadosCita();
+        if (typeof callback === 'function') callback();
+      })
+      .withFailureHandler(function() { if (typeof callback === 'function') callback(); })
+      .obtenerEmpleados(tokenSesion());
+  }
+
+  function pintarEmpleadosCita() {
+    var sel = document.getElementById('cita_empleado');
+    if (!sel) return;
+    var actual = sel.value;
+    var html = '<option value="">Automático</option>';
+    (Estado.empleados || []).forEach(function(e) {
+      html += '<option value="' + esc(e.id) + '">' + esc(e.nombre) + '</option>';
+    });
+    sel.innerHTML = html;
+    sel.value = actual;
+  }
+
   function initCitas() {
     document.getElementById('formCita').addEventListener('submit', guardarCita);
     document.getElementById('btnCancelarCita').addEventListener('click', cancelarEdicionCita);
+    cargarEmpleadosCita();
     var btnTglSvc = document.getElementById('btnToggleServiciosCita');
     if (btnTglSvc) btnTglSvc.addEventListener('click', alternarServiciosCita);
     var contSvcInit = document.getElementById('cita_servicios');
@@ -1702,6 +1733,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       hora: document.getElementById('cita_hora').value,
       duracionMins: document.getElementById('cita_duracion').value,
       descripcion: document.getElementById('cita_descripcion').value.trim(),
+      idEmpleado: document.getElementById('cita_empleado').value,
       servicios: obtenerServiciosCita()
     };
     // Enviar correo/nombre del cliente para que el servidor no tenga que releer
@@ -1831,6 +1863,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('cita_duracion').value = c.Duracion_Mins || 60;
     document.getElementById('cita_descripcion').value = c.Descripcion || '';
     marcarServiciosCita(c.Servicios);
+    cargarEmpleadosCita(function() {
+      document.getElementById('cita_empleado').value = c.ID_Empleado || '';
+    });
     document.getElementById('tituloFormCita').textContent = 'Editar ' + minuscInicial(etCita());
     document.getElementById('btnGuardarCita').textContent = 'Actualizar cita';
     document.getElementById('btnCancelarCita').style.display = 'inline-block';
@@ -1842,6 +1877,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (form) form.reset();
     var idField = document.getElementById('citaId');
     if (idField) idField.value = '';
+    var selEmp = document.getElementById('cita_empleado');
+    if (selEmp) selEmp.value = '';
     var dur = document.getElementById('cita_duracion');
     if (dur) dur.value = Estado.config.duracionCitaPredeterminada || 60;
     var contSer = document.getElementById('cita_servicios');
