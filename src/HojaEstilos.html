@@ -343,6 +343,8 @@
   .acciones-fila { display: flex; gap: 6px; white-space: nowrap; }
   .vacio-accion { color: var(--gris-texto); }
   .tabla-clientes.sin-foto .col-foto { display: none; }
+  .tabla-usuarios td.col-esp { white-space: normal; }
+  .tabla-usuarios td.col-esp .etiqueta { margin: 1px 2px 1px 0; }
   .col-check { width: 40px; text-align: center; }
   .check-completar {
     width: 18px;
@@ -1005,6 +1007,7 @@
     .tabla-historial th:nth-child(9), .tabla-historial td:nth-child(9),
     .tabla-usuarios th:nth-child(4), .tabla-usuarios td:nth-child(4),
     .tabla-usuarios th:nth-child(5), .tabla-usuarios td:nth-child(5),
+    .tabla-usuarios th:nth-child(6), .tabla-usuarios td:nth-child(6),
     .tabla-actividad th:nth-child(3), .tabla-actividad td:nth-child(3),
     .tabla-actividad th:nth-child(4), .tabla-actividad td:nth-child(4),
     .tabla-actividad th:nth-child(5), .tabla-actividad td:nth-child(5),
@@ -1098,7 +1101,7 @@
     .tabla-historial th:nth-child(5), .tabla-historial td:nth-child(5),
     .tabla-servicios th:nth-child(6), .tabla-servicios td:nth-child(6),
     .tabla-actividad th:nth-child(7), .tabla-actividad td:nth-child(7),
-    .tabla-usuarios th:nth-child(5), .tabla-usuarios td:nth-child(5) { display: table-cell; }
+    .tabla-usuarios th:nth-child(6), .tabla-usuarios td:nth-child(6) { display: table-cell; }
     .tabla-citas th:nth-child(2), .tabla-citas td:nth-child(2) { display: table-cell; }
     .tabla-citas th:nth-child(4), .tabla-citas td:nth-child(4) {
       display: table-cell;

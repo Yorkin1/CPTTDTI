@@ -3756,6 +3756,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '<div class="tarjeta-cita-cab"><strong>' + esc(u.nombre) + '</strong>' +
           '<span class="etiqueta etiqueta-programada">' + esc(rolTxt) + '</span></div>' +
         _filaTarjeta('Estado', u.activo ? 'Activo' : 'Inactivo') +
+        _filaTarjeta('Servicios', pildorasEspecialidades(u.serviciosIds)) +
         _filaTarjeta('Correo electrónico', esc(u.usuario)) +
         _filaTarjeta('Nombre', esc(u.nombre)) +
         ((puedeEditar || puedeEliminar)
@@ -3765,7 +3766,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
             '</div>'
           : '') +
       '</div>';
-    _insertarTarjeta(tbody, filaOrigen, id, html, 5);
+    _insertarTarjeta(tbody, filaOrigen, id, html, 6);
   }
 
   function initUsuarios() {
@@ -3830,6 +3831,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     } else {
       btn.textContent = 'Mostrar servicios';
     }
+    var tbUsu = document.getElementById('tablaUsuarios');
+    if (tbUsu && Estado.usuariosLista) dibujarUsuarios(tbUsu, Estado.usuariosLista);
   }
 
   function especialidadesMarcadas() {
@@ -3874,21 +3877,33 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
           Estado.usuariosCargados = true;
           dibujarUsuarios(tbody, resp.usuarios || []);
         } else {
-          tbody.innerHTML = '<tr><td colspan="5" class="vacio">' + esc((resp && resp.mensaje) || 'No se pudieron cargar los usuarios.') + '</td></tr>';
+          tbody.innerHTML =         '<tr><td colspan="6" class="vacio">' + esc((resp && resp.mensaje) || 'No se pudieron cargar los usuarios.') + '</td></tr>';
         }
         if (typeof callback === 'function') callback();
       })
       .withFailureHandler(function(err) {
-        tbody.innerHTML = '<tr><td colspan="5" class="vacio">Error al cargar usuarios.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="vacio">Error al cargar usuarios.</td></tr>';
         mostrarToast(err.message, 'error');
         if (typeof callback === 'function') callback();
       })
       .listarUsuarios(tokenSesion());
   }
 
+  function pildorasEspecialidades(csv) {
+    var ids = String(csv || '').split(',').map(function(p) { return String(p || '').trim(); }).filter(function(p) { return !!p; });
+    if (ids.length === 0) return '<span class="vacio-accion">Todos</span>';
+    var nombres = [];
+    for (var i = 0; i < ids.length; i++) {
+      var f = (Estado.servicios || []).filter(function(s) { return String(s.ID_Servicio) === String(ids[i]); })[0];
+      if (f) nombres.push(f.Nombre);
+    }
+    if (nombres.length === 0) return '<span class="vacio-accion">&mdash;</span>';
+    return nombres.map(function(n) { return '<span class="etiqueta etiqueta-programada">' + esc(n) + '</span>'; }).join(' ');
+  }
+
   function dibujarUsuarios(tbody, usuarios) {
     if (!usuarios || usuarios.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="vacio">No hay usuarios registrados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="vacio">No hay usuarios registrados.</td></tr>';
       return;
     }
 
@@ -3904,6 +3919,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '<td>' + esc(u.nombre) + '</td>' +
         '<td>' + (u.rol === 'administrador' ? 'Administrador' : 'Editor') + '</td>' +
         '<td>' + (u.activo ? 'Activo' : 'Inactivo') + '</td>' +
+        '<td class="col-esp">' + pildorasEspecialidades(u.serviciosIds) + '</td>' +
         '<td class="acciones-fila">' +
           (puedeEditar ? '<button class="btn btn-secundario btn-pequeno" onclick="editarUsuario(\'' + esc(u.usuario) + '\')">Editar</button>' : '<span class="vacio-accion">—</span>') +
           (puedeEliminar ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarUsuario(\'' + esc(u.usuario) + '\')">Eliminar</button>' : '') +
