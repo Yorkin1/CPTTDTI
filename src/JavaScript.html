@@ -1639,6 +1639,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '<div class="tarjeta-cita-fila"><span>Servicios</span><span>' + srvTxt + '</span></div>' +
         '<div class="tarjeta-cita-fila"><span>Descripción</span><span>' + (esc(c.Descripcion) || '<span class="vacio-accion">&mdash;</span>') + '</span></div>' +
         '<div class="tarjeta-cita-fila"><span>Agendado por</span><span>' + (esc(agendado) || '<span class="vacio-accion">&mdash;</span>') + '</span></div>' +
+        '<div class="tarjeta-cita-fila"><span>Atendido por</span><span>' + (esc(c.Empleado) || '<span class="vacio-accion">&mdash;</span>') + '</span></div>' +
         '<div class="tarjeta-cita-acciones">' +
           '<button class="btn btn-secundario btn-pequeno" onclick="editarCita(\'' + esc(c.ID_Cita) + '\')">Editar</button>' +
           (esAdminSesion() ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarCita(\'' + esc(c.ID_Cita) + '\')">Eliminar</button>' : '') +
@@ -3775,6 +3776,48 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       _clicTarjetaMovil(e, 'data-usuario-id', function(id) { alternarTarjetaUsuario(id); });
     });
     cargarUsuarios();
+    cargarServicios(false, pintarEspecialidades);
+  }
+
+  function pintarEspecialidades() {
+    var cont = document.getElementById('listaEspecialidades');
+    if (!cont) return;
+    var lista = (Estado.servicios || []).filter(function(s) {
+      return String(s.Activo || 'SI').toUpperCase() !== 'NO';
+    });
+    if (lista.length === 0) {
+      cont.innerHTML = '<span class="vacio-accion">&mdash;</span>';
+      return;
+    }
+    cont.innerHTML = lista.map(function(s) {
+      return '<label class="servicio-chk"><input type="checkbox" value="' +
+        esc(s.ID_Servicio) + '"> ' + esc(s.Nombre) + '</label>';
+    }).join('');
+  }
+
+  function especialidadesMarcadas() {
+    var marcadas = [];
+    var cont = document.getElementById('listaEspecialidades');
+    if (!cont) return marcadas;
+    var checks = cont.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < checks.length; i++) {
+      if (checks[i].checked) marcadas.push(checks[i].value);
+    }
+    return marcadas;
+  }
+
+  function marcarEspecialidades(csv) {
+    var mapa = {};
+    String(csv || '').split(',').forEach(function(p) {
+      var id = String(p || '').trim();
+      if (id) mapa[id] = true;
+    });
+    var cont = document.getElementById('listaEspecialidades');
+    if (!cont) return;
+    var checks = cont.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < checks.length; i++) {
+      checks[i].checked = !!mapa[checks[i].value];
+    }
   }
 
   function cargarUsuarios(forzar, callback) {
@@ -3856,6 +3899,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('usu_rol').value = u.rol === 'administrador' ? 'administrador' : 'editor';
     document.getElementById('usu_activo').value = u.activo ? 'SI' : 'NO';
     document.getElementById('campoUsuarioEstado').style.display = '';
+    marcarEspecialidades(u.serviciosIds || '');
     document.getElementById('tituloFormUsuario').textContent = 'Editar usuario';
     document.getElementById('btnGuardarUsuario').textContent = 'Actualizar usuario';
     document.getElementById('btnCancelarUsuario').style.display = 'inline-block';
@@ -3872,6 +3916,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('campoUsuarioContrasenaConfirmar').style.display = '';
     document.getElementById('usu_activo').value = 'SI';
     document.getElementById('campoUsuarioEstado').style.display = 'none';
+    marcarEspecialidades('');
     document.getElementById('tituloFormUsuario').textContent = 'Nuevo usuario';
     document.getElementById('btnGuardarUsuario').textContent = 'Crear usuario';
     document.getElementById('btnCancelarUsuario').style.display = 'none';
@@ -3886,7 +3931,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       nombre: document.getElementById('usu_nombre').value.trim(),
       contrasena: original ? '' : document.getElementById('usu_contrasena').value,
       rol: document.getElementById('usu_rol').value,
-      activo: original ? document.getElementById('usu_activo').value : 'SI'
+      activo: original ? document.getElementById('usu_activo').value : 'SI',
+      serviciosIds: especialidadesMarcadas().join(',')
     };
     if (!usuario) {
       mostrarToast('El usuario es obligatorio.', 'error');

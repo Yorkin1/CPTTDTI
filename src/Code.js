@@ -840,7 +840,7 @@ function obtenerDatosIniciales(token) {
       exito: true,
       config: obtenerEstadoAplicacion(),
       clientes: filasAObjetos_(obtenerHoja_(HOJA_CLIENTES)),
-      citas: _citasVisiblesPara_(_leerCitas_(), token)
+      citas: _conNombreEmpleado_(_citasVisiblesPara_(_leerCitas_(), token))
     };
   } catch (err) {
     Logger.log('Error en obtenerDatosIniciales: ' + err);
@@ -2231,6 +2231,7 @@ function listarUsuarios(token) {
       usuario: u.Email || u.ID_Usuario, idUsuario: u.ID_Usuario || '',
       nombre: u.Nombre || '', rol: u.Rol || 'editor',
       activo: String(u.Activo).toUpperCase() !== 'NO',
+      serviciosIds: String(u.Servicios_IDs || ''),
       fecha: String(u.Fecha_Registro || ''),
       principal: login.toLowerCase() === principalId
     };
@@ -2341,7 +2342,7 @@ function crearUsuario(token, datos) {
   var salt = _generarSalt_();
   var idUsuario = generarId('USR');
   obtenerHoja_(HOJA_USUARIOS).appendRow([
-    idUsuario, nombre || usuario, usuario, salt, _hashTexto_(salt + contrasena), rol, 'SI', _fechaRegistro_()
+    idUsuario, nombre || usuario, usuario, salt, _hashTexto_(salt + contrasena), rol, 'SI', _fechaRegistro_(), String(datos.serviciosIds || '')
   ]);
     Logger.log('Usuario creado: ' + usuario + ' (' + rol + ')');
     _registrarActividad_(token, 'Usuarios', 'Creó usuario', usuario + ' (' + rol + ')');
@@ -2375,6 +2376,7 @@ function actualizarUsuario(token, datos) {
   var colRol = ENCABEZADOS.Usuarios.indexOf('Rol') + 1;
   var colNombre = ENCABEZADOS.Usuarios.indexOf('Nombre') + 1;
   var colActivo = ENCABEZADOS.Usuarios.indexOf('Activo') + 1;
+  var colEsp = ENCABEZADOS.Usuarios.indexOf('Servicios_IDs') + 1;
   if (String(usuarioSesion).toLowerCase() === String(usuario).toLowerCase()) {
     activo = 'SI';
     if (rol !== 'administrador') {
@@ -2384,6 +2386,7 @@ function actualizarUsuario(token, datos) {
   hoja.getRange(u._fila, colNombre).setValue(datos.nombre || u.Nombre || usuario);
   hoja.getRange(u._fila, colRol).setValue(rol);
   hoja.getRange(u._fila, colActivo).setValue(activo);
+  if (colEsp > 0 && datos.serviciosIds !== undefined) hoja.getRange(u._fila, colEsp).setValue(String(datos.serviciosIds || ''));
     Logger.log('Usuario actualizado: ' + usuario + ' -> ' + rol);
     _registrarActividad_(token, 'Usuarios', 'Editó usuario', usuario + ' -> ' + rol);
     return { exito: true, mensaje: 'Usuario "' + usuario + '" actualizado.' };
@@ -2777,7 +2780,23 @@ function _leerCitas_() {
  */
 function obtenerCitas(token) {
   if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
-  return _citasVisiblesPara_(_leerCitas_(), token);
+  return _conNombreEmpleado_(_citasVisiblesPara_(_leerCitas_(), token));
+}
+
+function _conNombreEmpleado_(citas) {
+  var lista = citas || [];
+  if (lista.length === 0) return lista;
+  var mapa = {};
+  var usuarios = _usuariosComoObjetos_();
+  for (var i = 0; i < usuarios.length; i++) {
+    var idU = String(usuarios[i].ID_Usuario || '');
+    if (idU && !mapa[idU]) mapa[idU] = String(usuarios[i].Nombre || usuarios[i].Email || idU);
+  }
+  for (var j = 0; j < lista.length; j++) {
+    var emp = String(lista[j].ID_Empleado || '').trim();
+    lista[j].Empleado = emp ? (mapa[emp] || '') : '';
+  }
+  return lista;
 }
 
 function _citasVisiblesPara_(citas, token) {
