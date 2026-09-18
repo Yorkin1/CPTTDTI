@@ -3835,6 +3835,8 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       }).join('');
     }
     actualizarBotonEspecialidades();
+    var tbUsu = document.getElementById('tablaUsuarios');
+    if (tbUsu && Estado.usuariosLista) dibujarUsuarios(tbUsu, Estado.usuariosLista);
   }
 
   function alternarEspecialidades() {
@@ -3867,8 +3869,6 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     } else {
       btn.textContent = 'Mostrar servicios';
     }
-    var tbUsu = document.getElementById('tablaUsuarios');
-    if (tbUsu && Estado.usuariosLista) dibujarUsuarios(tbUsu, Estado.usuariosLista);
   }
 
   function especialidadesMarcadas() {
@@ -3934,7 +3934,13 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       if (f) nombres.push(f.Nombre);
     }
     if (nombres.length === 0) return '<span class="vacio-accion">&mdash;</span>';
-    return nombres.map(function(n) { return '<span class="etiqueta etiqueta-programada">' + esc(n) + '</span>'; }).join(' ');
+    var max = 3;
+    var html = nombres.slice(0, max).map(function(n) { return '<span class="etiqueta etiqueta-programada">' + esc(n) + '</span>'; }).join(' ');
+    if (nombres.length > max) {
+      var resto = nombres.slice(max).join(', ');
+      html += ' <span class="etiqueta etiqueta-expirada" title="' + esc(resto) + '">+' + (nombres.length - max) + ' más</span>';
+    }
+    return html;
   }
 
   function cargarUsuariosYServicios() {
