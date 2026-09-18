@@ -3777,6 +3777,10 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     });
     cargarUsuarios();
     cargarServicios(false, pintarEspecialidades);
+    var btnTglEsp = document.getElementById('btnToggleEspecialidades');
+    if (btnTglEsp) btnTglEsp.addEventListener('click', alternarEspecialidades);
+    var contEsp = document.getElementById('listaEspecialidades');
+    if (contEsp) contEsp.addEventListener('change', actualizarBotonEspecialidades);
   }
 
   function pintarEspecialidades() {
@@ -3787,12 +3791,45 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     });
     if (lista.length === 0) {
       cont.innerHTML = '<span class="vacio-accion">&mdash;</span>';
-      return;
+    } else {
+      cont.innerHTML = lista.map(function(s) {
+        return '<label class="servicio-chk"><input type="checkbox" value="' +
+          esc(s.ID_Servicio) + '"> ' + esc(s.Nombre) + '</label>';
+      }).join('');
     }
-    cont.innerHTML = lista.map(function(s) {
-      return '<label class="servicio-chk"><input type="checkbox" value="' +
-        esc(s.ID_Servicio) + '"> ' + esc(s.Nombre) + '</label>';
-    }).join('');
+    actualizarBotonEspecialidades();
+  }
+
+  function alternarEspecialidades() {
+    var cont = document.getElementById('listaEspecialidades');
+    if (!cont) return;
+    cont.classList.toggle('colapsado');
+    actualizarBotonEspecialidades();
+  }
+
+  function actualizarBotonEspecialidades() {
+    var btn = document.getElementById('btnToggleEspecialidades');
+    if (!btn) return;
+    var cont = document.getElementById('listaEspecialidades');
+    var colapsado = !cont || cont.classList.contains('colapsado');
+    var total = 0;
+    var sel = 0;
+    if (cont) {
+      var checks = cont.querySelectorAll('input[type="checkbox"]');
+      total = checks.length;
+      for (var i = 0; i < checks.length; i++) {
+        if (checks[i].checked) sel++;
+      }
+    }
+    if (!colapsado) {
+      btn.textContent = 'Ocultar servicios';
+    } else if (sel > 0) {
+      btn.textContent = 'Servicios (' + sel + ' seleccionados)';
+    } else if (total > 0) {
+      btn.textContent = 'Mostrar servicios (' + total + ')';
+    } else {
+      btn.textContent = 'Mostrar servicios';
+    }
   }
 
   function especialidadesMarcadas() {
@@ -3818,6 +3855,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     for (var i = 0; i < checks.length; i++) {
       checks[i].checked = !!mapa[checks[i].value];
     }
+    actualizarBotonEspecialidades();
   }
 
   function cargarUsuarios(forzar, callback) {
