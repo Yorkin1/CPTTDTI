@@ -2892,6 +2892,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
           if (datos.HABILITAR_MONITOR !== undefined) cfgOp.habilitarMonitor = (datos.HABILITAR_MONITOR === 'SI');
           Estado.config = cfgOp;
           aplicarConfiguracionGlobal();
+          actualizarBarraSesion();
           google.script.run
             .withSuccessHandler(function(estado) {
               Estado.config = estado || Estado.config;
