@@ -2536,7 +2536,9 @@ function _tituloEvento_(titulo, nombreCliente) {
  *                         hora (HH:mm), duracionMins, descripcion}
  */
 function agendarCita(token, datos) {
+  var candadoAge = LockService.getScriptLock();
   try {
+    candadoAge.waitLock(30000);
     if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
 
     // Servicios elegidos: precio y duración SIEMPRE se toman del catálogo.
@@ -2551,10 +2553,23 @@ function agendarCita(token, datos) {
     }
     if (duracion < 5) duracion = 60;
 
-    // Evitar superposiciones con otras citas del mismo día.
-    var choque = _citaTieneChoque_(datos.fecha, datos.hora, duracion);
-    if (choque && choque.choca) {
-      return { exito: false, mensaje: choque.mensaje };
+    var lanesAge = _lanesEmpleados_();
+    var idEmpleadoAge = '';
+    if (!lanesAge) {
+      // Evitar superposiciones con otras citas del mismo día.
+      var choque = _citaTieneChoque_(datos.fecha, datos.hora, duracion);
+      if (choque && choque.choca) {
+        return { exito: false, mensaje: choque.mensaje };
+      }
+    } else {
+      var idsServicioAge = [];
+      for (var iAge = 0; iAge < selServicios.items.length; iAge++) {
+        idsServicioAge.push(String(selServicios.items[iAge].id || ''));
+      }
+      idEmpleadoAge = _empleadoLibrePara_(datos.fecha, datos.hora, duracion, idsServicioAge, '');
+      if (idEmpleadoAge === null) {
+        return { exito: false, mensaje: 'No hay trabajador disponible en ese horario para los servicios elegidos.' };
+      }
     }
 
     // Verificar límite de citas por día (solo advertencia, no bloquea).
@@ -2646,7 +2661,8 @@ function agendarCita(token, datos) {
       'Programada',
       selServicios.items.length > 0 ? JSON.stringify(selServicios.items) : '',
       selServicios.items.length > 0 ? selServicios.total : '',
-      agendadoPor
+      agendadoPor,
+      idEmpleadoAge
     ]);
 
     // Forzar Fecha y Hora como TEXTO para que Sheets no las convierta en fecha/hora.
@@ -2713,6 +2729,8 @@ function agendarCita(token, datos) {
   } catch (err) {
     Logger.log('Error al agendar cita: ' + err);
     return { exito: false, mensaje: 'Error al agendar cita: ' + err.message };
+  } finally {
+    try { candadoAge.releaseLock(); } catch (eLAge) {}
   }
 }
 
@@ -2920,13 +2938,18 @@ function _eliminarHistorialDeCita_(idCita) {
 }
 
 function actualizarCita(token, id, datos) {
+  var candadoUpd = LockService.getScriptLock();
   try {
+    candadoUpd.waitLock(30000);
     if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
 
-    // Evitar superposiciones con otras citas del mismo día (ignorando la propia).
-    var choque = _citaTieneChoque_(datos.fecha, datos.hora, datos.duracionMins, id);
-    if (choque && choque.choca) {
-      return { exito: false, mensaje: choque.mensaje };
+    var lanesUpd = _lanesEmpleados_();
+    if (!lanesUpd) {
+      // Evitar superposiciones con otras citas del mismo día (ignorando la propia).
+      var choque = _citaTieneChoque_(datos.fecha, datos.hora, datos.duracionMins, id);
+      if (choque && choque.choca) {
+        return { exito: false, mensaje: choque.mensaje };
+      }
     }
 
     var hoja = obtenerHoja_(HOJA_CITAS);
@@ -2964,6 +2987,32 @@ function actualizarCita(token, id, datos) {
       duracion = parseInt(datos.duracionMins, 10) || 60;
     }
     if (duracion < 5) duracion = 60;
+    var idEmpleadoUpd = '';
+    if (lanesUpd) {
+      var colEmpUpd = ENCABEZADOS.Citas.indexOf('ID_Empleado') + 1;
+      var idEmpActual = colEmpUpd > 0 ? String(hoja.getRange(fila, colEmpUpd).getValue() || '').trim() : '';
+      var idsServicioUpd = [];
+      for (var iSu = 0; iSu < selServiciosUpd.items.length; iSu++) {
+        idsServicioUpd.push(String(selServiciosUpd.items[iSu].id || ''));
+      }
+      var aptosUpd = _empleadosAptos_(idsServicioUpd, lanesUpd);
+      var idsAptosUpd = [];
+      for (var iAu = 0; iAu < aptosUpd.length; iAu++) idsAptosUpd.push(aptosUpd[iAu].id);
+      var conservar = false;
+      if (idEmpActual && idsAptosUpd.indexOf(idEmpActual) !== -1) {
+        var ocUpd = _ocupacionPorEmpleado_(datos.fecha, id);
+        var iniUpd = _horaAMin_(String(datos.hora || ''));
+        if (iniUpd !== null && _librePara_(ocUpd.porEmpleado[idEmpActual] || [], ocUpd.legado, iniUpd, iniUpd + duracion)) conservar = true;
+      }
+      if (conservar) {
+        idEmpleadoUpd = idEmpActual;
+      } else {
+        idEmpleadoUpd = _empleadoLibrePara_(datos.fecha, datos.hora, duracion, idsServicioUpd, id);
+        if (idEmpleadoUpd === null) {
+          return { exito: false, mensaje: 'No hay trabajador disponible en ese horario para los servicios elegidos.' };
+        }
+      }
+    }
     var colCli = ENCABEZADOS.Citas.indexOf('ID_Cliente') + 1;
     var colFecha = ENCABEZADOS.Citas.indexOf('Fecha') + 1;
     var colHora = ENCABEZADOS.Citas.indexOf('Hora') + 1;
@@ -2979,6 +3028,10 @@ function actualizarCita(token, id, datos) {
     var colTotal = ENCABEZADOS.Citas.indexOf('Total_Precio') + 1;
     hoja.getRange(fila, colServicios).setValue(selServiciosUpd.items.length > 0 ? JSON.stringify(selServiciosUpd.items) : '');
     hoja.getRange(fila, colTotal).setValue(selServiciosUpd.items.length > 0 ? selServiciosUpd.total : '');
+    if (lanesUpd) {
+      var colEmpW = ENCABEZADOS.Citas.indexOf('ID_Empleado') + 1;
+      if (colEmpW > 0) hoja.getRange(fila, colEmpW).setValue(idEmpleadoUpd);
+    }
     hoja.getRange(fila, colFecha).setNumberFormat('@').setValue(String(datos.fecha || ''));
     hoja.getRange(fila, colHora).setNumberFormat('@').setValue(String(datos.hora || ''));
 
@@ -3067,6 +3120,8 @@ function actualizarCita(token, id, datos) {
   } catch (err) {
     Logger.log('Error al actualizar cita: ' + err);
     return { exito: false, mensaje: 'Error al actualizar la cita: ' + err.message };
+  } finally {
+    try { candadoUpd.releaseLock(); } catch (eLUpd) {}
   }
 }
 
@@ -3855,6 +3910,15 @@ function reservarCitaPublica(datos) {
       return { exito: false, mensaje: 'Ese horario ya no está disponible. Elija otro.',
         fecha: fecha, duracion: duracion, sugerencias: dispon.slots };
     }
+    var idsServicioRes = [];
+    for (var iRes = 0; iRes < selServicios.items.length; iRes++) {
+      idsServicioRes.push(String(selServicios.items[iRes].id || ''));
+    }
+    var idEmpleadoRes = _empleadoLibrePara_(fecha, hora, duracion, idsServicioRes, '');
+    if (idEmpleadoRes === null) {
+      return { exito: false, mensaje: 'Ese horario ya no está disponible. Elija otro.',
+        fecha: fecha, duracion: duracion, sugerencias: dispon.slots };
+    }
 
     // Nota: al cliente no se le muestran conteos de cupos; si el día está
     // lleno se bloqueó más arriba. El personal sí recibe avisos (agendarCita).
@@ -3902,7 +3966,8 @@ function reservarCitaPublica(datos) {
       idCita, idCliente, titulo, fecha, hora, duracion, descripcion, idEvento, 'Programada',
       selServicios.items.length > 0 ? JSON.stringify(selServicios.items) : '',
       selServicios.items.length > 0 ? selServicios.total : '',
-      'Cliente (en línea)'
+      'Cliente (en línea)',
+      idEmpleadoRes
     ]);
     var filaCita = hoja.getLastRow();
     var colFechaC = ENCABEZADOS.Citas.indexOf('Fecha') + 1;
@@ -4122,6 +4187,36 @@ function editarReservaPublica(datos) {
       return { exito: false, mensaje: 'Ese horario ya no está disponible. Elija otro.',
         fecha: fecha, duracion: duracion, sugerencias: dispon.slots };
     }
+    var colEmpE0 = ENCABEZADOS.Citas.indexOf('ID_Empleado') + 1;
+    var idEmpActualE = colEmpE0 > 0 ? String(hoja.getRange(fila, colEmpE0).getValue() || '').trim() : '';
+    var idsServicioEdit = [];
+    for (var iSe = 0; iSe < selServicios.items.length; iSe++) {
+      idsServicioEdit.push(String(selServicios.items[iSe].id || ''));
+    }
+    var idEmpleadoEdit = '';
+    var lanesEdit = _lanesEmpleados_();
+    if (!lanesEdit) {
+      idEmpleadoEdit = idEmpActualE;
+    } else {
+      var aptosEdit = _empleadosAptos_(idsServicioEdit, lanesEdit);
+      var idsAptosEdit = [];
+      for (var iAe = 0; iAe < aptosEdit.length; iAe++) idsAptosEdit.push(aptosEdit[iAe].id);
+      var conservarE = false;
+      if (idEmpActualE && idsAptosEdit.indexOf(idEmpActualE) !== -1) {
+        var ocEdit = _ocupacionPorEmpleado_(fecha, idCita);
+        var iniEdit = _horaAMin_(String(hora || ''));
+        if (iniEdit !== null && _librePara_(ocEdit.porEmpleado[idEmpActualE] || [], ocEdit.legado, iniEdit, iniEdit + duracion)) conservarE = true;
+      }
+      if (conservarE) {
+        idEmpleadoEdit = idEmpActualE;
+      } else {
+        idEmpleadoEdit = _empleadoLibrePara_(fecha, hora, duracion, idsServicioEdit, idCita);
+        if (idEmpleadoEdit === null) {
+          return { exito: false, mensaje: 'Ese horario ya no está disponible. Elija otro.',
+            fecha: fecha, duracion: duracion, sugerencias: dispon.slots };
+        }
+      }
+    }
 
     // Nueva descripción: nota + servicios (mismo formato que al crear).
     var notaEdit = String(datos.descripcion || '').trim().slice(0, 500);
@@ -4147,6 +4242,8 @@ function editarReservaPublica(datos) {
     hoja.getRange(fila, colDescE).setValue(descripcion);
     hoja.getRange(fila, colServE).setValue(selServicios.items.length > 0 ? JSON.stringify(selServicios.items) : '');
     hoja.getRange(fila, colTotE).setValue(selServicios.items.length > 0 ? selServicios.total : '');
+    var colEmpE = ENCABEZADOS.Citas.indexOf('ID_Empleado') + 1;
+    if (colEmpE > 0) hoja.getRange(fila, colEmpE).setValue(idEmpleadoEdit);
 
     // Mover el evento de Calendar (o crearlo si se perdió).
     var errorCalE = '';
