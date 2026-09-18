@@ -840,7 +840,7 @@ function obtenerDatosIniciales(token) {
       exito: true,
       config: obtenerEstadoAplicacion(),
       clientes: filasAObjetos_(obtenerHoja_(HOJA_CLIENTES)),
-      citas: _leerCitas_()
+      citas: _citasVisiblesPara_(_leerCitas_(), token)
     };
   } catch (err) {
     Logger.log('Error en obtenerDatosIniciales: ' + err);
@@ -2777,7 +2777,18 @@ function _leerCitas_() {
  */
 function obtenerCitas(token) {
   if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
-  return _leerCitas_();
+  return _citasVisiblesPara_(_leerCitas_(), token);
+}
+
+function _citasVisiblesPara_(citas, token) {
+  var email = _validarSesion_(token);
+  if (!email) return citas;
+  if (_esAdmin_(email)) return citas;
+  var propio = _idUsuarioSesion_(token);
+  return (citas || []).filter(function(c) {
+    var emp = String(c.ID_Empleado || '').trim();
+    return emp === '' || emp === propio;
+  });
 }
 
 /**
@@ -4369,12 +4380,25 @@ function obtenerHistorial(token, idCliente) {
   _repararHistorialUnaVez_();
   var hoja = obtenerHoja_(HOJA_HISTORIAL);
   var todos = filasAObjetos_(hoja);
-  if (!idCliente) {
-    return todos;
+  if (idCliente) {
+    todos = todos.filter(function(h) {
+      return String(h.ID_Cliente) === String(idCliente);
+    });
   }
-  return todos.filter(function(h) {
-    return String(h.ID_Cliente) === String(idCliente);
-  });
+  var emailH = _validarSesion_(token);
+  if (emailH && !_esAdmin_(emailH)) {
+    var propioH = _idUsuarioSesion_(token);
+    var mapaEmp = {};
+    var citasH = _leerCitas_();
+    for (var iH = 0; iH < citasH.length; iH++) {
+      mapaEmp[String(citasH[iH].ID_Cita || '')] = String(citasH[iH].ID_Empleado || '').trim();
+    }
+    todos = todos.filter(function(h) {
+      var emp = mapaEmp[String(h.ID_Cita || '')];
+      return emp === undefined || emp === '' || emp === propioH;
+    });
+  }
+  return todos;
 }
 
 /**
