@@ -3312,6 +3312,7 @@ function _hora12_(h) {
 /** Formatea un número como dinero ("$ 1,234.50"). */
 function _formatoMoneda_(n) {
   n = parseFloat(n) || 0;
+  if (n === 0) return 'Variable';
   return '$ ' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
