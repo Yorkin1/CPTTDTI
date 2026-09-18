@@ -4060,6 +4060,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('usu_activo').value = 'SI';
     document.getElementById('campoUsuarioEstado').style.display = 'none';
     marcarEspecialidades('');
+    var contEspCancel = document.getElementById('listaEspecialidades');
+    if (contEspCancel) contEspCancel.classList.add('colapsado');
+    actualizarBotonEspecialidades();
     document.getElementById('tituloFormUsuario').textContent = 'Nuevo usuario';
     document.getElementById('btnGuardarUsuario').textContent = 'Crear usuario';
     document.getElementById('btnCancelarUsuario').style.display = 'none';
