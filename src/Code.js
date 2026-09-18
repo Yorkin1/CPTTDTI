@@ -42,9 +42,9 @@ var CACHE_LISTAS_MAX_BYTES = 90 * 1024;
 
 var ENCABEZADOS = {
   Clientes:  ['ID_Cliente', 'Nombre', 'Apellido', 'Telefono', 'Email', 'Direccion', 'Notas', 'Fecha_Registro', 'Foto'],
-  Citas:     ['ID_Cita', 'ID_Cliente', 'Titulo', 'Fecha', 'Hora', 'Duracion_Mins', 'Descripcion', 'ID_Evento_Calendar', 'Estado', 'Servicios', 'Total_Precio', 'Agendado_Por'],
+  Citas:     ['ID_Cita', 'ID_Cliente', 'Titulo', 'Fecha', 'Hora', 'Duracion_Mins', 'Descripcion', 'ID_Evento_Calendar', 'Estado', 'Servicios', 'Total_Precio', 'Agendado_Por', 'ID_Empleado'],
   Historial: ['ID_Registro', 'ID_Cliente', 'ID_Cita', 'Fecha', 'Descripcion', 'Resultado'],
-  Usuarios:  ['ID_Usuario', 'Nombre', 'Email', 'Salt', 'Hash', 'Rol', 'Activo', 'Fecha_Registro'],
+  Usuarios:  ['ID_Usuario', 'Nombre', 'Email', 'Salt', 'Hash', 'Rol', 'Activo', 'Fecha_Registro', 'Servicios_IDs'],
   Servicios: ['ID_Servicio', 'Nombre', 'Precio', 'Duracion_Mins', 'Descripcion', 'Activo'],
   Actividad: ['ID_Registro', 'Fecha', 'Usuario', 'Email', 'Rol', 'Modulo', 'Accion', 'Detalle']
 };
@@ -2021,6 +2021,13 @@ function _validarSesion_(token) {
     return null;
   }
   return mapa[t].usuario;
+}
+
+function _idUsuarioSesion_(token) {
+  var email = _validarSesion_(token);
+  if (!email) return '';
+  var u = _buscarUsuario_(email);
+  return u ? String(u.ID_Usuario || '') : '';
 }
 
 /** Elimina una sesión (cierre de sesión). */
