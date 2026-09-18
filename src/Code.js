@@ -4080,13 +4080,21 @@ function reservarCitaPublica(datos) {
     var avisoCorreo = '';
     try {
       if (email) {
+        var partesH = String(fecha).split('-');
+        var horDiaCfg = {};
+        try {
+          horDiaCfg = (_parseHorarioAtencion_(cfg.HORARIO_ATENCION) || {})[
+            new Date(parseInt(partesH[0], 10), parseInt(partesH[1], 10) - 1, parseInt(partesH[2], 10)).getDay()] || {};
+        } catch (eHor) {}
+        var textoHorario = (horDiaCfg.abre && horDiaCfg.cierra)
+          ? 'Horario del día: ' + _hora12_(horDiaCfg.abre) + ' – ' + _hora12_(horDiaCfg.cierra) + '\n' : '';
         var cuerpo = 'Estimado/a ' + (nombre || 'cliente') + ':\n\n' +
           'Su ' + titulo.toLowerCase() + ' ha sido ' +
           (_etiquetaFemenina_(titulo) ? 'reservada' : 'reservado') + ' con los siguientes datos:\n' +
           (cfg.NOMBRE_NEGOCIO ? 'Empresa: ' + cfg.NOMBRE_NEGOCIO + '\n' : '') +
           'Fecha: ' + fecha + '\n' +
           'Hora: ' + _hora12_(hora) + '\n' +
-          'Duración: ' + duracion + ' min\n';
+          'Duración: ' + duracion + ' min\n' + textoHorario;
         if (selServicios.items.length > 0) {
           cuerpo += '\nServicios:\n' + selServicios.items.map(function(it) {
             return '- ' + it.cantidad + ' × ' + it.nombre + ': ' + _formatoMoneda_(it.subtotal);
@@ -4375,13 +4383,21 @@ function editarReservaPublica(datos) {
     var avisoCorreoE = '';
     try {
       if (email) {
+        var partesHE = String(fecha).split('-');
+        var horDiaCfgE = {};
+        try {
+          horDiaCfgE = (_parseHorarioAtencion_(cfg.HORARIO_ATENCION) || {})[
+            new Date(parseInt(partesHE[0], 10), parseInt(partesHE[1], 10) - 1, parseInt(partesHE[2], 10)).getDay()] || {};
+        } catch (eHorE) {}
+        var textoHorarioE = (horDiaCfgE.abre && horDiaCfgE.cierra)
+          ? 'Horario del día: ' + _hora12_(horDiaCfgE.abre) + ' – ' + _hora12_(horDiaCfgE.cierra) + '\n' : '';
         var cuerpoCli = 'Estimado/a ' + (nombre || 'cliente') + ':\n\n' +
           'Su ' + String(titulo).toLowerCase() + ' ha sido ' +
           (_etiquetaFemenina_(titulo) ? 'modificada' : 'modificado') + ' con los siguientes datos:\n' +
           (cfg.NOMBRE_NEGOCIO ? 'Empresa: ' + cfg.NOMBRE_NEGOCIO + '\n' : '') +
           'Fecha: ' + fecha + '\n' +
           'Hora: ' + _hora12_(hora) + '\n' +
-          'Duración: ' + duracion + ' min\n';
+          'Duración: ' + duracion + ' min\n' + textoHorarioE;
         if (selServicios.items.length > 0) {
           cuerpoCli += '\nServicios:\n' + selServicios.items.map(function(it) {
             return '- ' + it.cantidad + ' × ' + it.nombre + ': ' + _formatoMoneda_(it.subtotal);

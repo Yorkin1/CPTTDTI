@@ -787,9 +787,13 @@
       function renderParrilla() {
         var fecha = Reserva.seleccion.fecha;
         var etiqueta = (Reserva.config && Reserva.config.etiquetaCita) || 'Cita';
+        var diaSem = new Date(fecha + 'T00:00:00').getDay();
+        var horDia = ((Reserva.config && Reserva.config.horarioAtencion) || {})[diaSem] || {};
+        var rangoHorario = (horDia.abre && horDia.cierra)
+          ? ' · Horario: ' + hora12Reserva(horDia.abre) + ' – ' + hora12Reserva(horDia.cierra) : '';
         document.getElementById('resumenDia').textContent =
-          'Día ' + fechaDMYReserva(fecha) + ' (' + nombreDiaReserva(new Date(fecha + 'T00:00:00').getDay()) + ') · Duración: ' +
-          duracionLegibleReserva(Reserva.seleccion.duracion);
+          'Día ' + fechaDMYReserva(fecha) + ' (' + nombreDiaReserva(diaSem) + ') · Duración: ' +
+          duracionLegibleReserva(Reserva.seleccion.duracion) + rangoHorario;
 
         var contenedor = document.getElementById('parrillaHorarios');
         var slots = Reserva.seleccion.slots || [];
