@@ -611,7 +611,8 @@
             }
           })
           .withFailureHandler(function() {})
-          .obtenerHorariosDisponibles({ fecha: Reserva.seleccion.fecha, duracionMins: duracion });
+          .obtenerHorariosDisponibles({ fecha: Reserva.seleccion.fecha, duracionMins: duracion,
+            servicios: Object.keys(Reserva.seleccion.servicios || {}) });
       }
 
       function resumenServiciosHTML() {
@@ -779,6 +780,7 @@
             mostrarToastReserva('Error: ' + err.message, 'error');
           })
           .obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion,
+            servicios: Object.keys(Reserva.seleccion.servicios || {}),
             excluirIdCita: (Reserva._editando && Reserva._idCita) ? Reserva._idCita : '' });
       }
 

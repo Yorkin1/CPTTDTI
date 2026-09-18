@@ -3243,6 +3243,57 @@ function _generarSlots_(abre, cierra, duracion, paso) {
  * @param {string} exceptoId ID_Cita a ignorar (p. ej. la cita en edición).
  * @return {Array} [{ inicio, fin }]
  */
+function _listaServiciosIDs_(texto) {
+  var lista = [];
+  var partes = String(texto || '').split(',');
+  for (var i = 0; i < partes.length; i++) {
+    var p = String(partes[i] || '').trim();
+    if (p) lista.push(p);
+  }
+  return lista;
+}
+
+function _hayEspecialidades_() {
+  var lista = _usuariosComoObjetos_();
+  for (var i = 0; i < lista.length; i++) {
+    if (_listaServiciosIDs_(lista[i].Servicios_IDs).length > 0) return true;
+  }
+  return false;
+}
+
+function _lanesEmpleados_() {
+  if (!_hayEspecialidades_()) return null;
+  var lista = _usuariosComoObjetos_();
+  var principal = '';
+  try { principal = String(_correoPrincipalAdmin_() || '').toLowerCase(); } catch (ePr) {}
+  var lanes = [];
+  var lanesPrincipal = [];
+  for (var i = 0; i < lista.length; i++) {
+    var u = lista[i] || {};
+    if (String(u.Activo || 'SI').toUpperCase() === 'NO') continue;
+    var id = String(u.ID_Usuario || '');
+    if (!id) continue;
+    var lane = { id: id, nombre: String(u.Nombre || u.Email || id), esp: _listaServiciosIDs_(u.Servicios_IDs) };
+    if (principal && String(u.Email || '').toLowerCase() === principal) lanesPrincipal.push(lane);
+    else lanes.push(lane);
+  }
+  lanes = lanes.concat(lanesPrincipal);
+  return lanes.length > 0 ? lanes : null;
+}
+
+function _empleadosAptos_(idsServicio, lanes) {
+  lanes = lanes || _lanesEmpleados_();
+  if (!lanes) return null;
+  var req = idsServicio || [];
+  return lanes.filter(function(l) {
+    if (l.esp.length === 0) return true;
+    for (var i = 0; i < req.length; i++) {
+      if (l.esp.indexOf(req[i]) === -1) return false;
+    }
+    return true;
+  });
+}
+
 function _intervalosOcupados_(fecha, exceptoId) {
   var hoja = obtenerHoja_(HOJA_CITAS);
   var valores = hoja.getDataRange().getValues();
@@ -3278,6 +3329,83 @@ function _intervalosOcupados_(fecha, exceptoId) {
   return ocupados;
 }
 
+function _ocupacionPorEmpleado_(fecha, exceptoId) {
+  var hoja = obtenerHoja_(HOJA_CITAS);
+  var valores = hoja.getDataRange().getValues();
+  var res = { porEmpleado: {}, legado: [] };
+  if (valores.length < 2) return res;
+  var cab = valores[0];
+  var colId = cab.indexOf('ID_Cita');
+  var colFecha = cab.indexOf('Fecha');
+  var colHora = cab.indexOf('Hora');
+  var colDur = cab.indexOf('Duracion_Mins');
+  var colEstado = cab.indexOf('Estado');
+  var colEmp = cab.indexOf('ID_Empleado');
+  if (colFecha < 0 || colHora < 0 || colEstado < 0) return res;
+  for (var i = 1; i < valores.length; i++) {
+    var fila = valores[i];
+    if (exceptoId && colId >= 0 && String(fila[colId] || '') === String(exceptoId)) continue;
+    var fechaCita = String(fila[colFecha] || '');
+    if (fechaCita instanceof Date) {
+      fechaCita = Utilities.formatDate(fechaCita, obtenerZonaHoraria_(), 'yyyy-MM-dd');
+    }
+    var mFecha = String(fechaCita).match(/^(\d{4}-\d{2}-\d{2})/);
+    if (!mFecha || mFecha[1] !== fecha) continue;
+    var estado = String(fila[colEstado] || '').trim();
+    if (estado === 'Completada' || estado === 'Cancelada') continue;
+    var inicioMin = _horaAMin_(String(fila[colHora] || ''));
+    if (inicioMin === null) continue;
+    var duracion = parseInt(fila[colDur], 10) || 60;
+    var iv = { inicio: inicioMin, fin: inicioMin + duracion };
+    var emp = colEmp >= 0 ? String(fila[colEmp] || '').trim() : '';
+    if (emp) {
+      if (!res.porEmpleado[emp]) res.porEmpleado[emp] = [];
+      res.porEmpleado[emp].push(iv);
+    } else {
+      res.legado.push(iv);
+    }
+  }
+  return res;
+}
+
+function _librePara_(intervalosEmp, intervalosLegado, inicio, fin) {
+  var todos = (intervalosEmp || []).concat(intervalosLegado || []);
+  for (var i = 0; i < todos.length; i++) {
+    if (inicio < todos[i].fin && fin > todos[i].inicio) return false;
+  }
+  return true;
+}
+
+function _empleadoLibrePara_(fecha, hora, duracionMins, idsServicio, exceptoId) {
+  var inicioMin = _horaAMin_(String(hora || ''));
+  if (inicioMin === null) return null;
+  var dur = parseInt(duracionMins, 10) || 60;
+  var finMin = inicioMin + dur;
+  var lanes = _lanesEmpleados_();
+  if (!lanes) {
+    var ch = _citaTieneChoque_(fecha, hora, duracionMins, exceptoId);
+    return (ch && !ch.choca) ? '' : null;
+  }
+  var aptos = _empleadosAptos_(idsServicio, lanes);
+  var oc = _ocupacionPorEmpleado_(fecha, exceptoId);
+  for (var i = 0; i < aptos.length; i++) {
+    if (_librePara_(oc.porEmpleado[aptos[i].id] || [], oc.legado, inicioMin, finMin)) return aptos[i].id;
+  }
+  return null;
+}
+
+function _idsServicioDeDatos_(servicios) {
+  var ids = [];
+  if (!servicios) return ids;
+  var arr = Object.prototype.toString.call(servicios) === '[object Array]' ? servicios : [];
+  for (var i = 0; i < arr.length; i++) {
+    var s = arr[i];
+    var id = String((s && s.id) || s || '').trim();
+    if (id && ids.indexOf(id) === -1) ids.push(id);
+  }
+  return ids;
+}
+
 /**
  * Determina si una etiqueta de cita es femenina (regla heurística para
  * concordar el artículo). Femenina si termina en "a", "ción", "sión",
@@ -3305,12 +3433,18 @@ function _articulo_(etiqueta) {
  * @param {string} [exceptoId] ID_Cita a ignorar (la propia al editar).
  * @return {Object|null} { choca, mensaje } o null si la hora es inválida.
  */
-function _citaTieneChoque_(fecha, hora, duracion, exceptoId) {
+function _citaTieneChoque_(fecha, hora, duracion, exceptoId, idEmpleado) {
   var inicioMin = _horaAMin_(String(hora || ''));
   if (inicioMin === null) return null;
   var dur = parseInt(duracion, 10) || 60;
   var finMin = inicioMin + dur;
-  var ocupados = _intervalosOcupados_(String(fecha || ''), exceptoId);
+  var ocupados;
+  if (!idEmpleado) {
+    ocupados = _intervalosOcupados_(String(fecha || ''), exceptoId);
+  } else {
+    var oc = _ocupacionPorEmpleado_(String(fecha || ''), exceptoId);
+    ocupados = (oc.porEmpleado[idEmpleado] || []).concat(oc.legado);
+  }
   var etiqueta = obtenerConfiguracion().ETIQUETA_CITA || CONFIGURACION_PREDETERMINADA.ETIQUETA_CITA;
   for (var i = 0; i < ocupados.length; i++) {
     var o = ocupados[i];
@@ -3439,8 +3573,14 @@ function obtenerHorariosDisponibles(datos) {
 
     var paso = parseInt(cfg.PASO_RESERVA_MIN, 10) || 30;
     var slots = _generarSlots_(hDia.abre, hDia.cierra, duracion, paso);
-    // Al editar, la propia cita no bloquea su horario (misma sesión).
-    var ocupados = _intervalosOcupados_(fecha, datos.excluirIdCita || '');
+    var excluir = datos.excluirIdCita || '';
+    var idsServicio = _idsServicioDeDatos_(datos.servicios);
+    var lanes = _lanesEmpleados_();
+    var aptos = lanes ? _empleadosAptos_(idsServicio, lanes) : null;
+    if (lanes && aptos.length === 0 && idsServicio.length > 0) {
+      return { exito: true, fecha: fecha, duracion: duracion, dia: dia, slots: [],
+        mensaje: 'Ningún trabajador realiza los servicios elegidos.' };
+    }
 
     var hoy = Utilities.formatDate(new Date(), obtenerZonaHoraria_(), 'yyyy-MM-dd');
     var ahoraMin = null;
@@ -3450,16 +3590,31 @@ function obtenerHorariosDisponibles(datos) {
     }
 
     var libres = [];
-    for (var i = 0; i < slots.length; i++) {
-      var s = slots[i];
-      // Ocultar los horarios que ya empezaron o pasaron si el día es hoy
-      // (la cita debe iniciar en el futuro, no en un momento ya transcurrido).
-      if (ahoraMin !== null && s.inicio <= ahoraMin) continue;
-      var choca = false;
-      for (var j = 0; j < ocupados.length; j++) {
-        if (s.inicio < ocupados[j].fin && s.fin > ocupados[j].inicio) { choca = true; break; }
+    if (!lanes) {
+      // Al editar, la propia cita no bloquea su horario (misma sesión).
+      var ocupados = _intervalosOcupados_(fecha, excluir);
+      for (var i = 0; i < slots.length; i++) {
+        var s = slots[i];
+        // Ocultar los horarios que ya empezaron o pasaron si el día es hoy
+        // (la cita debe iniciar en el futuro, no en un momento ya transcurrido).
+        if (ahoraMin !== null && s.inicio <= ahoraMin) continue;
+        var choca = false;
+        for (var j = 0; j < ocupados.length; j++) {
+          if (s.inicio < ocupados[j].fin && s.fin > ocupados[j].inicio) { choca = true; break; }
+        }
+        if (!choca) libres.push(s.hora);
       }
-      if (!choca) libres.push(s.hora);
+    } else {
+      var oc = _ocupacionPorEmpleado_(fecha, excluir);
+      for (var k = 0; k < slots.length; k++) {
+        var sl = slots[k];
+        if (ahoraMin !== null && sl.inicio <= ahoraMin) continue;
+        var alguno = false;
+        for (var a = 0; a < aptos.length; a++) {
+          if (_librePara_(oc.porEmpleado[aptos[a].id] || [], oc.legado, sl.inicio, sl.fin)) { alguno = true; break; }
+        }
+        if (alguno) libres.push(sl.hora);
+      }
     }
 
     // Verificar límite de citas por día: si está lleno, bloquear el día
@@ -3694,7 +3849,7 @@ function reservarCitaPublica(datos) {
     }
 
     // Volver a validar el slot justo antes de escribir (evita dobles reservas).
-    var dispon = obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion });
+    var dispon = obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion, servicios: selServicios.items });
     if (!dispon.exito) return dispon;
     if (dispon.slots.indexOf(hora) === -1) {
       return { exito: false, mensaje: 'Ese horario ya no está disponible. Elija otro.',
@@ -3961,7 +4116,7 @@ function editarReservaPublica(datos) {
       }
     }
 
-    var dispon = obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion, excluirIdCita: idCita });
+    var dispon = obtenerHorariosDisponibles({ fecha: fecha, duracionMins: duracion, servicios: selServicios.items, excluirIdCita: idCita });
     if (!dispon.exito) return dispon;
     if (dispon.slots.indexOf(hora) === -1) {
       return { exito: false, mensaje: 'Ese horario ya no está disponible. Elija otro.',
