@@ -3793,7 +3793,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '<div class="tarjeta-cita-cab"><strong>' + esc(u.nombre) + '</strong>' +
           '<span class="etiqueta etiqueta-programada">' + esc(rolTxt) + '</span></div>' +
         _filaTarjeta('Estado', u.activo ? 'Activo' : 'Inactivo') +
-        _filaTarjeta('Servicios', pildorasEspecialidades(u.serviciosIds)) +
+        _filaTarjeta('Servicios', botonVerServicios(u)) +
         _filaTarjeta('Correo electrónico', esc(u.usuario)) +
         _filaTarjeta('Nombre', esc(u.nombre)) +
         ((puedeEditar || puedeEliminar)
@@ -3925,22 +3925,43 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
       .listarUsuarios(tokenSesion());
   }
 
-  function pildorasEspecialidades(csv) {
-    var ids = String(csv || '').split(',').map(function(p) { return String(p || '').trim(); }).filter(function(p) { return !!p; });
+  function botonVerServicios(u) {
+    var ids = String((u && u.serviciosIds) || '').split(',').map(function(p) { return String(p || '').trim(); }).filter(function(p) { return !!p; });
     if (ids.length === 0) return '<span class="vacio-accion">Todos</span>';
-    var nombres = [];
-    for (var i = 0; i < ids.length; i++) {
-      var f = (Estado.servicios || []).filter(function(s) { return String(s.ID_Servicio) === String(ids[i]); })[0];
-      if (f) nombres.push(f.Nombre);
+    return '<button type="button" class="btn btn-secundario btn-pequeno" onclick="verServiciosUsuario(\'' + esc(u.usuario) + '\')">Ver (' + ids.length + ')</button>';
+  }
+
+  function verServiciosUsuario(usuario) {
+    var u = null;
+    (Estado.usuariosLista || []).some(function(item) {
+      if (String(item.usuario).toLowerCase() === String(usuario).toLowerCase()) { u = item; return true; }
+      return false;
+    });
+    var modal = document.getElementById('modalServiciosUsuario');
+    if (!modal) return;
+    document.getElementById('tituloModalServicios').textContent =
+      'Servicios de ' + ((u && u.nombre) ? u.nombre : usuario);
+    var lista = document.getElementById('listaModalServicios');
+    var ids = u ? String(u.serviciosIds || '').split(',').map(function(p) { return String(p || '').trim(); }).filter(function(p) { return !!p; }) : [];
+    if (ids.length === 0) {
+      lista.innerHTML = '<span class="vacio-accion">Puede realizar todos los servicios.</span>';
+    } else {
+      var html = '';
+      for (var i = 0; i < ids.length; i++) {
+        var f = (Estado.servicios || []).filter(function(s) { return String(s.ID_Servicio) === String(ids[i]); })[0];
+        html += '<label class="servicio-chk"><input type="checkbox" checked disabled> ' + esc(f ? f.Nombre : ids[i]) + '</label>';
+      }
+      lista.innerHTML = html;
     }
-    if (nombres.length === 0) return '<span class="vacio-accion">&mdash;</span>';
-    var max = 3;
-    var html = nombres.slice(0, max).map(function(n) { return '<span class="etiqueta etiqueta-programada">' + esc(n) + '</span>'; }).join(' ');
-    if (nombres.length > max) {
-      var resto = nombres.slice(max).join(', ');
-      html += ' <span class="etiqueta etiqueta-expirada" title="' + esc(resto) + '">+' + (nombres.length - max) + ' más</span>';
-    }
-    return html;
+    document.getElementById('btnCerrarModalServicios').onclick = cerrarModalServicios;
+    document.getElementById('btnCerrarModalServicios2').onclick = cerrarModalServicios;
+    modal.onclick = function(e) { if (e.target === modal) cerrarModalServicios(); };
+    modal.style.display = 'flex';
+  }
+
+  function cerrarModalServicios() {
+    var modal = document.getElementById('modalServiciosUsuario');
+    if (modal) modal.style.display = 'none';
   }
 
   function cargarUsuariosYServicios() {
@@ -3984,7 +4005,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
         '<td>' + esc(u.nombre) + '</td>' +
         '<td>' + (u.rol === 'administrador' ? 'Administrador' : 'Editor') + '</td>' +
         '<td>' + (u.activo ? 'Activo' : 'Inactivo') + '</td>' +
-        '<td class="col-esp">' + pildorasEspecialidades(u.serviciosIds) + '</td>' +
+        '<td class="col-esp">' + botonVerServicios(u) + '</td>' +
         '<td class="acciones-fila">' +
           (puedeEditar ? '<button class="btn btn-secundario btn-pequeno" onclick="editarUsuario(\'' + esc(u.usuario) + '\')">Editar</button>' : '<span class="vacio-accion">—</span>') +
           (puedeEliminar ? '<button class="btn btn-peligro btn-pequeno" onclick="confirmarEliminarUsuario(\'' + esc(u.usuario) + '\')">Eliminar</button>' : '') +
@@ -4019,6 +4040,9 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     document.getElementById('usu_activo').value = u.activo ? 'SI' : 'NO';
     document.getElementById('campoUsuarioEstado').style.display = '';
     marcarEspecialidades(u.serviciosIds || '');
+    var contEspEdit = document.getElementById('listaEspecialidades');
+    if (contEspEdit) contEspEdit.classList.remove('colapsado');
+    actualizarBotonEspecialidades();
     document.getElementById('tituloFormUsuario').textContent = 'Editar usuario';
     document.getElementById('btnGuardarUsuario').textContent = 'Actualizar usuario';
     document.getElementById('btnCancelarUsuario').style.display = 'inline-block';

@@ -287,6 +287,19 @@
       </div>
     </div>
 
+    <div id="modalServiciosUsuario" class="modal-fondo" style="display:none;">
+      <div class="modal">
+        <div class="modal-cabecera">
+          <h2 id="tituloModalServicios">Servicios</h2>
+          <button type="button" class="modal-cerrar" id="btnCerrarModalServicios" aria-label="Cerrar">&times;</button>
+        </div>
+        <div id="listaModalServicios" class="servicios-cita"></div>
+        <div class="acciones-form">
+          <button type="button" class="btn btn-secundario" id="btnCerrarModalServicios2">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Vistas precargadas: se inyectan localmente sin llamar al servidor. -->
     <script type="text/plain" id="tpl-Clientes"><?!= include('Clientes') ?></script>
     <script type="text/plain" id="tpl-Servicios"><?!= include('Servicios') ?></script>
