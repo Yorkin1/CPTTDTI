@@ -3813,8 +3813,7 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     if (tbodyUsu) tbodyUsu.addEventListener('click', function(e) {
       _clicTarjetaMovil(e, 'data-usuario-id', function(id) { alternarTarjetaUsuario(id); });
     });
-    cargarUsuarios();
-    cargarServicios(false, pintarEspecialidades);
+    cargarUsuariosYServicios();
     var btnTglEsp = document.getElementById('btnToggleEspecialidades');
     if (btnTglEsp) btnTglEsp.addEventListener('click', alternarEspecialidades);
     var contEsp = document.getElementById('listaEspecialidades');
@@ -3936,6 +3935,29 @@ function ajustarDuracion(delta) { var campo = document.getElementById('ser_durac
     }
     if (nombres.length === 0) return '<span class="vacio-accion">&mdash;</span>';
     return nombres.map(function(n) { return '<span class="etiqueta etiqueta-programada">' + esc(n) + '</span>'; }).join(' ');
+  }
+
+  function cargarUsuariosYServicios() {
+    var tbody = document.getElementById('tablaUsuarios');
+    google.script.run
+      .withSuccessHandler(function(resp) {
+        if (sesionInvalida(resp)) return;
+        if (resp && resp.exito) {
+          Estado.usuariosLista = resp.usuarios || [];
+          Estado.usuariosCargados = true;
+          Estado.servicios = resp.servicios || [];
+          Estado.serviciosCargados = true;
+          if (tbody) dibujarUsuarios(tbody, Estado.usuariosLista);
+          pintarEspecialidades();
+        } else if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="6" class="vacio">' + esc((resp && resp.mensaje) || 'No se pudieron cargar los usuarios.') + '</td></tr>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="vacio">Error al cargar usuarios.</td></tr>';
+        mostrarToast(err.message, 'error');
+      })
+      .obtenerUsuariosYServicios(tokenSesion());
   }
 
   function dibujarUsuarios(tbody, usuarios) {

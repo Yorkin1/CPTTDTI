@@ -2239,6 +2239,18 @@ function listarUsuarios(token) {
   return { exito: true, usuarios: limpia };
 }
 
+function obtenerUsuariosYServicios(token) {
+  if (!_validarSesion_(token)) return _respuestaSesionExpirada_();
+  var u = listarUsuarios(token);
+  if (!u || !u.exito) return u;
+  var s = [];
+  try {
+    var rs = obtenerServicios(token);
+    s = (rs && rs.exito === false) ? [] : (rs || []);
+  } catch (eS) {}
+  return { exito: true, usuarios: u.usuarios, servicios: s };
+}
+
 /** Lee la lista de usuarios ya avisados como "nuevos". @return {Array} */
 function _usuariosYaAvisados_() {
   try {
